@@ -20,7 +20,7 @@ def main():
     # Check to see if we've supplied an existing master list to append to,
     # otherwise start a new one.
     if oldMaster != []:
-        finalData = pd.read_excel(oldMaster)
+        finalData = pd.read_excel(oldMaster[0])
     else:
         print('No existing master list found. Starting a new one.')
         # These are our names for the data in the master list.
@@ -108,12 +108,29 @@ def main():
         # Grab the next file from the list.
         newData = inputData[fileNum]
         fileNum += 1
-        # Iterate over each column of data that we want to append.
-        for dataName in list(finalData):
-            # Grab list of names that the data could be under.
-            nameList = lookupTable.at[0, dataName]
-            
-            
+
+        # Iterate over each dataframe in the ordered dictionary.
+        # Each sheet in the file is its own dataframe in the dictionary.
+        for sheetName in list(inputData):
+            sheet = inputData[sheetName]
+
+            # Iterate over each column of data that we want to append.
+            for dataName in list(finalData):
+                # Grab list of names that the data could potentially be under.
+                nameList = lookupTable.at[0, dataName]
+
+
+                # Look for a match in the sheet column names.
+                sheetColumns = list(sheet)
+                columnName = [val for val in sheetColumns if val in nameList]
+                
+                
+    # Save the output as a .xlsx file.
+    # %%
+    writer = pd.ExcelWriter('CurrentMaster.xlsx', engine='xlsxwriter')
+    finalData.to_excel(writer, sheet_name='Master')
+    writer.save()
+
 # Run the main function.
 # %%
 main()
