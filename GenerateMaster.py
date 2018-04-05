@@ -9,7 +9,7 @@ def main():
     # Get the master dataframe ready for the new data.
     # %%
     # Check for an existing master list.
-    oldMaster = glb.glob('oldMaster*')
+    oldMaster = glb.glob('CurrentMaster*')
 
     # Check if there's more than zero or one master list supplied. If there's
     # more than one, print an error and quit.
@@ -29,9 +29,6 @@ def main():
                                           'POS Customer',
                                           'Distributor',
                                           'PPN',
-                                          'City',
-                                          'State',
-                                          'Zip',
                                           'Invoice Amount',
                                           'Commission Rate',
                                           'Commission Paid'])
@@ -53,7 +50,7 @@ def main():
 
     # Read in each new file with Pandas and store them as dictionaries.
     # Each dictionary has a dataframe for each sheet in the file.
-    inputData = [pd.read_excel(filename, sheetname=None) for filename in filenames]
+    inputData = [pd.read_excel(filename, None) for filename in filenames]
 
     # Create the lookup tables for each column.
     # %%
@@ -81,21 +78,42 @@ def main():
                                         'Distri',
                                         'Disti',
                                         'Distributor']
-    
+
     lookupTable.at[0, 'PPN'] = ['Material Number',
                                 'Product',
                                 'Item',
                                 'PtNo',
                                 'Databook Product']
-    
+
+    lookupTable.at[0, 'Invoice Amount'] = ['Split Dollars',
+                                           'AdjPOS',
+                                           'Adj Inv Amt',
+                                           'Post Split Amt']
+
+    lookupTable.at[0, 'Commission Rate'] = ['Prod Class Rate',
+                                            'Rate',
+                                            'Comm Rate',
+                                            'Comission Rate']
+
+    lookupTable.at[0, 'Commission Paid'] = ['Comissions',
+                                            'Act Comm Due',
+                                            'Comm Due',
+                                            'Post Split Amt']
+
     # Go through each file, grab the new data, and put it in the master list.
     # %%
     # Iterate through each file that we're appending to the master list.
+    fileNum = 0
     for filename in filenames:
-        # Grab the next file from the dictionary.
-        newData = inputData[filename]
+        # Grab the next file from the list.
+        newData = inputData[fileNum]
+        fileNum += 1
         # Iterate over each column of data that we want to append.
         for dataName in list(finalData):
+            # Grab list of names that the data could be under.
+            nameList = lookupTable.at[0, dataName]
             
-
+            
+# Run the main function.
+# %%
 main()
