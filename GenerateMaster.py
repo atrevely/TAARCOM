@@ -22,7 +22,7 @@ def main():
     if oldMaster != []:
         finalData = pd.read_excel(oldMaster)
     else:
-        print("I didn't find an existing master list. Starting a new one.")
+        print('No existing master list found. Starting a new one.')
         # These are our names for the data in the master list.
         finalData = pd.DataFrame(columns=['Invoice Number',
                                           'Invoice Date',
@@ -45,7 +45,7 @@ def main():
 
     # If we didn't find anything new, let us know and quit.
     if filenames == []:
-        print("I didn't find any new files to append!")
+        print('No new files to append!')
         return
 
     # Read in each new file with Pandas and store them as dictionaries.
