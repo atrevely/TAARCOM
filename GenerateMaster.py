@@ -14,7 +14,7 @@ def main():
     # more than one, print an error and quit.
     if len(oldMaster) > 1:
         print('Too many master lists supplied! Only room for one (or zero).')
-        print('Shutting down. Please provide fewer master lists.')
+        print('Shutting down.')
         return
 
     # Check to see if we've supplied an existing master list to append to,
@@ -40,7 +40,7 @@ def main():
     filenames = glb.glob('*.xls*')
 
     # Remove the master from the filename list so we don't append it to itself.
-    if oldMaster[0] in filenames:
+    if oldMaster != []:
         del filenames[filenames.index(oldMaster[0])]
 
     # If we didn't find anything new, let us know and quit.
@@ -142,8 +142,17 @@ def main():
             # Now that we've renamed all of the relevant columns,
             # append the new sheet to the master list, where only the properly
             # named columns are appended.
-            matchingColumns = [val for val in list(newData) if val in list(finalData)]
-            finalData = finalData.append(sheet[matchingColumns])
+            if sheet.columns.duplicated().any():
+                print('Found duplicate column names. Please fix.')
+                print('Two items are being mapped to the same master column.')
+                print('Shutting down.')
+                return
+            else:
+                matchingColumns = [val for val in list(sheet) if val in list(finalData)]
+                if len(matchingColumns) > 0:
+                    finalData = finalData.append(sheet[matchingColumns])
+                else:
+                    print('Found no data on this sheet. Moving on.')
 
     # Replace NaNs with empty cells.
     finalData = finalData.fillna('')
