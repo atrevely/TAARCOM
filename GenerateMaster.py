@@ -144,7 +144,7 @@ def main():
             # named columns are appended.
             matchingColumns = [val for val in list(newData) if val in list(finalData)]
             finalData = finalData.append(sheet[matchingColumns])
-                 
+
     # Replace NaNs with empty cells.
     finalData = finalData.fillna('')
 
