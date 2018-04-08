@@ -153,6 +153,7 @@ def main():
     writer = pd.ExcelWriter('CurrentMaster.xlsx', engine='xlsxwriter')
     finalData.to_excel(writer, sheet_name='Master')
     writer.save()
+    print('New master list generated.')
 
 
 # Run the main function.
