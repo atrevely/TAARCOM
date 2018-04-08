@@ -1,6 +1,5 @@
 import pandas as pd
 import glob as glb
-import numpy as np
 
 
 # The main function.
@@ -41,8 +40,8 @@ def main():
     filenames = glb.glob('*.xls*')
 
     # Remove the master from the filename list so we don't append it to itself.
-    if oldMaster in filenames:
-        del filenames[filenames.index(oldMaster)]
+    if oldMaster[0] in filenames:
+        del filenames[filenames.index(oldMaster[0])]
 
     # If we didn't find anything new, let us know and quit.
     if filenames == []:
@@ -104,9 +103,6 @@ def main():
 
     # Go through each file, grab the new data, and put it in the master list.
     # %%
-    # First, figure out how many rows are currently in the master.
-    currentRows = finalData.shape[0]
-
     # Iterate through each file that we're appending to the master list.
     fileNum = 0
     for filename in filenames:
@@ -117,10 +113,10 @@ def main():
 
         # Iterate over each dataframe in the ordered dictionary.
         # Each sheet in the file is its own dataframe in the dictionary.
-        for sheetName in list(inputData):
-            sheet = inputData[sheetName]
+        for sheetName in list(newData):
+            sheet = newData[sheetName]
             totalRows = sheet.shape[0]
-            print('Found ' + str(totalRows) + ' entries in the tab ' + sheetName)
+            print('Found ' + str(totalRows) + ' entries in the tab: ' + sheetName)
 
             # Iterate over each column of data that we want to append.
             for dataName in list(finalData):
@@ -133,16 +129,24 @@ def main():
 
                 # Let us know if we didn't find a column that matches,
                 # or if we found too many columns that match,
-                # otherwise grab the data and put it into the master.
+                # then rename the column in the sheet to the master name.
                 if columnName == []:
-                    print('No column found for ' + columnName)
+                    print('No column found for: ' + dataName)
                 elif len(columnName) > 1:
-                    print('Found multiple matches for ' + columnName)
+                    print('Found multiple matches for: ' + dataName)
                     print('Shutting down. Please fix column names.')
                     return
                 else:
-                    
-                    
+                    sheet = sheet.rename(index=str, columns={columnName[0]: dataName})
+
+            # Now that we've renamed all of the relevant columns,
+            # append the new sheet to the master list, where only the properly
+            # named columns are appended.
+            matchingColumns = [val for val in list(newData) if val in list(finalData)]
+            finalData = finalData.append(sheet[matchingColumns])
+                 
+    # Replace NaNs with empty cells.
+    finalData = finalData.fillna('')
 
     # Save the output as a .xlsx file.
     # %%
