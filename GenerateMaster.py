@@ -94,9 +94,9 @@ def main():
     lookupTable.at[0, 'Commission Rate'] = ['Prod Class Rate',
                                             'Rate',
                                             'Comm Rate',
-                                            'Comission Rate']
+                                            'Commission Rate']
 
-    lookupTable.at[0, 'Commission Paid'] = ['Comissions',
+    lookupTable.at[0, 'Commission Paid'] = ['Commissions',
                                             'Act Comm Due',
                                             'Comm Due',
                                             'Post Split Amt']
