@@ -150,7 +150,7 @@ def main():
             else:
                 matchingColumns = [val for val in list(sheet) if val in list(finalData)]
                 if len(matchingColumns) > 0:
-                    finalData = finalData.append(sheet[matchingColumns])
+                    finalData = finalData.append(sheet[matchingColumns], ignore_index=True)
                 else:
                     print('Found no data on this sheet. Moving on.')
 
@@ -167,4 +167,5 @@ def main():
 
 # Run the main function.
 # %%
-main()
+if __name__ == "__main__":
+    main()
