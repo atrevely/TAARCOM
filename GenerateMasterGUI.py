@@ -29,9 +29,10 @@ class GenMast(QMainWindow):
         self.process.setTextCursor(cursor)
         self.process.ensureCursorVisible()
 
-    def __del__(self):
+    def closeEvent(self, event):
         # Return stdout to defaults.
         sys.stdout = sys.__stdout__
+        super().closeEvent(event)
 
     def initUI(self):
 
@@ -74,5 +75,6 @@ class GenMast(QMainWindow):
 if __name__ == '__main__':
 
     app = QApplication(sys.argv)
+    app.aboutToQuit.connect(app.deleteLater)  # This may be a hack for Spyder, consider deleting after testing.
     gui = GenMast()
     sys.exit(app.exec_())

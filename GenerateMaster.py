@@ -163,10 +163,3 @@ def main():
     finalData.to_excel(writer, sheet_name='Master')
     writer.save()
     print('New master list generated.')
-
-
-# Run the main function.
-# %%
-if __name__ == "__main__":
-
-    main()
