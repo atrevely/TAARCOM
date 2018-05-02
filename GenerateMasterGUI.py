@@ -39,16 +39,17 @@ class GenMast(QMainWindow):
     def initUI(self):
 
         # Button for generating the master list.
-        btnGenMast = QPushButton("Generate Master", self)
-        btnGenMast.move(30, 50)
+        btnGenMast = QPushButton("Process Files \n to Master", self)
+        btnGenMast.move(450, 100)
+        btnGenMast.resize(100, 100)
 
         # Button for selecting files to compile into master list.
         btnOpenFiles = QPushButton("Open Files", self)
-        btnOpenFiles.move(150, 50)
+        btnOpenFiles.move(30, 50)
 
         # Button for selecting files to compile into master list.
         btnUploadMast = QPushButton("Upload Master", self)
-        btnUploadMast.move(270, 50)
+        btnUploadMast.move(150, 50)
 
         # Link the buttons to their function calls.
         btnGenMast.clicked.connect(self.genMastClicked)
@@ -65,13 +66,13 @@ class GenMast(QMainWindow):
         self.process.move(30, 100)
 
         # Set window size and title, then show the window.
-        self.setGeometry(300, 300, 500, 300)
+        self.setGeometry(300, 300, 600, 300)
         self.setWindowTitle('Generate Master')
         self.show()
 
     def genMastClicked(self):
         # Check to see if we've selected files to process.
-        if self.filenames != []:
+        if self.filenames:
             # Run the GenerateMaster.py file.
             GenerateMaster.main(self.filenames, self.master)
         else:
@@ -86,6 +87,10 @@ class GenMast(QMainWindow):
             print('Master list provided:')
             print(self.master)
             print('---')
+            if 'CurrentMaster' not in self.master:
+                print('Caution!')
+                print('The file uploaded as master does not appear to be a master list.')
+                print('---')
 
     def openFilesClicked(self):
         # Grab the filenames to be passed into GenerateMaster.py
