@@ -1,28 +1,21 @@
 import pandas as pd
-import glob as glb
 
 
 # The main function.
-def main():
+def main(filenames, master):
 
     # Get the master dataframe ready for the new data.
     # %%
     # Check for an existing master list.
-    oldMaster = glb.glob('CurrentMaster*')
-
-    # Check if there's more than zero or one master list supplied. If there's
-    # more than one, print an error and quit.
-    if len(oldMaster) > 1:
-        print('Too many master lists supplied! Only room for one (or zero).')
-        print('Shutting down.')
-        return
+    oldMaster = master
 
     # Check to see if we've supplied an existing master list to append to,
     # otherwise start a new one.
-    if oldMaster != []:
-        finalData = pd.read_excel(oldMaster[0])
+    if oldMaster:
+        finalData = pd.read_excel(oldMaster)
+        print('Appending files to old master.')
     else:
-        print('No existing master list found. Starting a new one.')
+        print('No existing master list provided. Starting a new one.')
         # These are our names for the data in the master list.
         finalData = pd.DataFrame(columns=['Invoice Number',
                                           'Invoice Date',
@@ -32,22 +25,6 @@ def main():
                                           'Invoice Amount',
                                           'Commission Rate',
                                           'Commission Paid'])
-
-    # Get the new files ready for processing.
-    # They should be in the following folder: ...
-    # %%
-    # Glob the names of the .xlsx or .xls files that we want to process.
-    filenames = glb.glob('*.xls*')
-
-    # Remove the master from the filename list so we don't append it to itself.
-    if oldMaster != []:
-        del filenames[filenames.index(oldMaster[0])]
-
-    # If we didn't find anything new, let us know and quit.
-    if filenames == []:
-        print('No new files to append!')
-        print('Shutting down. Please add files to append.')
-        return
 
     # Read in each new file with Pandas and store them as dictionaries.
     # Each dictionary has a dataframe for each sheet in the file.
@@ -109,6 +86,7 @@ def main():
         # Grab the next file from the list.
         newData = inputData[fileNum]
         fileNum += 1
+        print('---')
         print('Working on file: ' + filename)
 
         # Iterate over each dataframe in the ordered dictionary.
@@ -135,6 +113,7 @@ def main():
                 elif len(columnName) > 1:
                     print('Found multiple matches for: ' + dataName)
                     print('Shutting down. Please fix column names.')
+                    print('---')
                     return
                 else:
                     sheet = sheet.rename(index=str, columns={columnName[0]: dataName})
@@ -146,6 +125,7 @@ def main():
                 print('Found duplicate column names. Please fix.')
                 print('Two items are being mapped to the same master column.')
                 print('Shutting down.')
+                print('---')
                 return
             else:
                 matchingColumns = [val for val in list(sheet) if val in list(finalData)]
@@ -162,4 +142,5 @@ def main():
     writer = pd.ExcelWriter('CurrentMaster.xlsx', engine='xlsxwriter')
     finalData.to_excel(writer, sheet_name='Master')
     writer.save()
+    print('---')
     print('New master list generated.')

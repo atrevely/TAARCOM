@@ -17,12 +17,14 @@ class GenMast(QMainWindow):
         super().__init__()
 
         self.initUI()
+        self.filenames = []
+        self.master = []
 
         # Custom output stream.
         sys.stdout = Stream(newText=self.onUpdateText)
 
     def onUpdateText(self, text):
-        # Print to text box widget.
+        # Print console output to text box widget.
         cursor = self.process.textCursor()
         cursor.movePosition(QtGui.QTextCursor.End)
         cursor.insertText(text)
@@ -44,9 +46,14 @@ class GenMast(QMainWindow):
         btnOpenFiles = QPushButton("Open Files", self)
         btnOpenFiles.move(150, 50)
 
+        # Button for selecting files to compile into master list.
+        btnUploadMast = QPushButton("Upload Master", self)
+        btnUploadMast.move(270, 50)
+
         # Link the buttons to their function calls.
         btnGenMast.clicked.connect(self.genMastClicked)
         btnOpenFiles.clicked.connect(self.openFilesClicked)
+        btnUploadMast.clicked.connect(self.uploadMastClicked)
 
         # Create the output widget.
         self.process = QTextEdit(self, readOnly=True)
@@ -63,17 +70,45 @@ class GenMast(QMainWindow):
         self.show()
 
     def genMastClicked(self):
-        # Run the GenerateMaster.py file.
-        GenerateMaster.main()
+        # Check to see if we've selected files to process.
+        if self.filenames != []:
+            # Run the GenerateMaster.py file.
+            GenerateMaster.main(self.filenames, self.master)
+        else:
+            print('No new files selected!')
+            print('Use the Open Files button to select files.')
+            print('---')
+
+    def uploadMastClicked(self):
+        # Grab an existing master list to append to.
+        self.master, _ = QFileDialog.getOpenFileName(self, filter="Excel files (*.xls *.xlsx *.xlsm)")
+        if self.master:
+            print('Master list provided:')
+            print(self.master)
+            print('---')
 
     def openFilesClicked(self):
         # Grab the filenames to be passed into GenerateMaster.py
-        filenames = QFileDialog.getOpenFileNames(self)
-        print(filenames)
+        self.filenames, _ = QFileDialog.getOpenFileNames(self, filter="Excel files (*.xls *.xlsx *.xlsm)")
+
+        # Check if the current master got uploaded as a new file.
+        for names in self.filenames:
+            if 'CurrentMaster' in names:
+                print('Master uploaded as new file.')
+                print('Try uploading files again.')
+                print('---')
+                return
+
+        # Print out the selected filenames.
+        if self.filenames:
+            print('Files selected:')
+            for file in self.filenames:
+                print(file)
+            print('---')
 
 
 if __name__ == '__main__':
-
+    # Run the application.
     app = QApplication(sys.argv)
     app.aboutToQuit.connect(app.deleteLater)  # This may be a hack for Spyder, consider deleting after testing.
     gui = GenMast()
