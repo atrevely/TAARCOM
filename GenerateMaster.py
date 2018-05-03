@@ -140,8 +140,9 @@ def main(filenames, master):
 
     # Save the output as a .xlsx file.
     # %%
-    writer = pd.ExcelWriter('CurrentMaster' + time.strftime('%Y%m%d') + '.xlsx', engine='xlsxwriter')
+    writer = pd.ExcelWriter('CurrentMaster' + time.strftime('%Y-%m-%d') + '.xlsx', engine='xlsxwriter')
     finalData.to_excel(writer, sheet_name='Master')
     writer.save()
     print('---')
     print('New master list generated.')
+    print('---')

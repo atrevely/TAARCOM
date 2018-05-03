@@ -51,10 +51,15 @@ class GenMast(QMainWindow):
         btnUploadMast = QPushButton("Upload Master", self)
         btnUploadMast.move(150, 50)
 
+        # Button for editing variable names
+        btnEditColumns = QPushButton("Edit Column Tags", self)
+        btnEditColumns.move(270, 50)
+
         # Link the buttons to their function calls.
         btnGenMast.clicked.connect(self.genMastClicked)
         btnOpenFiles.clicked.connect(self.openFilesClicked)
         btnUploadMast.clicked.connect(self.uploadMastClicked)
+        btnEditColumns.clicked.connect(self.editColumnsClicked)
 
         # Create the output widget.
         self.process = QTextEdit(self, readOnly=True)
@@ -69,6 +74,13 @@ class GenMast(QMainWindow):
         self.setGeometry(300, 300, 600, 300)
         self.setWindowTitle('Generate Master')
         self.show()
+
+        # Open new window for column name edits.
+        btnEditColumns.clicked.connect(self.editColumnsClicked)
+        self.dialog = ColumnEdit()
+
+    def editColumnsClicked(self):
+        self.dialog.show()
 
     def genMastClicked(self):
         # Check to see if we've selected files to process.
@@ -110,6 +122,16 @@ class GenMast(QMainWindow):
             for file in self.filenames:
                 print(file)
             print('---')
+
+
+class ColumnEdit(QMainWindow):
+
+    def __init__(self, parent=None):
+        super().__init__()
+
+        # Set window size and title, then show the window.
+        self.setGeometry(300, 300, 600, 300)
+        self.setWindowTitle('Column Name List')
 
 
 if __name__ == '__main__':
