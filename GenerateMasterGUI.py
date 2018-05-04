@@ -1,6 +1,7 @@
 import sys
 import GenerateMaster
-from PyQt5.QtWidgets import QMainWindow, QPushButton, QApplication, QFileDialog, QTextEdit, QTreeWidget
+import pandas as pd
+from PyQt5.QtWidgets import QMainWindow, QPushButton, QApplication, QFileDialog, QTextEdit, QTreeWidget, QTreeWidgetItem
 from PyQt5 import QtCore, QtGui
 
 
@@ -19,6 +20,11 @@ class GenMast(QMainWindow):
         self.initUI()
         self.filenames = []
         self.master = []
+
+        # Create a global varaiable for the lookup table.
+        # We can now edit it in the ColumnEdit class, or just leave it alone.
+        global lookupTable
+        lookupTable = pd.read_csv('lookupTable.csv', index_col=False)
 
         # Custom output stream.
         sys.stdout = Stream(newText=self.onUpdateText)
@@ -39,20 +45,20 @@ class GenMast(QMainWindow):
     def initUI(self):
 
         # Button for generating the master list.
-        btnGenMast = QPushButton("Process Files \n to Master", self)
+        btnGenMast = QPushButton('Process Files \n to Master', self)
         btnGenMast.move(450, 100)
         btnGenMast.resize(100, 100)
 
         # Button for selecting files to compile into master list.
-        btnOpenFiles = QPushButton("Open Files", self)
+        btnOpenFiles = QPushButton('Open Files', self)
         btnOpenFiles.move(30, 50)
 
         # Button for selecting files to compile into master list.
-        btnUploadMast = QPushButton("Upload Master", self)
+        btnUploadMast = QPushButton('Upload Master', self)
         btnUploadMast.move(150, 50)
 
         # Button for editing variable names
-        btnEditColumns = QPushButton("Edit Column Tags", self)
+        btnEditColumns = QPushButton('Edit Column Tags', self)
         btnEditColumns.move(270, 50)
 
         # Link the buttons to their function calls.
@@ -129,6 +135,19 @@ class ColumnEdit(QMainWindow):
         # Set window size and title, then show the window.
         self.setGeometry(200, 200, 600, 300)
         self.setWindowTitle('Column Name List')
+
+        # Create the tree widget with column names.
+        colTree = QTreeWidget(self)
+        colTree.resize(500, 200)
+        colTree.setColumnCount(1)
+        colTree.setHeaderLabels(["TCOM Column Names"])
+
+        # Populate the tree via the existing lookup table.
+        for colName in list(lookupTable):
+            dataCol = QTreeWidgetItem([colName])
+            colTree.addTopLevelItem(dataCol)
+            for rawName in lookupTable[colName].dropna():
+                dataCol.addChild(QTreeWidgetItem([rawName]))
 
 
 if __name__ == '__main__':
