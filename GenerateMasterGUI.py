@@ -1,6 +1,6 @@
 import sys
 import GenerateMaster
-from PyQt5.QtWidgets import QMainWindow, QPushButton, QApplication, QFileDialog, QTextEdit
+from PyQt5.QtWidgets import QMainWindow, QPushButton, QApplication, QFileDialog, QTextEdit, QTreeWidget
 from PyQt5 import QtCore, QtGui
 
 
@@ -75,12 +75,9 @@ class GenMast(QMainWindow):
         self.setWindowTitle('Generate Master')
         self.show()
 
-        # Open new window for column name edits.
-        btnEditColumns.clicked.connect(self.editColumnsClicked)
-        self.dialog = ColumnEdit()
-
     def editColumnsClicked(self):
-        self.dialog.show()
+        self.columnsWindow = ColumnEdit()
+        self.columnsWindow.show()
 
     def genMastClicked(self):
         # Check to see if we've selected files to process.
@@ -130,7 +127,7 @@ class ColumnEdit(QMainWindow):
         super().__init__()
 
         # Set window size and title, then show the window.
-        self.setGeometry(300, 300, 600, 300)
+        self.setGeometry(200, 200, 600, 300)
         self.setWindowTitle('Column Name List')
 
 
