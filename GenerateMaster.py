@@ -55,7 +55,7 @@ def main(filenames, oldMaster, lookupTable):
             # Iterate over each column of data that we want to append.
             for dataName in list(finalData):
                 # Grab list of names that the data could potentially be under.
-                nameList = lookupTable.at[0, dataName]
+                nameList = lookupTable[dataName].tolist()
 
                 # Look for a match in the sheet column names.
                 sheetColumns = list(sheet)
