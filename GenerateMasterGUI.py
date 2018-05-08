@@ -1,7 +1,7 @@
 import sys
 import GenerateMaster
 import pandas as pd
-from PyQt5.QtWidgets import QMainWindow, QPushButton, QApplication, QFileDialog, QTextEdit, QTreeWidget, QTreeWidgetItem
+from PyQt5.QtWidgets import QMainWindow, QPushButton, QApplication, QFileDialog, QTextEdit, QTreeWidget, QTreeWidgetItem, QInputDialog
 from PyQt5 import QtCore, QtGui
 
 
@@ -50,7 +50,7 @@ class GenMast(QMainWindow):
         btnGenMast.resize(100, 100)
 
         # Button for selecting files to compile into master list.
-        btnOpenFiles = QPushButton('Open Files', self)
+        btnOpenFiles = QPushButton('Add New Files', self)
         btnOpenFiles.move(30, 50)
 
         # Button for selecting files to compile into master list.
@@ -89,7 +89,7 @@ class GenMast(QMainWindow):
         # Check to see if we've selected files to process.
         if self.filenames:
             # Run the GenerateMaster.py file.
-            GenerateMaster.main(self.filenames, self.master)
+            GenerateMaster.main(self.filenames, self.master, lookupTable)
         else:
             print('No new files selected!')
             print('Use the Open Files button to select files.')
@@ -137,17 +137,96 @@ class ColumnEdit(QMainWindow):
         self.setWindowTitle('Column Name List')
 
         # Create the tree widget with column names.
-        colTree = QTreeWidget(self)
-        colTree.resize(500, 200)
-        colTree.setColumnCount(1)
-        colTree.setHeaderLabels(["TCOM Column Names"])
+        self.colTree = QTreeWidget(self)
+        self.colTree.resize(500, 200)
+        self.colTree.setColumnCount(1)
+        self.colTree.setHeaderLabels(["TCOM Column Names"])
+
+        # Create the button for adding data names.
+        btnAddName = QPushButton('Add Lookup Name', self)
+        btnAddName.move(10, 220)
+
+        # Create the button for adding data names.
+        btnAddTCOM = QPushButton('Add TCOM Name', self)
+        btnAddTCOM.move(130, 220)
+
+        # Create the button for saving data names.
+        btnSaveExit = QPushButton('Save && Exit', self)
+        btnSaveExit.move(470, 260)
+
+        # Create the button for canceling changes.
+        btnCancelExit = QPushButton('Cancel', self)
+        btnCancelExit.move(350, 260)
 
         # Populate the tree via the existing lookup table.
+        # Lookup table loaded from .csv during initial GUI setup.
+        # Make the items editable via double-click.
         for colName in list(lookupTable):
             dataCol = QTreeWidgetItem([colName])
-            colTree.addTopLevelItem(dataCol)
+            dataCol.setFlags(dataCol.flags() | QtCore.Qt.ItemIsEditable)
+            self.colTree.addTopLevelItem(dataCol)
             for rawName in lookupTable[colName].dropna():
-                dataCol.addChild(QTreeWidgetItem([rawName]))
+                newChild = QTreeWidgetItem([rawName])
+                newChild.setFlags(newChild.flags() | QtCore.Qt.ItemIsEditable)
+                dataCol.addChild(newChild)
+        self.colTree.setCurrentItem(dataCol)
+
+        # Link buttons to function calls.
+        btnAddName.clicked.connect(self.addNameClicked)
+        btnAddTCOM.clicked.connect(self.addTCOMClicked)
+        btnSaveExit.clicked.connect(self.saveExit)
+        btnCancelExit.clicked.connect(self.cancelExit)
+
+    def addNameClicked(self):
+        # Check if we've selected a TCOM name to add tag to.
+        if not self.colTree.currentIndex().parent().isValid():
+            text, ok = QInputDialog.getText(self, "Add Data Name", "Enter new data name:")
+            # Check to see if we've entered text.
+            if ok and text != '':
+                currentTCOM = self.colTree.currentItem()
+                newChild = QTreeWidgetItem([text])
+                newChild.setFlags(newChild.flags() | QtCore.Qt.ItemIsEditable)
+                currentTCOM.addChild(newChild)
+
+    def addTCOMClicked(self):
+        text, ok = QInputDialog.getText(self, "Add TCOM Name", "Enter new TCOM name:")
+        # Check to see if we've entered text.
+        if ok and text != '':
+            newTCOM = QTreeWidgetItem([text])
+            newTCOM.setFlags(newTCOM.flags() | QtCore.Qt.ItemIsEditable)
+            self.colTree.addTopLevelItem(newTCOM)
+            
+
+    # Allow delete key to remove items at all levels.
+    def keyPressEvent(self, event):
+        if event.key() == QtCore.Qt.Key_Delete:
+            root = self.colTree.invisibleRootItem()
+            for item in self.colTree.selectedItems():
+                (item.parent() or root).removeChild(item)
+
+    def saveExit(self):
+        global lookupTable
+        lookupTable = pd.DataFrame()
+
+        # Save tree to application space.
+        # Iterate over branches to rebuild lookup table.
+        root = self.colTree.invisibleRootItem()
+        for colNum in range(root.childCount()):
+            newCol = pd.DataFrame(columns=[root.child(colNum).text(0)])
+            for childNum in range(root.child(colNum).childCount()):
+                newCol = newCol.append({root.child(colNum).text(0): root.child(colNum).child(childNum).text(0)}, ignore_index=True)
+            lookupTable = pd.concat([lookupTable, newCol], axis=1)
+
+        # Save tree to .csv file.
+        lookupTable.fillna('').to_csv('lookupTable.csv', index=False)
+        print('Lookup table changes saved.')
+        print('---')
+
+        # Close window.
+        self.close()
+
+    def cancelExit(self):
+        self.close()
 
 
 if __name__ == '__main__':
