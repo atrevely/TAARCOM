@@ -1,11 +1,14 @@
 import sys
-import GenerateMaster
 import pandas as pd
-from PyQt5.QtWidgets import QMainWindow, QPushButton, QApplication, QFileDialog, QTextEdit, QTreeWidget, QTreeWidgetItem, QInputDialog
+from PyQt5.QtWidgets import QMainWindow, QPushButton, QApplication, \
+                            QFileDialog, QTextEdit, QTreeWidget, \
+                            QTreeWidgetItem, QInputDialog
 from PyQt5 import QtCore, QtGui
+import GenerateMaster
 
 
 class Stream(QtCore.QObject):
+    """Redirects console output to text widget."""
     newText = QtCore.pyqtSignal(str)
 
     def write(self, text):
@@ -13,7 +16,7 @@ class Stream(QtCore.QObject):
 
 
 class GenMast(QMainWindow):
-
+    """Main application window."""
     def __init__(self):
         super().__init__()
 
@@ -30,6 +33,7 @@ class GenMast(QMainWindow):
         sys.stdout = Stream(newText=self.onUpdateText)
 
     def onUpdateText(self, text):
+        """Write console output to text widget."""
         # Print console output to text box widget.
         cursor = self.process.textCursor()
         cursor.movePosition(QtGui.QTextCursor.End)
@@ -38,36 +42,35 @@ class GenMast(QMainWindow):
         self.process.ensureCursorVisible()
 
     def closeEvent(self, event):
+        """Shuts down application on close."""
         # Return stdout to defaults.
         sys.stdout = sys.__stdout__
         super().closeEvent(event)
 
     def initUI(self):
-
+        """Creates UI window on launch."""
         # Button for generating the master list.
         btnGenMast = QPushButton('Process Files \n to Master', self)
         btnGenMast.move(450, 100)
         btnGenMast.resize(100, 100)
+        btnGenMast.clicked.connect(self.genMastClicked)
 
         # Button for selecting files to compile into master list.
         btnOpenFiles = QPushButton('Add New Files', self)
         btnOpenFiles.move(30, 50)
+        btnOpenFiles.clicked.connect(self.openFilesClicked)
 
         # Button for selecting files to compile into master list.
         btnUploadMast = QPushButton('Upload Master', self)
         btnUploadMast.move(150, 50)
+        btnUploadMast.clicked.connect(self.uploadMastClicked)
 
         # Button for editing variable names
         btnEditColumns = QPushButton('Edit Column Tags', self)
         btnEditColumns.move(270, 50)
-
-        # Link the buttons to their function calls.
-        btnGenMast.clicked.connect(self.genMastClicked)
-        btnOpenFiles.clicked.connect(self.openFilesClicked)
-        btnUploadMast.clicked.connect(self.uploadMastClicked)
         btnEditColumns.clicked.connect(self.editColumnsClicked)
 
-        # Create the output widget.
+        # Create the text output widget.
         self.process = QTextEdit(self, readOnly=True)
         self.process.ensureCursorVisible()
         self.process.setLineWrapColumnOrWidth(500)
@@ -82,10 +85,13 @@ class GenMast(QMainWindow):
         self.show()
 
     def editColumnsClicked(self):
+        """Opens new window for editing lookup table."""
+        # Open new window with data tree and editing processes.
         self.columnsWindow = ColumnEdit()
         self.columnsWindow.show()
 
     def genMastClicked(self):
+        """Runs function for processing new files to master."""
         # Check to see if we've selected files to process.
         if self.filenames:
             # Run the GenerateMaster.py file.
@@ -96,20 +102,25 @@ class GenMast(QMainWindow):
             print('---')
 
     def uploadMastClicked(self):
+        """Upload an existing master list."""
         # Grab an existing master list to append to.
-        self.master, _ = QFileDialog.getOpenFileName(self, filter="Excel files (*.xls *.xlsx *.xlsm)")
+        self.master, _ = QFileDialog.getOpenFileName(
+                self, filter="Excel files (*.xls *.xlsx *.xlsm)")
         if self.master:
             print('Master list provided:')
             print(self.master)
             print('---')
             if 'CurrentMaster' not in self.master:
                 print('Caution!')
-                print('The file uploaded as master does not appear to be a master list.')
+                print('The file uploaded as master \
+                      does not appear to be a master list.')
                 print('---')
 
     def openFilesClicked(self):
+        """Provide filepaths for new data to process using GenerateMaster."""
         # Grab the filenames to be passed into GenerateMaster.py
-        self.filenames, _ = QFileDialog.getOpenFileNames(self, filter="Excel files (*.xls *.xlsx *.xlsm)")
+        self.filenames, _ = QFileDialog.getOpenFileNames(
+                self, filter="Excel files (*.xls *.xlsx *.xlsm)")
 
         # Check if the current master got uploaded as a new file.
         for names in self.filenames:
@@ -128,11 +139,12 @@ class GenMast(QMainWindow):
 
 
 class ColumnEdit(QMainWindow):
-
+    """Window for editing lookup table contents."""
     def __init__(self, parent=None):
+        """Create UI for window on launch."""
         super().__init__()
 
-        # Set window size and title, then show the window.
+        # Set window size and title.
         self.setGeometry(200, 200, 600, 300)
         self.setWindowTitle('Column Name List')
 
@@ -145,18 +157,22 @@ class ColumnEdit(QMainWindow):
         # Create the button for adding data names.
         btnAddName = QPushButton('Add Lookup Name', self)
         btnAddName.move(10, 220)
+        btnAddName.clicked.connect(self.addNameClicked)
 
         # Create the button for adding data names.
         btnAddTCOM = QPushButton('Add TCOM Name', self)
         btnAddTCOM.move(130, 220)
+        btnAddTCOM.clicked.connect(self.addTCOMClicked)
 
         # Create the button for saving data names.
         btnSaveExit = QPushButton('Save && Exit', self)
         btnSaveExit.move(470, 260)
+        btnSaveExit.clicked.connect(self.saveExit)
 
         # Create the button for canceling changes.
         btnCancelExit = QPushButton('Cancel', self)
         btnCancelExit.move(350, 260)
+        btnCancelExit.clicked.connect(self.cancelExit)
 
         # Populate the tree via the existing lookup table.
         # Lookup table loaded from .csv during initial GUI setup.
@@ -171,16 +187,12 @@ class ColumnEdit(QMainWindow):
                 dataCol.addChild(newChild)
         self.colTree.setCurrentItem(dataCol)
 
-        # Link buttons to function calls.
-        btnAddName.clicked.connect(self.addNameClicked)
-        btnAddTCOM.clicked.connect(self.addTCOMClicked)
-        btnSaveExit.clicked.connect(self.saveExit)
-        btnCancelExit.clicked.connect(self.cancelExit)
-
     def addNameClicked(self):
+        """Add new tag to a TCOM master data column."""
         # Check if we've selected a TCOM name to add tag to.
         if not self.colTree.currentIndex().parent().isValid():
-            text, ok = QInputDialog.getText(self, "Add Data Name", "Enter new data name:")
+            text, ok = QInputDialog.getText(self, "Add Data Name",
+                                            "Enter new data name:")
             # Check to see if we've entered text.
             if ok and text != '':
                 currentTCOM = self.colTree.currentItem()
@@ -189,22 +201,25 @@ class ColumnEdit(QMainWindow):
                 currentTCOM.addChild(newChild)
 
     def addTCOMClicked(self):
-        text, ok = QInputDialog.getText(self, "Add TCOM Name", "Enter new TCOM name:")
+        """Add new TCOM master column."""
+        text, ok = QInputDialog.getText(self, "Add TCOM Name",
+                                        "Enter new TCOM name:")
         # Check to see if we've entered text.
         if ok and text != '':
             newTCOM = QTreeWidgetItem([text])
             newTCOM.setFlags(newTCOM.flags() | QtCore.Qt.ItemIsEditable)
             self.colTree.addTopLevelItem(newTCOM)
-            
 
     # Allow delete key to remove items at all levels.
     def keyPressEvent(self, event):
+        """Wire delete key for expected functionality."""
         if event.key() == QtCore.Qt.Key_Delete:
             root = self.colTree.invisibleRootItem()
             for item in self.colTree.selectedItems():
                 (item.parent() or root).removeChild(item)
 
     def saveExit(self):
+        """Save changes to lookup table and close window."""
         global lookupTable
         lookupTable = pd.DataFrame()
 
@@ -214,7 +229,9 @@ class ColumnEdit(QMainWindow):
         for colNum in range(root.childCount()):
             newCol = pd.DataFrame(columns=[root.child(colNum).text(0)])
             for childNum in range(root.child(colNum).childCount()):
-                newCol = newCol.append({root.child(colNum).text(0): root.child(colNum).child(childNum).text(0)}, ignore_index=True)
+                newCol = newCol.append(
+                        {root.child(colNum).text(0): root.child(colNum).child(childNum).text(0)},
+                        ignore_index=True)
             lookupTable = pd.concat([lookupTable, newCol], axis=1)
 
         # Save tree to .csv file.
@@ -226,12 +243,14 @@ class ColumnEdit(QMainWindow):
         self.close()
 
     def cancelExit(self):
+        """Close the window without saving changes to lookup table."""
+        # Close window. Nothing gets saved.
         self.close()
 
 
 if __name__ == '__main__':
     # Run the application.
     app = QApplication(sys.argv)
-    app.aboutToQuit.connect(app.deleteLater)  # This may be a hack for Spyder, consider deleting after testing.
+    app.aboutToQuit.connect(app.deleteLater)
     gui = GenMast()
     sys.exit(app.exec_())

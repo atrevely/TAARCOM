@@ -4,10 +4,16 @@ import time
 
 # The main function.
 def main(filenames, oldMaster, lookupTable):
+    """Processes Excel files and appends them to a master list.
+
+    Keyword arguments:
+    filenames -- filepaths for opening (Excel) files to process.
+    oldMaster -- current master list (in Excel) to which we are appending data.
+    lookupTable -- dataframe which links master columns to file data.
+    """
 
     # Get the master dataframe ready for the new data.
     # %%
-
     # Check to see if we've supplied an existing master list to append to,
     # otherwise start a new one.
     if oldMaster:
@@ -43,7 +49,8 @@ def main(filenames, oldMaster, lookupTable):
         for sheetName in list(newData):
             sheet = newData[sheetName]
             totalRows = sheet.shape[0]
-            print('Found ' + str(totalRows) + ' entries in the tab: ' + sheetName)
+            print('Found ' + str(totalRows) + ' entries in the tab: '
+                  + sheetName)
 
             # Iterate over each column of data that we want to append.
             for dataName in list(finalData):
@@ -65,7 +72,8 @@ def main(filenames, oldMaster, lookupTable):
                     print('---')
                     return
                 else:
-                    sheet = sheet.rename(index=str, columns={columnName[0]: dataName})
+                    sheet = sheet.rename(index=str,
+                                         columns={columnName[0]: dataName})
 
             # Now that we've renamed all of the relevant columns,
             # append the new sheet to the master list, where only the properly
@@ -78,7 +86,8 @@ def main(filenames, oldMaster, lookupTable):
             else:
                 matchingColumns = [val for val in list(sheet) if val in list(finalData)]
                 if len(matchingColumns) > 0:
-                    finalData = finalData.append(sheet[matchingColumns], ignore_index=True)
+                    finalData = finalData.append(sheet[matchingColumns],
+                                                 ignore_index=True)
                 else:
                     print('Found no data on this sheet. Moving on.')
 
@@ -90,7 +99,8 @@ def main(filenames, oldMaster, lookupTable):
 
     # Save the output as a .xlsx file.
     # %%
-    writer = pd.ExcelWriter('CurrentMaster' + time.strftime('%Y-%m-%d-%H%M') + '.xlsx', engine='xlsxwriter')
+    writer = pd.ExcelWriter('CurrentMaster' + time.strftime('%Y-%m-%d-%H%M')
+                            + '.xlsx', engine='xlsxwriter')
     finalData.to_excel(writer, sheet_name='Master')
     writer.save()
     print('---')
