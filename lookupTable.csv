@@ -1,0 +1,6 @@
+PPN,Invoice Number,Inv Amt,Invoice Date,Qty
+Material Number,Invoice,Split Dollars,Date,Qty
+Product,Invoice Number,AdjPOS,Billing Date,Quantity
+Item,,Adj Inv Amt,Trans Date,QTY
+PtNumber,,,,
+Part Num,,,,
