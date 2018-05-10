@@ -152,7 +152,7 @@ class ColumnEdit(QMainWindow):
         self.colTree = QTreeWidget(self)
         self.colTree.resize(500, 200)
         self.colTree.setColumnCount(1)
-        self.colTree.setHeaderLabels(["TCOM Column Names"])
+        self.colTree.setHeaderLabels(['TCOM Column Names'])
 
         # Create the button for adding data names.
         btnAddName = QPushButton('Add Lookup Name', self)

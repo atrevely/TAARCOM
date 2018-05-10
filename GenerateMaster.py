@@ -1,15 +1,16 @@
 import pandas as pd
 import time
+import os.path
 
 
 # The main function.
-def main(filenames, oldMaster, lookupTable):
+def main(filepaths, oldMaster, lookupTable):
     """Processes Excel files and appends them to a master list.
 
     Keyword arguments:
-    filenames -- filepaths for opening (Excel) files to process.
+    filepaths -- paths for opening (Excel) files to process.
     oldMaster -- current master list (in Excel) to which we are appending data.
-    lookupTable -- dataframe which links master columns to file data.
+    lookupTable -- dataframe which links master columns to file data columns.
     """
 
     # Get the master dataframe ready for the new data.
@@ -30,13 +31,16 @@ def main(filenames, oldMaster, lookupTable):
         # These are our names for the data in the master list.
         columnNames = list(lookupTable)
         finalData = pd.DataFrame(columns=columnNames)
-        filesProcessed = pd.DataFrame(columns=['Filepaths'])
+        filesProcessed = pd.DataFrame(columns=['Filenames'])
 
+    # Strip the root off of the filepaths and leave just the filenames.
+    filenames = [os.path.basename(val) for val in filepaths]
     # Check if we've duplicated any files.
-    duplicates = list(set(filenames).intersection(filesProcessed['Filepaths']))
+    duplicates = list(set(filenames).intersection(filesProcessed['Filenames']))
+    # Don't let duplicate files get processed.
     filenames = [val for val in filenames if val not in duplicates]
     if duplicates:
-        # Don't let duplicate files get processed.
+        # Let us know we found duplictes and removed them.
         print('---')
         print('The following files are already in the master:')
         for file in list(duplicates):
@@ -49,14 +53,9 @@ def main(filenames, oldMaster, lookupTable):
             print('---')
             return
 
-    # Add the new files we processed to the list.
-    filenamesFrame = pd.DataFrame({'Filepaths': filenames})
-    filesProcessed = filesProcessed.append(filenamesFrame,
-                                           ignore_index=True)
-
     # Read in each new file with Pandas and store them as dictionaries.
     # Each dictionary has a dataframe for each sheet in the file.
-    inputData = [pd.read_excel(filename, None) for filename in filenames]
+    inputData = [pd.read_excel(filepath, None) for filepath in filepaths]
 
     # Decide which columns we want formatted as dollar amounts.
     dollarCols = ['Cust Revenue YTD', 'Invoiced Dollars', 'Actual Comm Paid',
@@ -123,11 +122,18 @@ def main(filenames, oldMaster, lookupTable):
                 else:
                     print('Found no data on this sheet. Moving on.')
 
+    # Clean up the master list before we save it.
+    # %%
     # Replace NaNs with empty cells.
     finalData = finalData.fillna('')
 
     # Reorder columns to match the lookup table.
     finalData = finalData.loc[:, list(lookupTable)]
+
+    # Add the new files we processed to the filepath list.
+    filenamesFrame = pd.DataFrame({'Filenames': filenames})
+    filesProcessed = filesProcessed.append(filenamesFrame,
+                                           ignore_index=True)
 
     # Save the output as a .xlsx file.
     # %%
