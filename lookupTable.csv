@@ -1,6 +1,6 @@
-PPN,Invoice Number,Inv Amt,Qty,POS Customer,Distributor,City,State,Zip Code,Commission Rate,Ship Date,Prod Class,Ship To,PL,Comm Paid,Customer Revenue YTD,Unique Number,Ship to Rep,Ship to Rep Name,Rep Group
-Material Number,Invoice,Split Dollars,Qty,Ship To Name,Sold To Name,City,State,Zip Code,Prod Class Rate,Billing Date,Prod Class,Ship To,PL,Commissions,Customer Revenue YTD,Unique Number,Ship to Rep,Ship to Rep Name,Rep Group
-Product,Invoice Number,AdjPOS,Quantity,,,,,,,,,,,,,,,,
-Item,,Adj Inv Amt,QTY,,,,,,,,,,,,,,,,
-PtNumber,,,,,,,,,,,,,,,,,,,
-Part Num,,,,,,,,,,,,,,,,,,,
+Part Number,Invoice Number,Inv Amt,Qty,POS Customer,Distributor,City,State,Zip Code,Commission Rate,Ship Date,Prod Class,Ship To,PL,Comm Paid,Cust Revenue YTD,Unique Number,Ship to Rep,Ship to Rep Name,Rep Group,Paid-On Revenue,Unit Price,On/Offshore
+Material Description,Invoice,Invoice Amount,Qty,Ship To Name,Sold To Name,City,State,Zip Code,Prod Class Rate,Billing Date,Prod Class,Ship To,PL,Commissions,Customer Revenue YTD,Unique Number,Ship to Rep,Ship to Rep Name,Rep Group,Actual Dollars,Unit Price,
+Product,Invoice Number,,Quantity,,,,,,,,,,,,,,,,,,,
+Item,,,QTY,,,,,,,,,,,,,,,,,,,
+PtNumber,,,,,,,,,,,,,,,,,,,,,,
+Part Num,,,,,,,,,,,,,,,,,,,,,,

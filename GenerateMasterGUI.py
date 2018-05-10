@@ -179,7 +179,6 @@ class ColumnEdit(QMainWindow):
         # Make the items editable via double-click.
         for colName in list(lookupTable):
             dataCol = QTreeWidgetItem([colName])
-            dataCol.setFlags(dataCol.flags() | QtCore.Qt.ItemIsEditable)
             self.colTree.addTopLevelItem(dataCol)
             for rawName in lookupTable[colName].dropna():
                 newChild = QTreeWidgetItem([rawName])
@@ -207,7 +206,6 @@ class ColumnEdit(QMainWindow):
         # Check to see if we've entered text.
         if ok and text != '':
             newTCOM = QTreeWidgetItem([text])
-            newTCOM.setFlags(newTCOM.flags() | QtCore.Qt.ItemIsEditable)
             self.colTree.addTopLevelItem(newTCOM)
 
     # Allow delete key to remove items at all levels.

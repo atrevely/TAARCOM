@@ -17,7 +17,8 @@ def main(filenames, oldMaster, lookupTable):
     # Check to see if we've supplied an existing master list to append to,
     # otherwise start a new one.
     if oldMaster:
-        finalData = pd.read_excel(oldMaster)
+        finalData = pd.read_excel(oldMaster, 'Master')
+        filesProcessed = pd.read_excel(oldMaster, 'Files Processed')
         print('Appending files to old master.')
         if list(finalData) != list(lookupTable):
             print('---')
@@ -27,11 +28,39 @@ def main(filenames, oldMaster, lookupTable):
     else:
         print('No existing master list provided. Starting a new one.')
         # These are our names for the data in the master list.
-        finalData = pd.DataFrame(columns=list(lookupTable))
+        columnNames = list(lookupTable)
+        finalData = pd.DataFrame(columns=columnNames)
+        filesProcessed = pd.DataFrame(columns=['Filepaths'])
+
+    # Check if we've duplicated any files.
+    duplicates = list(set(filenames).intersection(filesProcessed['Filepaths']))
+    filenames = [val for val in filenames if val not in duplicates]
+    if duplicates:
+        # Don't let duplicate files get processed.
+        print('---')
+        print('The following files are already in the master:')
+        for file in list(duplicates):
+            print(file)
+        print('Duplicate files were removed from processing.')
+        if not filenames:
+            print('---')
+            print('Files were all duplicates.')
+            print('Please try again.')
+            print('---')
+            return
+
+    # Add the new files we processed to the list.
+    filenamesFrame = pd.DataFrame({'Filepaths': filenames})
+    filesProcessed = filesProcessed.append(filenamesFrame,
+                                           ignore_index=True)
 
     # Read in each new file with Pandas and store them as dictionaries.
     # Each dictionary has a dataframe for each sheet in the file.
     inputData = [pd.read_excel(filename, None) for filename in filenames]
+
+    # Decide which columns we want formatted as dollar amounts.
+    dollarCols = ['Cust Revenue YTD', 'Invoiced Dollars', 'Actual Comm Paid',
+                  'Unit Price', 'Paid-On Revenue', 'Gross Comm Earned']
 
     # Go through each file, grab the new data, and put it in the master list.
     # %%
@@ -74,6 +103,9 @@ def main(filenames, oldMaster, lookupTable):
                 else:
                     sheet = sheet.rename(index=str,
                                          columns={columnName[0]: dataName})
+                    # Format to dollar amount (with commas as thousands).
+                    if dataName in dollarCols:
+                        sheet[dataName] = sheet[dataName].apply(lambda x: '${:,.2f}'.format(x))
 
             # Now that we've renamed all of the relevant columns,
             # append the new sheet to the master list, where only the properly
@@ -102,6 +134,7 @@ def main(filenames, oldMaster, lookupTable):
     writer = pd.ExcelWriter('CurrentMaster' + time.strftime('%Y-%m-%d-%H%M')
                             + '.xlsx', engine='xlsxwriter')
     finalData.to_excel(writer, sheet_name='Master')
+    filesProcessed.to_excel(writer, sheet_name='Files Processed')
     writer.save()
     print('---')
     print('New master list generated.')
