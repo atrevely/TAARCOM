@@ -57,6 +57,10 @@ def main(filepaths, oldMaster, lookupTable):
     # Each dictionary has a dataframe for each sheet in the file.
     inputData = [pd.read_excel(filepath, None) for filepath in filepaths]
 
+    # Read in the Master Lookup.
+    masterLookup = pd.read_excel('LookupMaster052018.xlsx')
+    masterLookup = masterLookup.fillna('')
+
     # Decide which columns we want formatted as dollar amounts.
     dollarCols = ['Cust Revenue YTD', 'Invoiced Dollars', 'Actual Comm Paid',
                   'Unit Price', 'Paid-On Revenue', 'Gross Comm Earned']
@@ -121,6 +125,33 @@ def main(filepaths, oldMaster, lookupTable):
                                                  ignore_index=True)
                 else:
                     print('Found no data on this sheet. Moving on.')
+
+    # Create and fill columns of derived data.
+    # %%
+    # Add new columns to final data.
+    finalData['Sales Primary'] = ''
+    finalData['Sales Secondary'] = ''
+
+    # Find match for each row in Lookup Master and tag it.
+    for row in range(len(finalData)):
+        # First match part number.
+        partNoMatches = masterLookup.loc[finalData.loc[row, 'Part Number'] == masterLookup['PPN']]
+        # Next match End Customer.
+        finalMatch = partNoMatches.loc[finalData.loc[row, 'POS Customer'] == partNoMatches['POSCustomer']]
+        # Make sure we found exactly one match.
+        if len(finalMatch) == 1:
+            # Grab primary and secondary sales people from Lookup Master.
+            finalData.loc[row, 'Sales Primary'] = finalMatch['Sales'].str[0:2].tolist()[0]
+            finalData.loc[row, 'Sales Secondary'] = finalMatch['Sales'].str[2:4].tolist()[0]
+        elif len(finalMatch) > 1:
+            print('Found multiple matches for row '
+                  + str(row + 1) + ' in Lookup Master')
+            print('---')
+        else:
+            print('Found no matches for row '
+                  + str(row + 1) + ' in Lookup Master')
+            print('---')
+
 
     # Clean up the master list before we save it.
     # %%
