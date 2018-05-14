@@ -15,13 +15,21 @@ def main(filepaths, oldMaster, lookupTable):
 
     # Get the master dataframe ready for the new data.
     # %%
+    # Get column names ready.
+    # Lookup data.
+    columnNames = list(lookupTable)
+    # Derived data.
+    columnNames[5:5] = ['Sales Primary']
+    columnNames[6:6] = ['Sales Secondary']
+    columnNames[7:7] = ['TName']
+
     # Check to see if we've supplied an existing master list to append to,
     # otherwise start a new one.
     if oldMaster:
         finalData = pd.read_excel(oldMaster, 'Master')
         filesProcessed = pd.read_excel(oldMaster, 'Files Processed')
         print('Appending files to old master.')
-        if list(finalData) != list(lookupTable):
+        if list(finalData) != columnNames:
             print('---')
             print('Columns in old master do not match current columns!')
             print('Please check column names and try again.')
@@ -29,7 +37,6 @@ def main(filepaths, oldMaster, lookupTable):
     else:
         print('No existing master list provided. Starting a new one.')
         # These are our names for the data in the master list.
-        columnNames = list(lookupTable)
         finalData = pd.DataFrame(columns=columnNames)
         filesProcessed = pd.DataFrame(columns=['Filenames'])
 
@@ -59,6 +66,7 @@ def main(filepaths, oldMaster, lookupTable):
 
     # Read in the Master Lookup.
     masterLookup = pd.read_excel('LookupMaster052018.xlsx')
+    # Fill NaNs with blank entries.
     masterLookup = masterLookup.fillna('')
 
     # Decide which columns we want formatted as dollar amounts.
@@ -85,7 +93,7 @@ def main(filepaths, oldMaster, lookupTable):
                   + sheetName)
 
             # Iterate over each column of data that we want to append.
-            for dataName in list(finalData):
+            for dataName in list(lookupTable):
                 # Grab list of names that the data could potentially be under.
                 nameList = lookupTable[dataName].tolist()
 
@@ -110,6 +118,9 @@ def main(filepaths, oldMaster, lookupTable):
                     if dataName in dollarCols:
                         sheet[dataName] = sheet[dataName].apply(lambda x: '${:,.2f}'.format(x))
 
+            # Replace NaNs in the sheet with empty field.
+            sheet = sheet.fillna('')
+
             # Now that we've renamed all of the relevant columns,
             # append the new sheet to the master list, where only the properly
             # named columns are appended.
@@ -119,7 +130,7 @@ def main(filepaths, oldMaster, lookupTable):
                 print('---')
                 return
             else:
-                matchingColumns = [val for val in list(sheet) if val in list(finalData)]
+                matchingColumns = [val for val in list(sheet) if val in list(lookupTable)]
                 if len(matchingColumns) > 0:
                     finalData = finalData.append(sheet[matchingColumns],
                                                  ignore_index=True)
@@ -128,11 +139,7 @@ def main(filepaths, oldMaster, lookupTable):
 
     # Create and fill columns of derived data.
     # %%
-    # Add new columns to final data.
-    finalData['Sales Primary'] = ''
-    finalData['Sales Secondary'] = ''
-
-    # Find match for each row in Lookup Master and tag it.
+    # Find matches in Lookup Master and extract data from them.
     for row in range(len(finalData)):
         # First match part number.
         partNoMatches = masterLookup.loc[finalData.loc[row, 'Part Number'] == masterLookup['PPN']]
@@ -143,23 +150,12 @@ def main(filepaths, oldMaster, lookupTable):
             # Grab primary and secondary sales people from Lookup Master.
             finalData.loc[row, 'Sales Primary'] = finalMatch['Sales'].str[0:2].tolist()[0]
             finalData.loc[row, 'Sales Secondary'] = finalMatch['Sales'].str[2:4].tolist()[0]
-        elif len(finalMatch) > 1:
-            print('Found multiple matches for row '
-                  + str(row + 1) + ' in Lookup Master')
-            print('---')
-        else:
-            print('Found no matches for row '
-                  + str(row + 1) + ' in Lookup Master')
-            print('---')
-
+            finalData.loc[row, 'TName'] = finalMatch['Tname'].str[:].tolist()[0]
 
     # Clean up the master list before we save it.
     # %%
-    # Replace NaNs with empty cells.
-    finalData = finalData.fillna('')
-
     # Reorder columns to match the lookup table.
-    finalData = finalData.loc[:, list(lookupTable)]
+    finalData = finalData.loc[:, columnNames]
 
     # Add the new files we processed to the filepath list.
     filenamesFrame = pd.DataFrame({'Filenames': filenames})
