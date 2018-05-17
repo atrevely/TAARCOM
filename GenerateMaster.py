@@ -15,13 +15,11 @@ def main(filepaths, oldMaster, lookupTable):
 
     # Get the master dataframe ready for the new data.
     # %%
-    # Get column names ready.
-    # Lookup data.
+    # Grab lookup table data names.
     columnNames = list(lookupTable)
-    # Derived data.
-    columnNames[5:5] = ['Sales Primary']
-    columnNames[6:6] = ['Sales Secondary']
-    columnNames[7:7] = ['TName']
+    # Add in derived data names.
+    columnNames[5:5] = ['TName']
+    columnNames[5:5] = ['Sales Primary', 'Sales Secondary']
 
     # Check to see if we've supplied an existing master list to append to,
     # otherwise start a new one.
@@ -33,12 +31,14 @@ def main(filepaths, oldMaster, lookupTable):
             print('---')
             print('Columns in old master do not match current columns!')
             print('Please check column names and try again.')
+            print('***')
             return
     else:
         print('No existing master list provided. Starting a new one.')
         # These are our names for the data in the master list.
         finalData = pd.DataFrame(columns=columnNames)
-        filesProcessed = pd.DataFrame(columns=['Filenames'])
+        filesProcessed = pd.DataFrame(columns=['Filenames',
+                                               'Total Commissions'])
 
     # Strip the root off of the filepaths and leave just the filenames.
     filenames = [os.path.basename(val) for val in filepaths]
@@ -57,7 +57,7 @@ def main(filepaths, oldMaster, lookupTable):
             print('---')
             print('Files were all duplicates.')
             print('Please try again.')
-            print('---')
+            print('***')
             return
 
     # Read in each new file with Pandas and store them as dictionaries.
@@ -70,8 +70,8 @@ def main(filepaths, oldMaster, lookupTable):
     masterLookup = masterLookup.fillna('')
 
     # Decide which columns we want formatted as dollar amounts.
-    dollarCols = ['Cust Revenue YTD', 'Invoiced Dollars', 'Actual Comm Paid',
-                  'Unit Price', 'Paid-On Revenue', 'Gross Comm Earned']
+    dollarCols = ['Cust Revenue YTD', 'Invoiced Dollars', 'Unit Price',
+                  'Paid-On Revenue', 'Gross Comm Earned']
 
     # Go through each file, grab the new data, and put it in the master list.
     # %%
@@ -83,10 +83,13 @@ def main(filepaths, oldMaster, lookupTable):
         fileNum += 1
         print('---')
         print('Working on file: ' + filename)
+        # Set total commissions for file back to zero.
+        totalComm = 0
 
         # Iterate over each dataframe in the ordered dictionary.
         # Each sheet in the file is its own dataframe in the dictionary.
         for sheetName in list(newData):
+            # Grab next sheet in file.
             sheet = newData[sheetName]
             totalRows = sheet.shape[0]
             print('Found ' + str(totalRows) + ' entries in the tab: '
@@ -109,12 +112,12 @@ def main(filepaths, oldMaster, lookupTable):
                 elif len(columnName) > 1:
                     print('Found multiple matches for: ' + dataName)
                     print('Please fix column names and try again.')
-                    print('---')
+                    print('***')
                     return
                 else:
                     sheet = sheet.rename(index=str,
                                          columns={columnName[0]: dataName})
-                    # Format to dollar amount (with commas as thousands).
+                    # Format to dollar amount (with commas at thousands).
                     if dataName in dollarCols:
                         sheet[dataName] = sheet[dataName].apply(lambda x: '${:,.2f}'.format(x))
 
@@ -127,15 +130,37 @@ def main(filepaths, oldMaster, lookupTable):
             if sheet.columns.duplicated().any():
                 print('Two items are being mapped to the same master column!')
                 print('Please check column mappings and try again.')
-                print('---')
+                print('***')
                 return
+            elif 'Actual Comm Paid' not in list(sheet):
+                print('No commission data found on this sheet.')
+                print('Moving on.')
+                print('-')
             else:
                 matchingColumns = [val for val in list(sheet) if val in list(lookupTable)]
                 if len(matchingColumns) > 0:
+                    # Append matching data.
                     finalData = finalData.append(sheet[matchingColumns],
                                                  ignore_index=True)
+                    # Sum commissions paid on sheet.
+                    print('Commissions for this sheet: ' 
+                          + '${:,.2f}'.format(sheet['Actual Comm Paid'].sum()))
+                    print('-')
+                    totalComm += sheet['Actual Comm Paid'].sum()
+                    # Format to dollars.
+                    sheet['Actual Comm Paid'] = sheet['Actual Comm Paid'].apply(lambda x: '${:,.2f}'.format(x))
                 else:
                     print('Found no data on this sheet. Moving on.')
+                    print('-')
+
+        # Show total commissions.
+        print('-')
+        print('Total commissions for this file: '
+              '${:,.2f}'.format(totalComm))
+        # Append filename and commissions to Files Processed sheet.
+        newFile = pd.DataFrame({'Filenames': [filename],
+                                'Total Commissions': [totalComm]})
+        filesProcessed = filesProcessed.append(newFile, ignore_index=True)
 
     # Create and fill columns of derived data.
     # %%
@@ -144,7 +169,9 @@ def main(filepaths, oldMaster, lookupTable):
         # First match part number.
         partNoMatches = masterLookup.loc[finalData.loc[row, 'Part Number'] == masterLookup['PPN']]
         # Next match End Customer.
-        finalMatch = partNoMatches.loc[finalData.loc[row, 'POS Customer'] == partNoMatches['POSCustomer']]
+        customerMatches = partNoMatches.loc[finalData.loc[row, 'End Customer'] == partNoMatches['EndCustomer']]
+        # Finally match POS Customer.
+        finalMatch = customerMatches.loc[finalData.loc[row, 'POS Customer'] == partNoMatches['POSCustomer']]
         # Make sure we found exactly one match.
         if len(finalMatch) == 1:
             # Grab primary and secondary sales people from Lookup Master.
@@ -157,18 +184,13 @@ def main(filepaths, oldMaster, lookupTable):
     # Reorder columns to match the lookup table.
     finalData = finalData.loc[:, columnNames]
 
-    # Add the new files we processed to the filepath list.
-    filenamesFrame = pd.DataFrame({'Filenames': filenames})
-    filesProcessed = filesProcessed.append(filenamesFrame,
-                                           ignore_index=True)
-
     # Save the output as a .xlsx file.
     # %%
     writer = pd.ExcelWriter('CurrentMaster' + time.strftime('%Y-%m-%d-%H%M')
                             + '.xlsx', engine='xlsxwriter')
-    finalData.to_excel(writer, sheet_name='Master')
-    filesProcessed.to_excel(writer, sheet_name='Files Processed')
+    finalData.to_excel(writer, sheet_name='Master', index=False)
+    filesProcessed.to_excel(writer, sheet_name='Files Processed', index=False)
     writer.save()
     print('---')
     print('New master list generated.')
-    print('---')
+    print('***')
