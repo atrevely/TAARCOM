@@ -71,10 +71,6 @@ def main(filepaths, oldMaster, lookupTable):
     # Fill NaNs with blank entries.
     masterLookup = masterLookup.fillna('')
 
-    # Decide which columns we want formatted as dollar amounts.
-    dollarCols = ['Cust Revenue YTD', 'Invoiced Dollars', 'Unit Price',
-                  'Paid-On Revenue', 'Gross Comm Earned']
-
     # Go through each file, grab the new data, and put it in the master list.
     # %%
     # Iterate through each file that we're appending to the master list.
@@ -119,9 +115,6 @@ def main(filepaths, oldMaster, lookupTable):
                 else:
                     sheet = sheet.rename(index=str,
                                          columns={columnName[0]: dataName})
-                    # Format to dollar amount (with commas at thousands).
-                    if dataName in dollarCols:
-                        sheet[dataName] = sheet[dataName].apply(lambda x: '${:,.2f}'.format(x))
 
             # Replace NaNs in the sheet with empty field.
             sheet = sheet.fillna('')
@@ -146,8 +139,6 @@ def main(filepaths, oldMaster, lookupTable):
                           + '${:,.2f}'.format(sheet['Actual Comm Paid'].sum()))
                     print('-')
                     totalComm += sheet['Actual Comm Paid'].sum()
-                    # Format to dollars.
-                    sheet['Actual Comm Paid'] = sheet['Actual Comm Paid'].apply(lambda x: '${:,.2f}'.format(x))
                     # Append matching data.
                     finalData = finalData.append(sheet[matchingColumns],
                                                  ignore_index=True)
