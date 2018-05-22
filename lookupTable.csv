@@ -1,6 +1,11 @@
-Part Number,Invoice Number,Inv Amt,Qty,POS Customer,Distributor,City,State,Zip Code,Commission Rate,Ship Date,Prod Class,Ship To,PL,Actual Comm Paid,Cust Revenue YTD,Unique Number,Ship to Rep,Ship to Rep Name,Rep Group,Paid-On Revenue,Unit Price,On/Offshore,End Customer
-Material Description,Invoice,Invoice Amount,Qty,Ship To Name,Sold To Name,City,State,Zip Code,Prod Class Rate,Billing Date,Prod Class,Ship To,PL,Commissions,Customer Revenue YTD,Unique Number,Ship to Rep,Ship to Rep Name,Rep Group,Actual Dollars,Unit Price,,End Customer
-Product,Invoice Number,,Quantity,,,,,,,,,,,,,,,,,,,,End Name
-Item,test,,QTY,,,,,,,,,,,,,,,,,,,,
-PtNumber,test,,,,,,,,,,,,,,,,,,,,,,
-Part Num,test,,,,,,,,,,,,,,,,,,,,,,
+Billing Customer,Distributor,Invoice Number,Part Number,Quantity,Unit Price,Invoiced Dollars,Paid-On Revenue,Split Percentage,Commission Rate,Actual Comm Paid,Invoice Date,On/Offshore,PL,Division,City,State,Zip Code,Gross Rev Reduction,Product Category,Shared Rev Tier Rate,Cust Revenue YTD,Total NDS,Post-Split NDS,End Customer,Cust Part Number,End Market,Q Number
+Cust Name,Disti,Bill Doc.,Databook Product,Billed Qty,ASP,Actual Dollars,Adj Inv Amt,Comm %,%,Act Comm Due,Bill Date,Comm Type,L1_Segm,Division,Address,CustState,CustZip,Revenue Margin Rate,Prod Class,Customer Revenue Tier Rate,Customer Revenue YTD,Ext NDS,AdjNDS,Design Customer,Cust P/N,Application desc,Prod Country
+CustName,Distributor,Invoice,Item,Order quantity,Disti selling price (per piece),Ext Resale,AdjPOS,Comm.%,Comm Rate,Comm Due,Billing Date,,PL,Family Group,City,Prod St,Prod Zip,,,,,,,Disti End Cust Name,,End Customer Market segment,Material (Q-no.)
+Customer,Distributor Name,Invoice Number,Material Description,Pre Split Qty,Price,Invoice Amt,End Customer Value,Split Percent,Commission Rate,Comm.,Date,,,L1_TO_Segm,City/State,State,Zip,,,,,,,End Customer,,End Market,Material Entered
+Customer Name,Sold To Name,Invoice#,P/N,Qty,Resale,POS,Gross Value,Split%,Prod Class Rate,CommEarned,Date,,,Product Family,CustCity,,Zip Code,,,,,,,End Name,,,
+Name,,POS Invoice Number,Part Number,QTY,Sales Price,Pre Split Amt,Post Split Amt,,Rate,Commissions,Invoice Date,,,,Prod City,,,,,,,,,EndCust,,,
+SC Name,,,PartNo,Quantity,Test89,Total amount,Split Dollars,,Rep 1%,Total,POS Invoice Date,,,,Sales Region,,,,,,,,,EndCustomer,,,
+Ship To Name,,,Product,Text90,Unit Cost,,SumOfCstExt,,Total %,Total Comm,POS_ShpDate,,,,SC City,,,,,,,,,,,,
+Sold-TO-Name,,,PtNo,,Unit Price,,Value,,,Com Due,POS-ShpDate,,,,,,,,,,,,,,,,
+Source Customer Name,,,,,,,,,,,Sales Date,,,,,,,,,,,,,,,,
+,,,,,,,,,,,Trans date,,,,,,,,,,,,,,,,

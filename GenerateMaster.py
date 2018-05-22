@@ -18,8 +18,10 @@ def main(filepaths, oldMaster, lookupTable):
     # Grab lookup table data names.
     columnNames = list(lookupTable)
     # Add in derived data names.
-    columnNames[5:5] = ['TName']
-    columnNames[5:5] = ['Sales Primary', 'Sales Secondary']
+    columnNames[3:3] = ['T-Name', 'CM', 'T-End Cust']
+    columnNames[0:0] = ['Sales Primary', 'Sales Secondary']
+    # LOAD UP PRINCIPAL HERE
+    # TNAME, CM, ENDCUST
 
     # Check to see if we've supplied an existing master list to append to,
     # otherwise start a new one.
@@ -139,9 +141,6 @@ def main(filepaths, oldMaster, lookupTable):
             else:
                 matchingColumns = [val for val in list(sheet) if val in list(lookupTable)]
                 if len(matchingColumns) > 0:
-                    # Append matching data.
-                    finalData = finalData.append(sheet[matchingColumns],
-                                                 ignore_index=True)
                     # Sum commissions paid on sheet.
                     print('Commissions for this sheet: ' 
                           + '${:,.2f}'.format(sheet['Actual Comm Paid'].sum()))
@@ -149,6 +148,9 @@ def main(filepaths, oldMaster, lookupTable):
                     totalComm += sheet['Actual Comm Paid'].sum()
                     # Format to dollars.
                     sheet['Actual Comm Paid'] = sheet['Actual Comm Paid'].apply(lambda x: '${:,.2f}'.format(x))
+                    # Append matching data.
+                    finalData = finalData.append(sheet[matchingColumns],
+                                                 ignore_index=True)
                 else:
                     print('Found no data on this sheet. Moving on.')
                     print('-')
@@ -169,15 +171,15 @@ def main(filepaths, oldMaster, lookupTable):
         # First match part number.
         partNoMatches = masterLookup.loc[finalData.loc[row, 'Part Number'] == masterLookup['PPN']]
         # Next match End Customer.
-        customerMatches = partNoMatches.loc[finalData.loc[row, 'End Customer'] == partNoMatches['EndCustomer']]
-        # Finally match POS Customer.
-        finalMatch = customerMatches.loc[finalData.loc[row, 'POS Customer'] == partNoMatches['POSCustomer']]
+        customerMatches = partNoMatches.loc[finalData.loc[row, 'Billing Customer'] == partNoMatches['POSCustomer']]
         # Make sure we found exactly one match.
-        if len(finalMatch) == 1:
+        if len(customerMatches) == 1:
             # Grab primary and secondary sales people from Lookup Master.
-            finalData.loc[row, 'Sales Primary'] = finalMatch['Sales'].str[0:2].tolist()[0]
-            finalData.loc[row, 'Sales Secondary'] = finalMatch['Sales'].str[2:4].tolist()[0]
-            finalData.loc[row, 'TName'] = finalMatch['Tname'].str[:].tolist()[0]
+            finalData.loc[row, 'Sales Primary'] = customerMatches['Sales'].str[0:2].tolist()[0]
+            finalData.loc[row, 'Sales Secondary'] = customerMatches['Sales'].str[2:4].tolist()[0]
+            finalData.loc[row, 'T-Name'] = customerMatches['Tname'].str[:].tolist()[0]
+            finalData.loc[row, 'CM'] = customerMatches['CM'].str[:].tolist()[0]
+            finalData.loc[row, 'T-End Cust'] = customerMatches['EndCustomer'].str[:].tolist()[0]
 
     # Clean up the master list before we save it.
     # %%
