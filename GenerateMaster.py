@@ -18,8 +18,8 @@ def main(filepaths, oldMaster, lookupTable):
     # Grab lookup table data names.
     columnNames = list(lookupTable)
     # Add in derived data names.
-    columnNames[3:3] = ['T-Name', 'CM', 'T-End Cust']
     columnNames[0:0] = ['Sales Primary', 'Sales Secondary']
+    columnNames[3:3] = ['T-Name', 'CM', 'T-End Cust', 'Principal']
     # LOAD UP PRINCIPAL HERE
     # TNAME, CM, ENDCUST
 
@@ -27,6 +27,7 @@ def main(filepaths, oldMaster, lookupTable):
     # otherwise start a new one.
     if oldMaster:
         finalData = pd.read_excel(oldMaster, 'Master')
+        oldMastLen = len(finalData)
         filesProcessed = pd.read_excel(oldMaster, 'Files Processed')
         print('Appending files to old master.')
         if list(finalData) != columnNames:
@@ -158,7 +159,7 @@ def main(filepaths, oldMaster, lookupTable):
     # Create and fill columns of derived data.
     # %%
     # Find matches in Lookup Master and extract data from them.
-    for row in range(len(finalData)):
+    for row in range(oldMastLen,len(finalData)):
         # First match part number.
         partNoMatches = masterLookup.loc[finalData.loc[row, 'Part Number'] == masterLookup['PPN']]
         # Next match End Customer.
