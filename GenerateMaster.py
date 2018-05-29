@@ -21,7 +21,7 @@ def main(filepaths, oldMaster, lookupTable):
     columnNames[0:0] = ['CM Sales', 'Design Sales']
     columnNames[3:3] = ['T-Name', 'CM', 'T-End Cust', 'Principal']
     columnNames[7:7] = ['Corrected Distributor']
-    
+
     # LOAD UP PRINCIPAL HERE
 
     # Check to see if we've supplied an existing master list to append to,
@@ -40,6 +40,7 @@ def main(filepaths, oldMaster, lookupTable):
     else:
         print('No existing master list provided. Starting a new one.')
         # These are our names for the data in the master list.
+        oldMastLen = 0
         finalData = pd.DataFrame(columns=columnNames)
         filesProcessed = pd.DataFrame(columns=['Filenames',
                                                'Total Commissions'])
@@ -69,7 +70,7 @@ def main(filepaths, oldMaster, lookupTable):
     inputData = [pd.read_excel(filepath, None) for filepath in filepaths]
 
     # Read in the Master Lookup.
-    masterLookup = pd.read_excel('LookupMaster052018.xlsx')
+    masterLookup = pd.read_excel('LookupMaster052018v2.xlsx')
     # Fill NaNs with blank entries.
     masterLookup = masterLookup.fillna('')
 
@@ -163,9 +164,10 @@ def main(filepaths, oldMaster, lookupTable):
     finalData['Billing Customer'] = finalData['Billing Customer'].astype(str)
     for row in range(oldMastLen, len(finalData)):
         # First match part number.
-        partNoMatches = masterLookup.loc[finalData.loc[row, 'Part Number'] == masterLookup['PPN']]
+        partNoMatches = masterLookup[finalData.loc[row, 'Part Number'] == masterLookup['PPN']]
         # Next match End Customer.
-        customerMatches = partNoMatches.loc[finalData.loc[row, 'Billing Customer'].lower() == partNoMatches['POSCustomer'].str.lower()]
+        customerMatches = partNoMatches[finalData.loc[row, 'Billing Customer'].lower() == partNoMatches['POSCustomer'].str.lower()]
+        customerMatches = customerMatches.reset_index()
         # Make sure we found exactly one match.
         if len(customerMatches) == 1:
             # Grab primary and secondary sales people from Lookup Master.
