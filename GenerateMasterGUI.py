@@ -7,6 +7,7 @@ from PyQt5.QtWidgets import QMainWindow, QPushButton, QApplication, \
 from PyQt5 import QtCore, QtGui
 import GenerateMaster
 
+
 class Stream(QtCore.QObject):
     """Redirects console output to text widget."""
     newText = QtCore.pyqtSignal(str)
@@ -27,12 +28,12 @@ class GenMast(QMainWindow):
         # Create a global varaiable for the lookup table.
         # We can now edit it in the ColumnEdit class, or just leave it alone.
         global lookupTable
+        # Upload lookup table, if found.
         if os.path.exists('lookupTable.csv'):
             lookupTable = pd.read_csv('lookupTable.csv', index_col=False)
 
         # Custom output stream.
-        sys.stdout = Stream(newText=self.onUpdateText)    
-
+        sys.stdout = Stream(newText=self.onUpdateText)
 
     def onUpdateText(self, text):
         """Write console output to text widget."""
@@ -95,7 +96,7 @@ class GenMast(QMainWindow):
         else:
             print('No lookup table file found!')
             print('Please make sure lookupTable.csv is in the directory.')
-            print('***')            
+            print('***')
 
     def genMastClicked(self):
         """Runs function for processing new files to master."""
