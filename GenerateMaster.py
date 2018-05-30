@@ -70,6 +70,15 @@ def main(filepaths, oldMaster, lookupTable):
     # Each dictionary has a dataframe for each sheet in the file.
     inputData = [pd.read_excel(filepath, None) for filepath in filepaths]
 
+    # Read in file of entries that need fixing.
+    if os.path.exists('EntriesNeedFixing.xlsx'):
+        fixList = pd.read_excel('EntriesNeedFixing.xlsx', 'Data')
+    else:
+        print('No Fix Entries file found!')
+        print('Please make sure EntriesNeedFixing*.xlsx is in the directory.')
+        print('***')
+        return
+
     # Read in the Master Lookup.
     if os.path.exists('LookupMaster052018v2.xlsx'):
         masterLookup = pd.read_excel('LookupMaster052018v2.xlsx')
@@ -197,7 +206,8 @@ def main(filepaths, oldMaster, lookupTable):
 
         # Find a corrected distributor match.
         # Strip extraneous characters and all spaces, and make lowercase.
-        distName = re.sub('[^a-zA-Z0-9]', '', finalData.loc[row, 'Distributor']).lower()
+        distName = re.sub('[^a-zA-Z0-9]', '',
+                          finalData.loc[row, 'Distributor']).lower()
         # Reset match count.
         matches = 0
         # Find match from distMap.
@@ -211,6 +221,13 @@ def main(filepaths, oldMaster, lookupTable):
                     finalData.loc[row, 'Corrected Distributor'] = distMap[distMap['Dist'] == dist]['Corrected Dist'].iloc[0]
                     matches += 1
 
+        # If anything isn't found, copy to Fix Entries.
+        if (len(customerMatches) != 1) or (matches != 1):
+            fixList = fixList.append(finalData.loc[row, :])
+            fixList.loc[row, 'Distributor Matches'] = matches
+            fixList.loc[row, 'Lookup Master Matches'] = len(customerMatches)
+            fixList.loc[row, 'Date Added'] = time.strftime('%Y-%m-%d')
+
     # Reorder columns to match the lookup table.
     finalData = finalData.loc[:, columnNames]
 
@@ -220,6 +237,9 @@ def main(filepaths, oldMaster, lookupTable):
                             + '.xlsx', engine='xlsxwriter')
     finalData.to_excel(writer, sheet_name='Master', index=False)
     filesProcessed.to_excel(writer, sheet_name='Files Processed', index=False)
+    writer.save()
+    writer = pd.ExcelWriter('EntriesNeedFixing.xlsx', engine='xlsxwriter')
+    fixList.to_excel(writer, sheet_name='Data', index=True)
     writer.save()
     print('---')
     print('New master list generated.')
