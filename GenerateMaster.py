@@ -1,6 +1,7 @@
 import pandas as pd
 import time
 import os.path
+import re
 
 
 # The main function.
@@ -176,6 +177,23 @@ def main(filepaths, oldMaster, lookupTable):
             finalData.loc[row, 'T-Name'] = customerMatches['Tname'][0]
             finalData.loc[row, 'CM'] = customerMatches['CM'][0]
             finalData.loc[row, 'T-End Cust'] = customerMatches['EndCustomer'][0]
+
+    # Load distMap.
+    if os.path.exists('distributorLookup.xlsx'):
+        distMap = pd.read_excel('distributorLookup.xlsx', 'Distributors')
+        # Iterate through each distributor and find a match.
+        for row in range(len(finalData)):
+            # Strip extraneous characters and all spaces, and make lowercase.
+            distName = re.sub('[^a-zA-Z0-9]', '', finalData.loc[row, 'Distributor']).lower()
+            # Find match from distMap.
+            for dist in distMap['Dist']:
+                if dist in distName:
+                    # Check if it's already been matched.
+                    if finalData.loc[row, 'Corrected Distributor']:
+                        finalData.loc[row, 'Corrected Distributor'] = 'ERROR: MULTIPLE MATCHES FOUND DURING PROCESSING.'
+                    else:
+                        # Input corrected distributor name.
+                        finalData.loc[row, 'Corrected Distributor'] = distMap[distMap['Dist'] == dist]['Corrected Dist'].iloc[0]
 
     # Clean up the master list before we save it.
     # %%
