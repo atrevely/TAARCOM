@@ -25,8 +25,7 @@ def main(filepaths, oldMaster, lookupTable):
 
     # LOAD UP PRINCIPAL HERE
 
-    # Check to see if we've supplied an existing master list to append to,
-    # otherwise start a new one.
+    # Check to see if we've supplied an existing master list to append to.
     if oldMaster:
         finalData = pd.read_excel(oldMaster, 'Master')
         oldMastLen = len(finalData)
@@ -38,10 +37,11 @@ def main(filepaths, oldMaster, lookupTable):
             print('Please check column names and try again.')
             print('***')
             return
+    # Start new master.
     else:
         print('No existing master list provided. Starting a new one.')
-        # These are our names for the data in the master list.
         oldMastLen = 0
+        # These are our names for the data in the master list.
         finalData = pd.DataFrame(columns=columnNames)
         filesProcessed = pd.DataFrame(columns=['Filenames',
                                                'Total Commissions'])
@@ -71,7 +71,13 @@ def main(filepaths, oldMaster, lookupTable):
     inputData = [pd.read_excel(filepath, None) for filepath in filepaths]
 
     # Read in the Master Lookup.
-    masterLookup = pd.read_excel('LookupMaster052018v2.xlsx')
+    if os.path.exists('LookupMaster052018v2.xlsx'):
+        masterLookup = pd.read_excel('LookupMaster052018v2.xlsx')
+    else:
+        print('No Lookup Master found!')
+        print('Please make sure LookupMaster*.xlsx is in the directory.')
+        print('***')
+        return
     # Fill NaNs with blank entries.
     masterLookup = masterLookup.fillna('')
 
@@ -161,8 +167,19 @@ def main(filepaths, oldMaster, lookupTable):
 
     # Create and fill columns of derived data.
     # %%
+    # Load distMap.
+    if os.path.exists('distributorLookup.xlsx'):
+        distMap = pd.read_excel('distributorLookup.xlsx', 'Distributors')
+    else:
+        print('---')
+        print('No distributor lookup found!')
+        print('Please make sure distributorLookup.xlsx is in the directory.')
+        print('***')
+        return
+
     # Find matches in Lookup Master and extract data from them.
     finalData['Billing Customer'] = finalData['Billing Customer'].astype(str)
+    # Iterate over each row of the newly appended data.
     for row in range(oldMastLen, len(finalData)):
         # First match part number.
         partNoMatches = masterLookup[finalData.loc[row, 'Part Number'] == masterLookup['PPN']]
@@ -178,25 +195,22 @@ def main(filepaths, oldMaster, lookupTable):
             finalData.loc[row, 'CM'] = customerMatches['CM'][0]
             finalData.loc[row, 'T-End Cust'] = customerMatches['EndCustomer'][0]
 
-    # Load distMap.
-    if os.path.exists('distributorLookup.xlsx'):
-        distMap = pd.read_excel('distributorLookup.xlsx', 'Distributors')
-        # Iterate through each distributor and find a match.
-        for row in range(len(finalData)):
-            # Strip extraneous characters and all spaces, and make lowercase.
-            distName = re.sub('[^a-zA-Z0-9]', '', finalData.loc[row, 'Distributor']).lower()
-            # Find match from distMap.
-            for dist in distMap['Dist']:
-                if dist in distName:
-                    # Check if it's already been matched.
-                    if finalData.loc[row, 'Corrected Distributor']:
-                        finalData.loc[row, 'Corrected Distributor'] = 'ERROR: MULTIPLE MATCHES FOUND DURING PROCESSING.'
-                    else:
-                        # Input corrected distributor name.
-                        finalData.loc[row, 'Corrected Distributor'] = distMap[distMap['Dist'] == dist]['Corrected Dist'].iloc[0]
+        # Find a corrected distributor match.
+        # Strip extraneous characters and all spaces, and make lowercase.
+        distName = re.sub('[^a-zA-Z0-9]', '', finalData.loc[row, 'Distributor']).lower()
+        # Reset match count.
+        matches = 0
+        # Find match from distMap.
+        for dist in distMap['Dist']:
+            if dist in distName:
+                # Check if it's already been matched.
+                if matches > 0:
+                    finalData.loc[row, 'Corrected Distributor'] = 'MULTIPLE MATCHES FOUND DURING PROCESSING.'
+                else:
+                    # Input corrected distributor name.
+                    finalData.loc[row, 'Corrected Distributor'] = distMap[distMap['Dist'] == dist]['Corrected Dist'].iloc[0]
+                    matches += 1
 
-    # Clean up the master list before we save it.
-    # %%
     # Reorder columns to match the lookup table.
     finalData = finalData.loc[:, columnNames]
 
