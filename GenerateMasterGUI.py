@@ -37,7 +37,6 @@ class GenMast(QMainWindow):
 
     def onUpdateText(self, text):
         """Write console output to text widget."""
-        # Print console output to text box widget.
         cursor = self.process.textCursor()
         cursor.movePosition(QtGui.QTextCursor.End)
         cursor.insertText(text)
@@ -63,12 +62,12 @@ class GenMast(QMainWindow):
         btnOpenFiles.move(30, 50)
         btnOpenFiles.clicked.connect(self.openFilesClicked)
 
-        # Button for selecting files to compile into master list.
+        # Button for selecting a current master to append to.
         btnUploadMast = QPushButton('Upload Master', self)
         btnUploadMast.move(150, 50)
         btnUploadMast.clicked.connect(self.uploadMastClicked)
 
-        # Button for editing variable names
+        # Button for editing column names/tags.
         btnEditColumns = QPushButton('Edit Column Tags', self)
         btnEditColumns.move(270, 50)
         btnEditColumns.clicked.connect(self.editColumnsClicked)
@@ -101,13 +100,17 @@ class GenMast(QMainWindow):
     def genMastClicked(self):
         """Runs function for processing new files to master."""
         # Check to see if we've selected files to process.
-        if self.filenames:
+        if self.filenames and lookupTable:
             # Run the GenerateMaster.py file.
             GenerateMaster.main(self.filenames, self.master, lookupTable)
-        else:
+        elif os.path.exists('lookupTable.csv'):
             print('No new files selected!')
             print('Use the Open Files button to select files.')
             print('---')
+        else:
+            print('No lookup table found!')
+            print('Please make sure lookupTable.csv is in the directory.')
+            print('***')
 
     def uploadMastClicked(self):
         """Upload an existing master list."""

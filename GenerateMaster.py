@@ -23,11 +23,9 @@ def main(filepaths, oldMaster, lookupTable):
     columnNames[3:3] = ['T-Name', 'CM', 'T-End Cust', 'Principal']
     columnNames[7:7] = ['Corrected Distributor']
 
-    # LOAD UP PRINCIPAL HERE
-
     # Check to see if we've supplied an existing master list to append to.
     if oldMaster:
-        finalData = pd.read_excel(oldMaster, 'Master')
+        finalData = pd.read_excel(oldMaster, 'Master').fillna('')
         oldMastLen = len(finalData)
         filesProcessed = pd.read_excel(oldMaster, 'Files Processed')
         print('Appending files to old master.')
@@ -70,25 +68,33 @@ def main(filepaths, oldMaster, lookupTable):
     # Each dictionary has a dataframe for each sheet in the file.
     inputData = [pd.read_excel(filepath, None) for filepath in filepaths]
 
+    # Read in distMap.
+    if os.path.exists('distributorLookup.xlsx'):
+        distMap = pd.read_excel('distributorLookup.xlsx', 'Distributors')
+    else:
+        print('---')
+        print('No distributor lookup found!')
+        print('Please make sure distributorLookup.xlsx is in the directory.')
+        print('***')
+        return
+
     # Read in file of entries that need fixing.
     if os.path.exists('EntriesNeedFixing.xlsx'):
-        fixList = pd.read_excel('EntriesNeedFixing.xlsx', 'Data')
+        fixList = pd.read_excel('EntriesNeedFixing.xlsx', 'Data').fillna('')
     else:
-        print('No Fix Entries file found!')
+        print('No EntriesNeedFixing file found!')
         print('Please make sure EntriesNeedFixing*.xlsx is in the directory.')
         print('***')
         return
 
     # Read in the Master Lookup.
     if os.path.exists('LookupMaster052018v2.xlsx'):
-        masterLookup = pd.read_excel('LookupMaster052018v2.xlsx')
+        masterLookup = pd.read_excel('LookupMaster052018v2.xlsx').fillna('')
     else:
         print('No Lookup Master found!')
         print('Please make sure LookupMaster*.xlsx is in the directory.')
         print('***')
         return
-    # Fill NaNs with blank entries.
-    masterLookup = masterLookup.fillna('')
 
     # Go through each file, grab the new data, and put it in the master list.
     # %%
@@ -124,7 +130,7 @@ def main(filepaths, oldMaster, lookupTable):
                 # Let us know if we didn't find a column that matches,
                 # or if we found too many columns that match,
                 # then rename the column in the sheet to the master name.
-                if columnName == []:
+                if not columnName:
                     print('No column found for: ' + dataName)
                 elif len(columnName) > 1:
                     print('Found multiple matches for: ' + dataName)
@@ -176,16 +182,6 @@ def main(filepaths, oldMaster, lookupTable):
 
     # Create and fill columns of derived data.
     # %%
-    # Load distMap.
-    if os.path.exists('distributorLookup.xlsx'):
-        distMap = pd.read_excel('distributorLookup.xlsx', 'Distributors')
-    else:
-        print('---')
-        print('No distributor lookup found!')
-        print('Please make sure distributorLookup.xlsx is in the directory.')
-        print('***')
-        return
-
     # Find matches in Lookup Master and extract data from them.
     finalData['Billing Customer'] = finalData['Billing Customer'].astype(str)
     # Iterate over each row of the newly appended data.
@@ -221,7 +217,7 @@ def main(filepaths, oldMaster, lookupTable):
                     finalData.loc[row, 'Corrected Distributor'] = distMap[distMap['Dist'] == dist]['Corrected Dist'].iloc[0]
                     matches += 1
 
-        # If anything isn't found, copy to Fix Entries.
+        # If any data isn't found, copy entry to Fix Entries.
         if (len(customerMatches) != 1) or (matches != 1):
             fixList = fixList.append(finalData.loc[row, :])
             fixList.loc[row, 'Distributor Matches'] = matches
@@ -233,11 +229,13 @@ def main(filepaths, oldMaster, lookupTable):
 
     # Save the output as a .xlsx file.
     # %%
+    # Save the master file.
     writer = pd.ExcelWriter('CurrentMaster' + time.strftime('%Y-%m-%d-%H%M')
                             + '.xlsx', engine='xlsxwriter')
     finalData.to_excel(writer, sheet_name='Master', index=False)
     filesProcessed.to_excel(writer, sheet_name='Files Processed', index=False)
     writer.save()
+    # Save the Needs Fixing file.
     writer = pd.ExcelWriter('EntriesNeedFixing.xlsx', engine='xlsxwriter')
     fixList.to_excel(writer, sheet_name='Data', index=True)
     writer.save()
