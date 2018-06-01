@@ -177,7 +177,8 @@ def main(filepaths, oldMaster, lookupTable):
               '${:,.2f}'.format(totalComm))
         # Append filename and commissions to Files Processed sheet.
         newFile = pd.DataFrame({'Filenames': [filename],
-                                'Total Commissions': [totalComm]})
+                                'Total Commissions': [totalComm],
+                                'Date Added': [time.strftime('%m/%d/%Y')]})
         filesProcessed = filesProcessed.append(newFile, ignore_index=True)
 
     # Create and fill columns of derived data.
@@ -222,7 +223,7 @@ def main(filepaths, oldMaster, lookupTable):
             fixList = fixList.append(finalData.loc[row, :])
             fixList.loc[row, 'Distributor Matches'] = matches
             fixList.loc[row, 'Lookup Master Matches'] = len(customerMatches)
-            fixList.loc[row, 'Date Added'] = time.strftime('%Y-%m-%d')
+            fixList.loc[row, 'Date Added'] = time.strftime('%m/%d/%Y')
 
     # Reorder columns to match the lookup table.
     finalData = finalData.loc[:, columnNames]
@@ -236,6 +237,7 @@ def main(filepaths, oldMaster, lookupTable):
     filesProcessed.to_excel(writer, sheet_name='Files Processed', index=False)
     writer.save()
     # Save the Needs Fixing file.
+    fixList.index.name = 'Master Index'
     writer = pd.ExcelWriter('EntriesNeedFixing.xlsx', engine='xlsxwriter')
     fixList.to_excel(writer, sheet_name='Data', index=True)
     writer.save()
