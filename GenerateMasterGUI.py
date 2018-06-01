@@ -100,7 +100,7 @@ class GenMast(QMainWindow):
     def genMastClicked(self):
         """Runs function for processing new files to master."""
         # Check to see if we've selected files to process.
-        if self.filenames and lookupTable:
+        if self.filenames and os.path.exists('lookupTable.csv'):
             # Run the GenerateMaster.py file.
             GenerateMaster.main(self.filenames, self.master, lookupTable)
         elif os.path.exists('lookupTable.csv'):

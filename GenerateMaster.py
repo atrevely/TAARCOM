@@ -183,6 +183,8 @@ def main(filepaths, oldMaster, lookupTable):
 
     # Create and fill columns of derived data.
     # %%
+    # Fill NaNs left over from appending.
+    finalData = finalData.fillna('')
     # Find matches in Lookup Master and extract data from them.
     finalData['Billing Customer'] = finalData['Billing Customer'].astype(str)
     # Iterate over each row of the newly appended data.
