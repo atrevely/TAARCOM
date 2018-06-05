@@ -22,6 +22,7 @@ def main(filepaths, oldMaster, lookupTable):
     columnNames[0:0] = ['CM Sales', 'Design Sales']
     columnNames[3:3] = ['T-Name', 'CM', 'T-End Cust', 'Principal']
     columnNames[7:7] = ['Corrected Distributor']
+    columnNames.append('TEMP/FINAL')
 
     # Check to see if we've supplied an existing master list to append to.
     if oldMaster:
@@ -79,11 +80,11 @@ def main(filepaths, oldMaster, lookupTable):
         return
 
     # Read in file of entries that need fixing.
-    if os.path.exists('EntriesNeedFixing.xlsx'):
-        fixList = pd.read_excel('EntriesNeedFixing.xlsx', 'Data').fillna('')
+    if os.path.exists('Entries Need Fixing.xlsx'):
+        fixList = pd.read_excel('Entries Need Fixing.xlsx', 'Data').fillna('')
     else:
-        print('No EntriesNeedFixing file found!')
-        print('Please make sure EntriesNeedFixing*.xlsx is in the directory.')
+        print('No Entries Need Fixing file found!')
+        print('Please make sure Entries Need Fixing.xlsx is in the directory.')
         print('***')
         return
 
@@ -122,7 +123,6 @@ def main(filepaths, oldMaster, lookupTable):
             for dataName in list(lookupTable):
                 # Grab list of names that the data could potentially be under.
                 nameList = lookupTable[dataName].tolist()
-
                 # Look for a match in the sheet column names.
                 sheetColumns = list(sheet)
                 columnName = [val for val in sheetColumns if val in nameList]
@@ -141,9 +141,6 @@ def main(filepaths, oldMaster, lookupTable):
                     sheet = sheet.rename(index=str,
                                          columns={columnName[0]: dataName})
 
-            # Replace NaNs in the sheet with empty field.
-            sheet = sheet.fillna('')
-
             # Now that we've renamed all of the relevant columns,
             # append the new sheet to the master list, where only the properly
             # named columns are appended.
@@ -153,6 +150,7 @@ def main(filepaths, oldMaster, lookupTable):
                 print('***')
                 return
             elif 'Actual Comm Paid' not in list(sheet):
+                # Tab has no comission data, so it is ignored.
                 print('No commission data found on this sheet.')
                 print('Moving on.')
                 print('-')
@@ -172,11 +170,10 @@ def main(filepaths, oldMaster, lookupTable):
                     print('-')
 
         # Show total commissions.
-        print('-')
         print('Total commissions for this file: '
               '${:,.2f}'.format(totalComm))
         # Append filename and commissions to Files Processed sheet.
-        newFile = pd.DataFrame({'Filenames': [filename],
+        newFile = pd.DataFrame({'Filename': [filename],
                                 'Total Commissions': [totalComm],
                                 'Date Added': [time.strftime('%m/%d/%Y')]})
         filesProcessed = filesProcessed.append(newFile, ignore_index=True)
@@ -202,6 +199,8 @@ def main(filepaths, oldMaster, lookupTable):
             finalData.loc[row, 'T-Name'] = customerMatches['Tname'][0]
             finalData.loc[row, 'CM'] = customerMatches['CM'][0]
             finalData.loc[row, 'T-End Cust'] = customerMatches['EndCustomer'][0]
+            # Update usage in lookup master
+            masterLookup.loc[customerMatches['index'], 'Last Used'] = time.strftime('%m/%d/%Y')
 
         # Find a corrected distributor match.
         # Strip extraneous characters and all spaces, and make lowercase.
@@ -214,7 +213,8 @@ def main(filepaths, oldMaster, lookupTable):
             if dist in distName:
                 # Check if it's already been matched.
                 if matches > 0:
-                    finalData.loc[row, 'Corrected Distributor'] = 'MULTIPLE MATCHES FOUND DURING PROCESSING.'
+                    # Too many matches, so clear them and check by hand.
+                    finalData.loc[row, 'Corrected Distributor'] = ''
                 else:
                     # Input corrected distributor name.
                     finalData.loc[row, 'Corrected Distributor'] = distMap[distMap['Dist'] == dist]['Corrected Dist'].iloc[0]
@@ -226,23 +226,60 @@ def main(filepaths, oldMaster, lookupTable):
             fixList.loc[row, 'Distributor Matches'] = matches
             fixList.loc[row, 'Lookup Master Matches'] = len(customerMatches)
             fixList.loc[row, 'Date Added'] = time.strftime('%m/%d/%Y')
+            finalData.loc[row, 'TEMP/FINAL'] = 'TEMP'
+        else:
+            # Everything found, so entry is final.
+            finalData.loc[row, 'TEMP/FINAL'] = 'FINAL'
 
-    # Reorder columns to match the lookup table.
+    # Reorder columns to match the desired layout in columnNames.
     finalData = finalData.loc[:, columnNames]
 
     # Save the output as a .xlsx file.
     # %%
-    # Save the master file.
-    writer = pd.ExcelWriter('CurrentMaster' + time.strftime('%Y-%m-%d-%H%M')
+    # Save the Running Master file.
+    writer = pd.ExcelWriter('Running Master ' + time.strftime('%Y-%m-%d-%H%M')
                             + '.xlsx', engine='xlsxwriter')
     finalData.to_excel(writer, sheet_name='Master', index=False)
     filesProcessed.to_excel(writer, sheet_name='Files Processed', index=False)
+    try:
+        writer.save()
+    except IOError:
+        print('---')
+        print('Running Master is open in Excel!')
+        print('Please close the file and try again.')
+        print('***')
+        return
     writer.save()
     # Save the Needs Fixing file.
     fixList.index.name = 'Master Index'
-    writer = pd.ExcelWriter('EntriesNeedFixing.xlsx', engine='xlsxwriter')
+    writer = pd.ExcelWriter('Entries Need Fixing.xlsx', engine='xlsxwriter')
     fixList.to_excel(writer, sheet_name='Data', index=True)
+    try:
+        writer.save()
+    except IOError:
+        print('---')
+        print('Entries Need Fixing is open in Excel!')
+        print('Please close the file and try again.')
+        print('***')
+        return
+    writer.save()
+    # Save the Lookup Master
+    writer = pd.ExcelWriter('Lookup Master ' + time.strftime('%Y-%m-%d-%H%M')
+                            + '.xlsx', engine='xlsxwriter')
+    masterLookup.to_excel(writer, sheet_name='Lookup', index=True)
+    try:
+        writer.save()
+    except IOError:
+        print('---')
+        print('Lookup Master is open in Excel!')
+        print('Please close the file and try again.')
+        print('***')
+        return
     writer.save()
     print('---')
-    print('New master list generated.')
+    print('Updates completed successfully!')
+    print('---')
+    print('Running Master updated.')
+    print('Lookup Master updated.')
+    print('Entries Need Fixing updated.')
     print('***')

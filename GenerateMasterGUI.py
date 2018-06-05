@@ -121,7 +121,7 @@ class GenMast(QMainWindow):
             print('Master list provided:')
             print(self.master)
             print('---')
-            if 'CurrentMaster' not in self.master:
+            if 'Running Master' not in self.master:
                 print('Caution!')
                 print('The file uploaded as master \
                       does not appear to be a master list.')
@@ -135,7 +135,7 @@ class GenMast(QMainWindow):
 
         # Check if the current master got uploaded as a new file.
         for names in self.filenames:
-            if 'CurrentMaster' in names:
+            if 'Running Master' in names:
                 print('Master uploaded as new file.')
                 print('Try uploading files again.')
                 print('---')
