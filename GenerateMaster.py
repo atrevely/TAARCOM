@@ -1,5 +1,6 @@
 import pandas as pd
 import time
+from dateutil.parser import parse
 import calendar
 import math
 import os.path
@@ -209,12 +210,20 @@ def main(filepaths, oldMaster, lookupTable):
             # Update usage in lookup master
             masterLookup.loc[customerMatches['index'], 'Last Used'] = time.strftime('%m/%d/%Y')
 
-        # Input the date information.
-        year = finalData.loc[row, 'Invoice Date'][6:10]
-        month = finalData.loc[row, 'Invoice Date'][0:2]
-        finalData.loc[row, 'Year'] = int(year)
-        finalData.loc[row, 'Month'] = calendar.month_name[int(month)][0:3]
-        finalData.loc[row, 'Quarter'] = year + 'Q' + str(math.ceil(int(month)/3)) 
+        # Try parsing the date.
+        dateError = 0
+        try:
+            parse(finalData.loc[row, 'Invoice Date'])
+        except ValueError:
+            dateError = 1
+        if not dateError:
+            dateParsed = parse(finalData.loc[row, 'Invoice Date'])
+            # Cast date format into mm/dd/yyyy.
+            finalData.loc[row, 'Invoice Date'] = dateParsed.strftime('%m/%d/%Y')
+            # Fill in quarter/year/month data.
+            finalData.loc[row, 'Year'] = dateParsed.year
+            finalData.loc[row, 'Month'] = calendar.month_name[dateParsed.month][0:3]
+            finalData.loc[row, 'Quarter'] = str(dateParsed.year) + 'Q' + str(math.ceil(dateParsed.month/3))
 
         # Find a corrected distributor match.
         # Strip extraneous characters and all spaces, and make lowercase.
@@ -235,7 +244,7 @@ def main(filepaths, oldMaster, lookupTable):
                     matches += 1
 
         # If any data isn't found, copy entry to Fix Entries.
-        if (len(customerMatches) != 1) or (matches != 1):
+        if (len(customerMatches) != 1) or (matches != 1) or (dateError):
             fixList = fixList.append(finalData.loc[row, :])
             fixList.loc[row, 'Master Index'] = row
             fixList.loc[row, 'Distributor Matches'] = matches
