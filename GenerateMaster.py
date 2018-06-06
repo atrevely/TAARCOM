@@ -1,6 +1,6 @@
 import pandas as pd
-import time
 from dateutil.parser import parse
+import time
 import calendar
 import math
 import os.path
@@ -23,9 +23,11 @@ def main(filepaths, oldMaster, lookupTable):
     columnNames = list(lookupTable)
     # Add in derived data names.
     columnNames[0:0] = ['CM Sales', 'Design Sales', 'Quarter', 'Month', 'Year']
-    columnNames[6:6] = ['T-Name', 'CM', 'T-End Cust', 'Principal']
-    columnNames[10:10] = ['Corrected Distributor']
+    columnNames[7:7] = ['T-End Cust', 'T-Name', 'CM',
+                        'Principal', 'Corrected Distributor']
     columnNames.append('TEMP/FINAL')
+    columnNames.append('From File')
+    columnNames.append('Paid Date')
 
     # Check to see if we've supplied an existing master list to append to.
     if oldMaster:
@@ -45,13 +47,15 @@ def main(filepaths, oldMaster, lookupTable):
         oldMastLen = 0
         # These are our names for the data in the master list.
         finalData = pd.DataFrame(columns=columnNames)
-        filesProcessed = pd.DataFrame(columns=['Filenames',
-                                               'Total Commissions'])
+        filesProcessed = pd.DataFrame(columns=['Filename',
+                                               'Total Commissions',
+                                               'Date Added',
+                                               'Paid Date'])
 
     # Strip the root off of the filepaths and leave just the filenames.
     filenames = [os.path.basename(val) for val in filepaths]
     # Check if we've duplicated any files.
-    duplicates = list(set(filenames).intersection(filesProcessed['Filenames']))
+    duplicates = list(set(filenames).intersection(filesProcessed['Filename']))
     # Don't let duplicate files get processed.
     filenames = [val for val in filenames if val not in duplicates]
     if duplicates:
@@ -146,8 +150,8 @@ def main(filepaths, oldMaster, lookupTable):
                     print('***')
                     return
                 else:
-                    sheet = sheet.rename(index=str,
-                                         columns={columnName[0]: dataName})
+                    sheet.rename(columns={columnName[0]: dataName},
+                                 inplace=True)
 
             # Now that we've renamed all of the relevant columns,
             # append the new sheet to the master list, where only the properly
@@ -183,21 +187,24 @@ def main(filepaths, oldMaster, lookupTable):
         # Append filename and commissions to Files Processed sheet.
         newFile = pd.DataFrame({'Filename': [filename],
                                 'Total Commissions': [totalComm],
-                                'Date Added': [time.strftime('%m/%d/%Y')]})
+                                'Date Added': [time.strftime('%m/%d/%Y')],
+                                'Paid Date': ['']})
         filesProcessed = filesProcessed.append(newFile, ignore_index=True)
+        # Fill the NaNs in From File with the filename.
+        finalData['From File'].fillna(filename, inplace=True)
 
     # Create and fill columns of derived data.
     # %%
     # Fill NaNs left over from appending.
-    finalData = finalData.fillna('')
+    finalData.fillna('', inplace=True)
     # Find matches in Lookup Master and extract data from them.
-    finalData['Billing Customer'] = finalData['Billing Customer'].astype(str)
+    finalData['Reported Customer'] = finalData['Reported Customer'].astype(str)
     # Iterate over each row of the newly appended data.
     for row in range(oldMastLen, len(finalData)):
         # First match part number.
         partNoMatches = masterLookup[finalData.loc[row, 'Part Number'] == masterLookup['PPN']]
         # Next match End Customer.
-        customerMatches = partNoMatches[finalData.loc[row, 'Billing Customer'].lower() == partNoMatches['POSCustomer'].str.lower()]
+        customerMatches = partNoMatches[finalData.loc[row, 'Reported Customer'].lower() == partNoMatches['POSCustomer'].str.lower()]
         customerMatches = customerMatches.reset_index()
         # Make sure we found exactly one match.
         if len(customerMatches) == 1:
@@ -243,7 +250,7 @@ def main(filepaths, oldMaster, lookupTable):
                     finalData.loc[row, 'Corrected Distributor'] = distMap[distMap['Dist'] == dist]['Corrected Dist'].iloc[0]
                     matches += 1
 
-        # If any data isn't found, copy entry to Fix Entries.
+        # If any data isn't found/parsed, copy entry to Fix Entries.
         if (len(customerMatches) != 1) or (matches != 1) or (dateError):
             fixList = fixList.append(finalData.loc[row, :])
             fixList.loc[row, 'Master Index'] = row
