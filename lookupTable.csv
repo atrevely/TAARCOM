@@ -7,5 +7,6 @@ Name,,POS Invoice Number,Part Number,QTY,Sales Price,Pre Split Amt,Post Split Am
 SC Name,,,PartNo,Quantity,Test89,Total amount,Split Dollars,,Rep 1%,Total,POS Invoice Date,,,,Sales Region,,,,,,,,,EndCustomer,,,
 Ship To Name,,,Product,Text90,Unit Cost,,SumOfCstExt,,Total %,Total Comm,POS_ShpDate,,,,SC City,,,,,,,,,,,,
 Sold-TO-Name,,,PtNo,,Unit Price,,Value,,,Com Due,POS-ShpDate,,,,,,,,,,,,,,,,
-Source Customer Name,,,,,,,,,,,Sales Date,,,,,,,,,,,,,,,,
+Source Customer Name,,,,,,,,,,Commission Amount,Sales Date,,,,,,,,,,,,,,,,
 ,,,,,,,,,,,Trans date,,,,,,,,,,,,,,,,
+,,,,,,,,,,,Inv Date,,,,,,,,,,,,,,,,

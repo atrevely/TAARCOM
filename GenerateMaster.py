@@ -1,5 +1,7 @@
 import pandas as pd
 import time
+import calendar
+import math
 import os.path
 import re
 
@@ -19,9 +21,9 @@ def main(filepaths, oldMaster, lookupTable):
     # Grab lookup table data names.
     columnNames = list(lookupTable)
     # Add in derived data names.
-    columnNames[0:0] = ['CM Sales', 'Design Sales']
-    columnNames[3:3] = ['T-Name', 'CM', 'T-End Cust', 'Principal']
-    columnNames[7:7] = ['Corrected Distributor']
+    columnNames[0:0] = ['CM Sales', 'Design Sales', 'Quarter', 'Month', 'Year']
+    columnNames[6:6] = ['T-Name', 'CM', 'T-End Cust', 'Principal']
+    columnNames[10:10] = ['Corrected Distributor']
     columnNames.append('TEMP/FINAL')
 
     # Check to see if we've supplied an existing master list to append to.
@@ -58,9 +60,10 @@ def main(filepaths, oldMaster, lookupTable):
         for file in list(duplicates):
             print(file)
         print('Duplicate files were removed from processing.')
+        # Exit if no new files are left.
         if not filenames:
             print('---')
-            print('Files were all duplicates.')
+            print('No new files selected.')
             print('Please try again.')
             print('***')
             return
@@ -69,7 +72,7 @@ def main(filepaths, oldMaster, lookupTable):
     # Each dictionary has a dataframe for each sheet in the file.
     inputData = [pd.read_excel(filepath, None) for filepath in filepaths]
 
-    # Read in distMap.
+    # Read in distMap. Exit if not found.
     if os.path.exists('distributorLookup.xlsx'):
         distMap = pd.read_excel('distributorLookup.xlsx', 'Distributors')
     else:
@@ -79,19 +82,21 @@ def main(filepaths, oldMaster, lookupTable):
         print('***')
         return
 
-    # Read in file of entries that need fixing.
+    # Read in file of entries that need fixing. Exit if not found.
     if os.path.exists('Entries Need Fixing.xlsx'):
         fixList = pd.read_excel('Entries Need Fixing.xlsx', 'Data').fillna('')
     else:
+        print('---')
         print('No Entries Need Fixing file found!')
         print('Please make sure Entries Need Fixing.xlsx is in the directory.')
         print('***')
         return
 
-    # Read in the Master Lookup.
+    # Read in the Master Lookup. Exit if not found.
     if os.path.exists('LookupMaster052018v2.xlsx'):
         masterLookup = pd.read_excel('LookupMaster052018v2.xlsx').fillna('')
     else:
+        print('---')
         print('No Lookup Master found!')
         print('Please make sure LookupMaster*.xlsx is in the directory.')
         print('***')
@@ -115,6 +120,8 @@ def main(filepaths, oldMaster, lookupTable):
         for sheetName in list(newData):
             # Grab next sheet in file.
             sheet = newData[sheetName]
+            # Make sure index is an integer, not a string.
+            sheet.index = sheet.index.map(int)
             totalRows = sheet.shape[0]
             print('Found ' + str(totalRows) + ' entries in the tab: '
                   + sheetName)
@@ -122,7 +129,7 @@ def main(filepaths, oldMaster, lookupTable):
             # Iterate over each column of data that we want to append.
             for dataName in list(lookupTable):
                 # Grab list of names that the data could potentially be under.
-                nameList = lookupTable[dataName].tolist()
+                nameList = lookupTable[dataName].dropna().tolist()
                 # Look for a match in the sheet column names.
                 sheetColumns = list(sheet)
                 columnName = [val for val in sheetColumns if val in nameList]
@@ -202,6 +209,13 @@ def main(filepaths, oldMaster, lookupTable):
             # Update usage in lookup master
             masterLookup.loc[customerMatches['index'], 'Last Used'] = time.strftime('%m/%d/%Y')
 
+        # Input the date information.
+        year = finalData.loc[row, 'Invoice Date'][6:10]
+        month = finalData.loc[row, 'Invoice Date'][0:2]
+        finalData.loc[row, 'Year'] = int(year)
+        finalData.loc[row, 'Month'] = calendar.month_name[int(month)][0:3]
+        finalData.loc[row, 'Quarter'] = year + 'Q' + str(math.ceil(int(month)/3)) 
+
         # Find a corrected distributor match.
         # Strip extraneous characters and all spaces, and make lowercase.
         distName = re.sub('[^a-zA-Z0-9]', '',
@@ -223,6 +237,7 @@ def main(filepaths, oldMaster, lookupTable):
         # If any data isn't found, copy entry to Fix Entries.
         if (len(customerMatches) != 1) or (matches != 1):
             fixList = fixList.append(finalData.loc[row, :])
+            fixList.loc[row, 'Master Index'] = row
             fixList.loc[row, 'Distributor Matches'] = matches
             fixList.loc[row, 'Lookup Master Matches'] = len(customerMatches)
             fixList.loc[row, 'Date Added'] = time.strftime('%m/%d/%Y')
@@ -250,10 +265,10 @@ def main(filepaths, oldMaster, lookupTable):
         print('***')
         return
     writer.save()
+
     # Save the Needs Fixing file.
-    fixList.index.name = 'Master Index'
     writer = pd.ExcelWriter('Entries Need Fixing.xlsx', engine='xlsxwriter')
-    fixList.to_excel(writer, sheet_name='Data', index=True)
+    fixList.to_excel(writer, sheet_name='Data', index=False)
     try:
         writer.save()
     except IOError:
@@ -263,10 +278,11 @@ def main(filepaths, oldMaster, lookupTable):
         print('***')
         return
     writer.save()
+
     # Save the Lookup Master
     writer = pd.ExcelWriter('Lookup Master ' + time.strftime('%Y-%m-%d-%H%M')
                             + '.xlsx', engine='xlsxwriter')
-    masterLookup.to_excel(writer, sheet_name='Lookup', index=True)
+    masterLookup.to_excel(writer, sheet_name='Lookup', index=False)
     try:
         writer.save()
     except IOError:
@@ -276,6 +292,7 @@ def main(filepaths, oldMaster, lookupTable):
         print('***')
         return
     writer.save()
+
     print('---')
     print('Updates completed successfully!')
     print('---')
