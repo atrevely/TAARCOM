@@ -21,13 +21,13 @@ def main(filepaths, oldMaster, lookupTable):
     # %%
     # Grab lookup table data names.
     columnNames = list(lookupTable)
-    # Add in derived data names.
+    # Add in non-lookup'd data names.
     columnNames[0:0] = ['CM Sales', 'Design Sales', 'Quarter', 'Month', 'Year']
     columnNames[7:7] = ['T-End Cust', 'T-Name', 'CM',
                         'Principal', 'Corrected Distributor']
     columnNames.append('TEMP/FINAL')
-    columnNames.append('From File')
     columnNames.append('Paid Date')
+    columnNames.append('From File')
 
     # Check to see if we've supplied an existing master list to append to.
     if oldMaster:
@@ -174,6 +174,10 @@ def main(filepaths, oldMaster, lookupTable):
                           + '${:,.2f}'.format(sheet['Actual Comm Paid'].sum()))
                     print('-')
                     totalComm += sheet['Actual Comm Paid'].sum()
+                    # Strip whitespace from strings.
+                    stringCols = [val for val in list(sheet) if sheet[val].dtype == 'object']
+                    for col in stringCols:
+                        sheet[col] = sheet[col].str.strip()
                     # Append matching data.
                     finalData = finalData.append(sheet[matchingColumns],
                                                  ignore_index=True)
@@ -214,8 +218,11 @@ def main(filepaths, oldMaster, lookupTable):
             finalData.loc[row, 'T-Name'] = customerMatches['Tname'][0]
             finalData.loc[row, 'CM'] = customerMatches['CM'][0]
             finalData.loc[row, 'T-End Cust'] = customerMatches['EndCustomer'][0]
-            # Update usage in lookup master
+            # Update usage in lookup master.
             masterLookup.loc[customerMatches['index'], 'Last Used'] = time.strftime('%m/%d/%Y')
+            # Update OOT city.
+            if customerMatches['Tname'][0][0:3] == 'OOT' and not customerMatches['City'][0]:
+                 masterLookup.loc[customerMatches['index'], 'City'] = finalData.loc[row, 'City']
 
         # Try parsing the date.
         dateError = 0
@@ -251,7 +258,7 @@ def main(filepaths, oldMaster, lookupTable):
                     matches += 1
 
         # If any data isn't found/parsed, copy entry to Fix Entries.
-        if (len(customerMatches) != 1) or (matches != 1) or (dateError):
+        if len(customerMatches) != 1 or matches != 1 or dateError:
             fixList = fixList.append(finalData.loc[row, :])
             fixList.loc[row, 'Master Index'] = row
             fixList.loc[row, 'Distributor Matches'] = matches
