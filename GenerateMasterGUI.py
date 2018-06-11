@@ -92,14 +92,16 @@ class GenMast(QMainWindow):
 
     def editColumnsClicked(self):
         """Opens new window for editing lookup table."""
-        # Open new window with data tree and editing processes.
-        if os.path.exists('lookupTable.csv'):
-            self.columnsWindow = ColumnEdit()
-            self.columnsWindow.show()
-        else:
-            print('No lookup table file found!')
-            print('Please make sure lookupTable.csv is in the directory.')
-            print('***')
+        # Lock if GenerateMaster is running.
+        if self.threadpool.activeThreadCount() == 0:
+            # Open new window with data tree and editing processes.
+            if os.path.exists('lookupTable.csv'):
+                self.columnsWindow = ColumnEdit()
+                self.columnsWindow.show()
+            else:
+                print('No lookup table file found!')
+                print('Please make sure lookupTable.csv is in the directory.')
+                print('***')
 
     def genMastClicked(self):
         """Send the GenerateMaster execution to a worker thread."""
@@ -125,39 +127,43 @@ class GenMast(QMainWindow):
 
     def uploadMastClicked(self):
         """Upload an existing master list."""
-        # Grab an existing master list to append to.
-        self.master, _ = QFileDialog.getOpenFileName(
-                self, filter="Excel files (*.xls *.xlsx *.xlsm)")
-        if self.master:
-            print('Master list provided:')
-            print(self.master)
-            print('---')
-            if 'Running Master' not in self.master:
-                print('Caution!')
-                print('The file uploaded as master \
-                      does not appear to be a master list.')
+        # Lock if GenerateMaster is running.
+        if self.threadpool.activeThreadCount() == 0:
+            # Grab an existing master list to append to.
+            self.master, _ = QFileDialog.getOpenFileName(
+                    self, filter="Excel files (*.xls *.xlsx *.xlsm)")
+            if self.master:
+                print('Master list provided:')
+                print(self.master)
+                print('---')
+                if 'Running Master' not in self.master:
+                    print('Caution!')
+                    print('The file uploaded as master \
+                          does not appear to be a master list.')
                 print('---')
 
     def openFilesClicked(self):
         """Provide filepaths for new data to process using GenerateMaster."""
-        # Grab the filenames to be passed into GenerateMaster.py
-        self.filenames, _ = QFileDialog.getOpenFileNames(
-                self, filter="Excel files (*.xls *.xlsx *.xlsm)")
+        # Lock if GenerateMaster is running.
+        if self.threadpool.activeThreadCount() == 0:
+            # Grab the filenames to be passed into GenerateMaster.py
+            self.filenames, _ = QFileDialog.getOpenFileNames(
+                    self, filter="Excel files (*.xls *.xlsx *.xlsm)")
 
-        # Check if the current master got uploaded as a new file.
-        for names in self.filenames:
-            if 'Running Master' in names:
-                print('Master uploaded as new file.')
-                print('Try uploading files again.')
+            # Check if the current master got uploaded as a new file.
+            for names in self.filenames:
+                if 'Running Master' in names:
+                    print('Master uploaded as new file.')
+                    print('Try uploading files again.')
+                    print('---')
+                    return
+
+            # Print out the selected filenames.
+            if self.filenames:
+                print('Files selected:')
+                for file in self.filenames:
+                    print(file)
                 print('---')
-                return
-
-        # Print out the selected filenames.
-        if self.filenames:
-            print('Files selected:')
-            for file in self.filenames:
-                print(file)
-            print('---')
 
 
 class Worker(QRunnable):
