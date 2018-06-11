@@ -1,10 +1,11 @@
 import sys
 import pandas as pd
 import os.path
+from PyQt5 import QtCore, QtGui
 from PyQt5.QtWidgets import QMainWindow, QPushButton, QApplication, \
                             QFileDialog, QTextEdit, QTreeWidget, \
                             QTreeWidgetItem, QInputDialog
-from PyQt5 import QtCore, QtGui
+from PyQt5.QtCore import QRunnable, QThreadPool, pyqtSlot
 import GenerateMaster
 
 
@@ -20,6 +21,9 @@ class GenMast(QMainWindow):
     """Main application window."""
     def __init__(self):
         super().__init__()
+
+        # Initialize the threadpool for handling worker jobs.
+        self.threadpool = QThreadPool()
 
         self.initUI()
         self.filenames = []
@@ -98,6 +102,13 @@ class GenMast(QMainWindow):
             print('***')
 
     def genMastClicked(self):
+        """Send the GenerateMaster execution to a worker thread."""
+        # Only allow one thread at a time.
+        if self.threadpool.activeThreadCount() == 0:
+            worker = Worker(self.genMastExecute)
+            self.threadpool.start(worker)
+
+    def genMastExecute(self):
         """Runs function for processing new files to master."""
         # Check to see if we've selected files to process.
         if self.filenames and os.path.exists('lookupTable.csv'):
@@ -147,6 +158,29 @@ class GenMast(QMainWindow):
             for file in self.filenames:
                 print(file)
             print('---')
+
+
+class Worker(QRunnable):
+    '''
+    Inherits from QRunnable to handler worker thread.
+
+    param args -- Arguments to pass to the callback function.
+    param kwargs -- Keywords to pass to the callback function.
+    '''
+
+    def __init__(self, fn, *args, **kwargs):
+        super(Worker, self).__init__()
+        # Store constructor arguments (re-used for processing)
+        self.fn = fn
+        self.args = args
+        self.kwargs = kwargs
+
+    @pyqtSlot()
+    def run(self):
+        '''
+        Initialise the runner function with passed args, kwargs.
+        '''
+        self.fn(*self.args, **self.kwargs)
 
 
 class ColumnEdit(QMainWindow):

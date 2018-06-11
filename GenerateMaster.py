@@ -98,8 +98,8 @@ def main(filepaths, oldMaster, lookupTable):
         return
 
     # Read in the Master Lookup. Exit if not found.
-    if os.path.exists('LookupMaster052018v2.xlsx'):
-        masterLookup = pd.read_excel('LookupMaster052018v2.xlsx').fillna('')
+    if os.path.exists('Lookup Master OOT Cities.xlsx'):
+        masterLookup = pd.read_excel('Lookup Master OOT Cities.xlsx').fillna('')
     else:
         print('---')
         print('No Lookup Master found!')
