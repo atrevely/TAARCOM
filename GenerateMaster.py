@@ -270,7 +270,7 @@ def main(filepaths, oldMaster, lookupTable):
             finalData.loc[row, 'TEMP/FINAL'] = 'FINAL'
 
         # Update progress every 1,000 rows.
-        if row % 1000 == 0:
+        if row % 1000 == 0 and row > 0:
             print('Done with row ' '{:,.0f}'.format(row))
 
     # Reorder columns to match the desired layout in columnNames.

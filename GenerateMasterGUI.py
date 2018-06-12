@@ -24,7 +24,7 @@ class GenMast(QMainWindow):
 
         # Initialize the threadpool for handling worker jobs.
         self.threadpool = QThreadPool()
-
+        # Initialize UI and supporting filenames.
         self.initUI()
         self.filenames = []
         self.master = []
@@ -56,25 +56,25 @@ class GenMast(QMainWindow):
     def initUI(self):
         """Creates UI window on launch."""
         # Button for generating the master list.
-        btnGenMast = QPushButton('Process Files \n to Master', self)
-        btnGenMast.move(450, 100)
-        btnGenMast.resize(100, 100)
-        btnGenMast.clicked.connect(self.genMastClicked)
+        self.btnGenMast = QPushButton('Process Files \n to Master', self)
+        self.btnGenMast.move(450, 100)
+        self.btnGenMast.resize(100, 100)
+        self.btnGenMast.clicked.connect(self.genMastClicked)
 
         # Button for selecting files to compile into master list.
-        btnOpenFiles = QPushButton('Add New Files', self)
-        btnOpenFiles.move(30, 50)
-        btnOpenFiles.clicked.connect(self.openFilesClicked)
+        self.btnOpenFiles = QPushButton('Add New Files', self)
+        self.btnOpenFiles.move(30, 50)
+        self.btnOpenFiles.clicked.connect(self.openFilesClicked)
 
         # Button for selecting a current master to append to.
-        btnUploadMast = QPushButton('Upload Master', self)
-        btnUploadMast.move(150, 50)
-        btnUploadMast.clicked.connect(self.uploadMastClicked)
+        self.btnUploadMast = QPushButton('Upload Master', self)
+        self.btnUploadMast.move(150, 50)
+        self.btnUploadMast.clicked.connect(self.uploadMastClicked)
 
         # Button for editing column names/tags.
-        btnEditColumns = QPushButton('Edit Column Tags', self)
-        btnEditColumns.move(270, 50)
-        btnEditColumns.clicked.connect(self.editColumnsClicked)
+        self.btnEditColumns = QPushButton('Edit Column Tags', self)
+        self.btnEditColumns.move(270, 50)
+        self.btnEditColumns.clicked.connect(self.editColumnsClicked)
 
         # Create the text output widget.
         self.process = QTextEdit(self, readOnly=True)
@@ -92,30 +92,36 @@ class GenMast(QMainWindow):
 
     def editColumnsClicked(self):
         """Opens new window for editing lookup table."""
-        # Lock if GenerateMaster is running.
-        if self.threadpool.activeThreadCount() == 0:
-            # Open new window with data tree and editing processes.
-            if os.path.exists('lookupTable.csv'):
-                self.columnsWindow = ColumnEdit()
-                self.columnsWindow.show()
-            else:
-                print('No lookup table file found!')
-                print('Please make sure lookupTable.csv is in the directory.')
-                print('***')
+        # Open new window with data tree and editing processes.
+        if os.path.exists('lookupTable.csv'):
+            self.columnsWindow = ColumnEdit()
+            self.columnsWindow.show()
+        else:
+            print('No lookup table file found!')
+            print('Please make sure lookupTable.csv is in the directory.')
+            print('***')
 
     def genMastClicked(self):
         """Send the GenerateMaster execution to a worker thread."""
-        # Only allow one thread at a time.
-        if self.threadpool.activeThreadCount() == 0:
-            worker = Worker(self.genMastExecute)
-            self.threadpool.start(worker)
+        worker = Worker(self.genMastExecute)
+        self.threadpool.start(worker)
 
     def genMastExecute(self):
         """Runs function for processing new files to master."""
         # Check to see if we've selected files to process.
         if self.filenames and os.path.exists('lookupTable.csv'):
+            # Turn off the buttons.
+            self.btnGenMast.setEnabled(False)
+            self.btnOpenFiles.setEnabled(False)
+            self.btnUploadMast.setEnabled(False)
+            self.btnEditColumns.setEnabled(False)
             # Run the GenerateMaster.py file.
             GenerateMaster.main(self.filenames, self.master, lookupTable)
+            # Turn buttons back on.
+            self.btnGenMast.setEnabled(True)
+            self.btnOpenFiles.setEnabled(True)
+            self.btnUploadMast.setEnabled(True)
+            self.btnEditColumns.setEnabled(True)
         elif os.path.exists('lookupTable.csv'):
             print('No new files selected!')
             print('Use the Open Files button to select files.')
@@ -127,43 +133,39 @@ class GenMast(QMainWindow):
 
     def uploadMastClicked(self):
         """Upload an existing master list."""
-        # Lock if GenerateMaster is running.
-        if self.threadpool.activeThreadCount() == 0:
-            # Grab an existing master list to append to.
-            self.master, _ = QFileDialog.getOpenFileName(
-                    self, filter="Excel files (*.xls *.xlsx *.xlsm)")
-            if self.master:
-                print('Master list provided:')
-                print(self.master)
-                print('---')
-                if 'Running Master' not in self.master:
-                    print('Caution!')
-                    print('The file uploaded as master \
-                          does not appear to be a master list.')
-                print('---')
+        # Grab an existing master list to append to.
+        self.master, _ = QFileDialog.getOpenFileName(
+                self, filter="Excel files (*.xls *.xlsx *.xlsm)")
+        if self.master:
+            print('Master list provided:')
+            print(self.master)
+            print('---')
+            if 'Running Master' not in self.master:
+                print('Caution!')
+                print('The file uploaded as master'
+                      + 'does not appear to be a master list.')
+            print('---')
 
     def openFilesClicked(self):
         """Provide filepaths for new data to process using GenerateMaster."""
-        # Lock if GenerateMaster is running.
-        if self.threadpool.activeThreadCount() == 0:
-            # Grab the filenames to be passed into GenerateMaster.py
-            self.filenames, _ = QFileDialog.getOpenFileNames(
-                    self, filter="Excel files (*.xls *.xlsx *.xlsm)")
+        # Grab the filenames to be passed into GenerateMaster.py
+        self.filenames, _ = QFileDialog.getOpenFileNames(
+                self, filter="Excel files (*.xls *.xlsx *.xlsm)")
 
-            # Check if the current master got uploaded as a new file.
-            for names in self.filenames:
-                if 'Running Master' in names:
-                    print('Master uploaded as new file.')
-                    print('Try uploading files again.')
-                    print('---')
-                    return
-
-            # Print out the selected filenames.
-            if self.filenames:
-                print('Files selected:')
-                for file in self.filenames:
-                    print(file)
+        # Check if the current master got uploaded as a new file.
+        for names in self.filenames:
+            if 'Running Master' in names:
+                print('Master uploaded as new file.')
+                print('Try uploading files again.')
                 print('---')
+                return
+
+        # Print out the selected filenames.
+        if self.filenames:
+            print('Files selected:')
+            for file in self.filenames:
+                print(file)
+            print('---')
 
 
 class Worker(QRunnable):
