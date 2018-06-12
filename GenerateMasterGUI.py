@@ -16,6 +16,8 @@ class Stream(QtCore.QObject):
     def write(self, text):
         self.newText.emit(str(text))
 
+    def flush(self):
+        pass
 
 class GenMast(QMainWindow):
     """Main application window."""
@@ -96,6 +98,7 @@ class GenMast(QMainWindow):
         if os.path.exists('lookupTable.csv'):
             self.columnsWindow = ColumnEdit()
             self.columnsWindow.show()
+            self.hide()
         else:
             print('No lookup table file found!')
             print('Please make sure lookupTable.csv is in the directory.')
@@ -291,11 +294,22 @@ class ColumnEdit(QMainWindow):
         print('---')
 
         # Close window.
+        self.mainWindow = GenMast()
+        self.mainWindow.show()
         self.close()
 
     def cancelExit(self):
         """Close the window without saving changes to lookup table."""
         # Close window. Nothing gets saved.
+        self.mainWindow = GenMast()
+        self.mainWindow.show()
+        self.close()
+
+    def closeEvent(self, event):
+        """Close the window without saving changes to lookup table."""
+        # Close window. Nothing gets saved.
+        self.mainWindow = GenMast()
+        self.mainWindow.show()
         self.close()
 
 
