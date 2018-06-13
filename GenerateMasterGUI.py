@@ -41,14 +41,18 @@ class GenMast(QMainWindow):
 
         # Custom output stream.
         sys.stdout = Stream(newText=self.onUpdateText)
+        # Print welcome message.
+        print('Welcome to the TAARCOM List Generator.')
+        print('Messages and updates will display here.')
+        print('---')
 
     def onUpdateText(self, text):
         """Write console output to text widget."""
-        cursor = self.process.textCursor()
+        cursor = self.textBox.textCursor()
         cursor.movePosition(QtGui.QTextCursor.End)
         cursor.insertText(text)
-        self.process.setTextCursor(cursor)
-        self.process.ensureCursorVisible()
+        self.textBox.setTextCursor(cursor)
+        self.textBox.ensureCursorVisible()
 
     def closeEvent(self, event):
         """Shuts down application on close."""
@@ -83,13 +87,13 @@ class GenMast(QMainWindow):
         self.btnEditColumns.clicked.connect(self.editColumnsClicked)
 
         # Create the text output widget.
-        self.process = QTextEdit(self, readOnly=True)
-        self.process.ensureCursorVisible()
-        self.process.setLineWrapColumnOrWidth(500)
-        self.process.setLineWrapMode(QTextEdit.FixedPixelWidth)
-        self.process.setFixedWidth(550)
-        self.process.setFixedHeight(400)
-        self.process.move(50, 150)
+        self.textBox = QTextEdit(self, readOnly=True)
+        self.textBox.ensureCursorVisible()
+        self.textBox.setLineWrapColumnOrWidth(500)
+        self.textBox.setLineWrapMode(QTextEdit.FixedPixelWidth)
+        self.textBox.setFixedWidth(550)
+        self.textBox.setFixedHeight(400)
+        self.textBox.move(50, 150)
 
         # Set window size and title, then show the window.
         self.setGeometry(300, 300, 900, 600)
@@ -212,33 +216,37 @@ class ColumnEdit(QMainWindow):
         super().__init__()
 
         # Set window size and title.
-        self.setGeometry(200, 200, 600, 300)
+        self.setGeometry(200, 200, 800, 550)
         self.setWindowTitle('Column Name List')
 
         # Create the tree widget with column names.
         self.colTree = QTreeWidget(self)
-        self.colTree.resize(500, 200)
+        self.colTree.resize(600, 500)
         self.colTree.setColumnCount(1)
         self.colTree.setHeaderLabels(['TCOM Column Names'])
 
         # Create the button for adding data names.
         btnAddName = QPushButton('Add Lookup Name', self)
-        btnAddName.move(10, 220)
+        btnAddName.move(630, 10)
+        btnAddName.resize(150, 100)
         btnAddName.clicked.connect(self.addNameClicked)
 
         # Create the button for adding data names.
         btnAddTCOM = QPushButton('Add TCOM Name', self)
-        btnAddTCOM.move(130, 220)
+        btnAddTCOM.move(630, 120)
+        btnAddTCOM.resize(150, 100)
         btnAddTCOM.clicked.connect(self.addTCOMClicked)
 
         # Create the button for saving data names.
         btnSaveExit = QPushButton('Save && Return', self)
-        btnSaveExit.move(470, 260)
+        btnSaveExit.move(630, 230)
+        btnSaveExit.resize(150, 100)
         btnSaveExit.clicked.connect(self.saveExit)
 
         # Create the button for canceling changes.
         btnCancelExit = QPushButton('Cancel', self)
-        btnCancelExit.move(350, 260)
+        btnCancelExit.move(630, 340)
+        btnCancelExit.resize(150, 100)
         btnCancelExit.clicked.connect(self.cancelExit)
 
         # Populate the tree via the existing lookup table.
@@ -260,7 +268,7 @@ class ColumnEdit(QMainWindow):
             text, ok = QInputDialog.getText(self, "Add Data Name",
                                             "Enter new data name:")
             # Check to see if we've entered text.
-            if ok and text != '':
+            if ok and text.strip() != '':
                 currentTCOM = self.colTree.currentItem()
                 newChild = QTreeWidgetItem([text])
                 newChild.setFlags(newChild.flags() | QtCore.Qt.ItemIsEditable)
@@ -271,7 +279,7 @@ class ColumnEdit(QMainWindow):
         text, ok = QInputDialog.getText(self, "Add TCOM Name",
                                         "Enter new TCOM name:")
         # Check to see if we've entered text.
-        if ok and text != '':
+        if ok and text.strip() != '':
             newTCOM = QTreeWidgetItem([text])
             self.colTree.addTopLevelItem(newTCOM)
 
@@ -306,18 +314,17 @@ class ColumnEdit(QMainWindow):
 
         # Close window.
         self.close()
-        gui.restoreButtons()
 
     def cancelExit(self):
         """Close the window without saving changes to lookup table."""
         # Close window. Nothing gets saved.
+        print('Tag edits canceled.')
+        print('---')
         self.close()
-        gui.restoreButtons()
 
     def closeEvent(self, event):
-        """Close the window without saving changes to lookup table."""
-        # Close window. Nothing gets saved.
-        self.close()
+        """Close event."""
+        # Restore buttons in main GUI on close.
         gui.restoreButtons()
 
 
@@ -325,5 +332,10 @@ if __name__ == '__main__':
     # Run the application.
     app = QApplication(sys.argv)
     app.aboutToQuit.connect(app.deleteLater)
+    # Font settings.
+    font = QtGui.QFont()
+    font.setPointSize(10)
+    app.setFont(font)
+    # Open main window.
     gui = GenMast()
     sys.exit(app.exec_())
