@@ -19,6 +19,7 @@ class Stream(QtCore.QObject):
     def flush(self):
         pass
 
+
 class GenMast(QMainWindow):
     """Main application window."""
     def __init__(self):
@@ -59,23 +60,26 @@ class GenMast(QMainWindow):
         """Creates UI window on launch."""
         # Button for generating the master list.
         self.btnGenMast = QPushButton('Process Files \n to Master', self)
-        self.btnGenMast.move(450, 100)
-        self.btnGenMast.resize(100, 100)
+        self.btnGenMast.move(650, 300)
+        self.btnGenMast.resize(150, 150)
         self.btnGenMast.clicked.connect(self.genMastClicked)
 
         # Button for selecting files to compile into master list.
         self.btnOpenFiles = QPushButton('Add New Files', self)
-        self.btnOpenFiles.move(30, 50)
+        self.btnOpenFiles.move(50, 30)
+        self.btnOpenFiles.resize(150, 100)
         self.btnOpenFiles.clicked.connect(self.openFilesClicked)
 
         # Button for selecting a current master to append to.
         self.btnUploadMast = QPushButton('Upload Master', self)
-        self.btnUploadMast.move(150, 50)
+        self.btnUploadMast.move(250, 30)
+        self.btnUploadMast.resize(150, 100)
         self.btnUploadMast.clicked.connect(self.uploadMastClicked)
 
         # Button for editing column names/tags.
         self.btnEditColumns = QPushButton('Edit Column Tags', self)
-        self.btnEditColumns.move(270, 50)
+        self.btnEditColumns.move(450, 30)
+        self.btnEditColumns.resize(150, 100)
         self.btnEditColumns.clicked.connect(self.editColumnsClicked)
 
         # Create the text output widget.
@@ -83,12 +87,12 @@ class GenMast(QMainWindow):
         self.process.ensureCursorVisible()
         self.process.setLineWrapColumnOrWidth(500)
         self.process.setLineWrapMode(QTextEdit.FixedPixelWidth)
-        self.process.setFixedWidth(400)
-        self.process.setFixedHeight(150)
-        self.process.move(30, 100)
+        self.process.setFixedWidth(550)
+        self.process.setFixedHeight(400)
+        self.process.move(50, 150)
 
         # Set window size and title, then show the window.
-        self.setGeometry(300, 300, 600, 300)
+        self.setGeometry(300, 300, 900, 600)
         self.setWindowTitle('Generate Master')
         self.show()
 
@@ -98,7 +102,7 @@ class GenMast(QMainWindow):
         if os.path.exists('lookupTable.csv'):
             self.columnsWindow = ColumnEdit()
             self.columnsWindow.show()
-            self.hide()
+            self.lockButtons()
         else:
             print('No lookup table file found!')
             print('Please make sure lookupTable.csv is in the directory.')
@@ -113,18 +117,13 @@ class GenMast(QMainWindow):
         """Runs function for processing new files to master."""
         # Check to see if we've selected files to process.
         if self.filenames and os.path.exists('lookupTable.csv'):
-            # Turn off the buttons.
-            self.btnGenMast.setEnabled(False)
-            self.btnOpenFiles.setEnabled(False)
-            self.btnUploadMast.setEnabled(False)
-            self.btnEditColumns.setEnabled(False)
+            # Turn buttons off.
+            self.lockButtons()
             # Run the GenerateMaster.py file.
             GenerateMaster.main(self.filenames, self.master, lookupTable)
             # Turn buttons back on.
-            self.btnGenMast.setEnabled(True)
-            self.btnOpenFiles.setEnabled(True)
-            self.btnUploadMast.setEnabled(True)
-            self.btnEditColumns.setEnabled(True)
+            self.restoreButtons()
+
         elif os.path.exists('lookupTable.csv'):
             print('No new files selected!')
             print('Use the Open Files button to select files.')
@@ -169,6 +168,18 @@ class GenMast(QMainWindow):
             for file in self.filenames:
                 print(file)
             print('---')
+
+    def lockButtons(self):
+        self.btnGenMast.setEnabled(False)
+        self.btnOpenFiles.setEnabled(False)
+        self.btnUploadMast.setEnabled(False)
+        self.btnEditColumns.setEnabled(False)
+
+    def restoreButtons(self):
+        self.btnGenMast.setEnabled(True)
+        self.btnOpenFiles.setEnabled(True)
+        self.btnUploadMast.setEnabled(True)
+        self.btnEditColumns.setEnabled(True)
 
 
 class Worker(QRunnable):
@@ -221,7 +232,7 @@ class ColumnEdit(QMainWindow):
         btnAddTCOM.clicked.connect(self.addTCOMClicked)
 
         # Create the button for saving data names.
-        btnSaveExit = QPushButton('Save && Exit', self)
+        btnSaveExit = QPushButton('Save && Return', self)
         btnSaveExit.move(470, 260)
         btnSaveExit.clicked.connect(self.saveExit)
 
@@ -294,23 +305,20 @@ class ColumnEdit(QMainWindow):
         print('---')
 
         # Close window.
-        self.mainWindow = GenMast()
-        self.mainWindow.show()
         self.close()
+        gui.restoreButtons()
 
     def cancelExit(self):
         """Close the window without saving changes to lookup table."""
         # Close window. Nothing gets saved.
-        self.mainWindow = GenMast()
-        self.mainWindow.show()
         self.close()
+        gui.restoreButtons()
 
     def closeEvent(self, event):
         """Close the window without saving changes to lookup table."""
         # Close window. Nothing gets saved.
-        self.mainWindow = GenMast()
-        self.mainWindow.show()
         self.close()
+        gui.restoreButtons()
 
 
 if __name__ == '__main__':
