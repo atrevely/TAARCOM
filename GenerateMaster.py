@@ -163,14 +163,14 @@ def main(filepaths, oldMaster, lookupTable):
                 return
             elif 'Actual Comm Paid' not in list(sheet):
                 # Tab has no comission data, so it is ignored.
-                print('No commission data found on this sheet.')
+                print('No commission data found on this tab.')
                 print('Moving on.')
                 print('-')
             else:
                 matchingColumns = [val for val in list(sheet) if val in list(lookupTable)]
                 if len(matchingColumns) > 0:
                     # Sum commissions paid on sheet.
-                    print('Commissions for this sheet: '
+                    print('Commissions for this tab: '
                           + '${:,.2f}'.format(sheet['Actual Comm Paid'].sum()))
                     print('-')
                     totalComm += sheet['Actual Comm Paid'].sum()
@@ -182,7 +182,7 @@ def main(filepaths, oldMaster, lookupTable):
                     finalData = finalData.append(sheet[matchingColumns],
                                                  ignore_index=True)
                 else:
-                    print('Found no data on this sheet. Moving on.')
+                    print('Found no data on this tab. Moving on.')
                     print('-')
 
         # Show total commissions.
@@ -230,6 +230,13 @@ def main(filepaths, oldMaster, lookupTable):
             parse(finalData.loc[row, 'Invoice Date'])
         except ValueError:
             dateError = 1
+        except TypeError:
+            # Check if Pandas read it in as a Timestamp object.
+            # If so, turn it back into a string.
+            if isinstance(finalData.loc[row, 'Invoice Date'], pd.Timestamp):
+                finalData.loc[row, 'Invoice Date'] = str(finalData.loc[row, 'Invoice Date'])
+            else:
+                dateError = 1
         if not dateError:
             dateParsed = parse(finalData.loc[row, 'Invoice Date'])
             # Cast date format into mm/dd/yyyy.
@@ -326,4 +333,4 @@ def main(filepaths, oldMaster, lookupTable):
     print('Running Master updated.')
     print('Lookup Master updated.')
     print('Entries Need Fixing updated.')
-    print('***')
+    print('+++')

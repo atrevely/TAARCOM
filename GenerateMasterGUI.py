@@ -5,7 +5,7 @@ from PyQt5 import QtCore, QtGui
 from PyQt5.QtWidgets import QMainWindow, QPushButton, QApplication, \
                             QFileDialog, QTextEdit, QTreeWidget, \
                             QTreeWidgetItem, QInputDialog
-from PyQt5.QtCore import QRunnable, QThreadPool, pyqtSlot
+from PyQt5.QtCore import pyqtSlot
 import GenerateMaster
 
 
@@ -26,7 +26,7 @@ class GenMast(QMainWindow):
         super().__init__()
 
         # Initialize the threadpool for handling worker jobs.
-        self.threadpool = QThreadPool()
+        self.threadpool = QtCore.QThreadPool()
         # Initialize UI and supporting filenames.
         self.initUI()
         self.filenames = []
@@ -69,7 +69,7 @@ class GenMast(QMainWindow):
         self.btnGenMast.clicked.connect(self.genMastClicked)
 
         # Button for selecting files to compile into master list.
-        self.btnOpenFiles = QPushButton('Add New Files', self)
+        self.btnOpenFiles = QPushButton('Select New Files', self)
         self.btnOpenFiles.move(50, 30)
         self.btnOpenFiles.resize(150, 100)
         self.btnOpenFiles.clicked.connect(self.openFilesClicked)
@@ -130,7 +130,7 @@ class GenMast(QMainWindow):
 
         elif os.path.exists('lookupTable.csv'):
             print('No new files selected!')
-            print('Use the Open Files button to select files.')
+            print('Use the Select New Files button to select files.')
             print('---')
         else:
             print('No lookup table found!')
@@ -186,7 +186,7 @@ class GenMast(QMainWindow):
         self.btnEditColumns.setEnabled(True)
 
 
-class Worker(QRunnable):
+class Worker(QtCore.QRunnable):
     '''
     Inherits from QRunnable to handler worker thread.
 
@@ -283,9 +283,9 @@ class ColumnEdit(QMainWindow):
             newTCOM = QTreeWidgetItem([text])
             self.colTree.addTopLevelItem(newTCOM)
 
-    # Allow delete key to remove items at all levels.
     def keyPressEvent(self, event):
         """Wire delete key for expected functionality."""
+        # Allow delete key to remove items at all levels.
         if event.key() == QtCore.Qt.Key_Delete:
             root = self.colTree.invisibleRootItem()
             for item in self.colTree.selectedItems():
