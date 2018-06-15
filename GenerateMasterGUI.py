@@ -16,6 +16,7 @@ class Stream(QtCore.QObject):
     def write(self, text):
         self.newText.emit(str(text))
 
+    # Pass the flush so we don't get an attribute error.
     def flush(self):
         pass
 
@@ -32,19 +33,33 @@ class GenMast(QMainWindow):
         self.filenames = []
         self.master = []
 
-        # Create a global varaiable for the lookup table.
-        # We can now edit it in the ColumnEdit class, or just leave it alone.
-        global lookupTable
-        # Upload lookup table, if found.
-        if os.path.exists('lookupTable.csv'):
-            lookupTable = pd.read_csv('lookupTable.csv', index_col=False)
-
         # Custom output stream.
         sys.stdout = Stream(newText=self.onUpdateText)
         # Print welcome message.
         print('Welcome to the TAARCOM List Generator.')
         print('Messages and updates will display here.')
         print('---')
+
+        # Create a global varaiable for the lookup table.
+        # We can now edit it in the ColumnEdit class, or just leave it alone.
+        global lookupTable
+        # Upload lookup table, if found.
+        if os.path.exists('lookupTable.xlsx'):
+            lookupTable = pd.read_excel('lookupTable.xlsx', index_col=False)
+        else:
+            print('No lookup table found!')
+            print('Please make sure lookupTable.xlsx is in the directory.')
+            print('***')
+
+        # Try finding the supporting files.
+        if not os.path.exists('Lookup Master OOT Cities.xlsx'):
+            print('No Lookup Master found!')
+            print('Please make sure Lookup Master is in the directory.')
+            print('***')
+        if not os.path.exists('distributorLookup.xlsx'):
+            print('No distributor lookup found!')
+            print('Please make sure distributorLookup.xlsx is in the directory.')
+            print('***')
 
     def onUpdateText(self, text):
         """Write console output to text widget."""
@@ -69,13 +84,13 @@ class GenMast(QMainWindow):
         self.btnGenMast.clicked.connect(self.genMastClicked)
 
         # Button for selecting files to compile into master list.
-        self.btnOpenFiles = QPushButton('Select New Files', self)
+        self.btnOpenFiles = QPushButton('Select \n Commission Files', self)
         self.btnOpenFiles.move(50, 30)
         self.btnOpenFiles.resize(150, 100)
         self.btnOpenFiles.clicked.connect(self.openFilesClicked)
 
         # Button for selecting a current master to append to.
-        self.btnUploadMast = QPushButton('Upload Master', self)
+        self.btnUploadMast = QPushButton('Select \n Running Master', self)
         self.btnUploadMast.move(250, 30)
         self.btnUploadMast.resize(150, 100)
         self.btnUploadMast.clicked.connect(self.uploadMastClicked)
@@ -109,13 +124,15 @@ class GenMast(QMainWindow):
     def editColumnsClicked(self):
         """Opens new window for editing lookup table."""
         # Open new window with data tree and editing processes.
-        if os.path.exists('lookupTable.csv'):
+        if os.path.exists('lookupTable.xlsx'):
+            global lookupTable
+            lookupTable = pd.read_excel('lookupTable.xlsx', index_col=False)
             self.columnsWindow = ColumnEdit()
             self.columnsWindow.show()
             self.lockButtons()
         else:
             print('No lookup table file found!')
-            print('Please make sure lookupTable.csv is in the directory.')
+            print('Please make sure lookupTable.xlsx is in the directory.')
             print('***')
 
     def genMastClicked(self):
@@ -133,7 +150,7 @@ class GenMast(QMainWindow):
     def genMastExecute(self):
         """Runs function for processing new files to master."""
         # Check to see if we've selected files to process.
-        if self.filenames and os.path.exists('lookupTable.csv'):
+        if self.filenames and os.path.exists('lookupTable.xlsx'):
             # Turn buttons off.
             self.lockButtons()
             # Run the GenerateMaster.py file.
@@ -141,14 +158,10 @@ class GenMast(QMainWindow):
             # Turn buttons back on.
             self.restoreButtons()
 
-        elif os.path.exists('lookupTable.csv'):
-            print('No new files selected!')
-            print('Use the Select New Files button to select files.')
+        elif os.path.exists('lookupTable.xlsx'):
+            print('No commission files selected!')
+            print('Use the Select Commission Files button to select files.')
             print('---')
-        else:
-            print('No lookup table found!')
-            print('Please make sure lookupTable.csv is in the directory.')
-            print('***')
 
     def uploadMastClicked(self):
         """Upload an existing master list."""
@@ -156,7 +169,7 @@ class GenMast(QMainWindow):
         self.master, _ = QFileDialog.getOpenFileName(
                 self, filter="Excel files (*.xls *.xlsx *.xlsm)")
         if self.master:
-            print('Master list provided:')
+            print('Current master list provided:')
             print(self.master)
             print('---')
             if 'Running Master' not in self.master:
@@ -251,19 +264,19 @@ class ColumnEdit(QMainWindow):
         btnAddTCOM.clicked.connect(self.addTCOMClicked)
 
         # Create the button for saving data names.
-        btnSaveExit = QPushButton('Save && Return', self)
+        btnSaveExit = QPushButton('Save && Exit', self)
         btnSaveExit.move(630, 230)
         btnSaveExit.resize(150, 100)
         btnSaveExit.clicked.connect(self.saveExit)
 
         # Create the button for canceling changes.
-        btnCancelExit = QPushButton('Cancel', self)
+        btnCancelExit = QPushButton('Cancel && Exit', self)
         btnCancelExit.move(630, 340)
         btnCancelExit.resize(150, 100)
         btnCancelExit.clicked.connect(self.cancelExit)
 
         # Populate the tree via the existing lookup table.
-        # Lookup table loaded from .csv during initial GUI setup.
+        # Lookup table loaded from .xlsx during initial GUI setup.
         # Make the items editable via double-click.
         for colName in list(lookupTable):
             dataCol = QTreeWidgetItem([colName])
@@ -320,13 +333,24 @@ class ColumnEdit(QMainWindow):
                         ignore_index=True)
             lookupTable = pd.concat([lookupTable, newCol], axis=1)
 
-        # Save tree to .csv file.
-        lookupTable.fillna('').to_csv('lookupTable.csv', index=False)
+        # Save tree to .xlsx file.
+        writer = pd.ExcelWriter('lookupTable.xlsx', engine='xlsxwriter')
+        lookupTable.to_excel(writer, sheet_name='Lookup', index=False)
+        try:
+            writer.save()
+        except IOError:
+            print('Lookup table is open in Excel!')
+            print('Please close the file and try again.')
+            print('***')
+            return
+
+        # Save and exit if no error.
+        writer.save()
         print('Lookup table changes saved.')
         print('---')
-
         # Close window.
         self.close()
+
 
     def cancelExit(self):
         """Close the window without saving changes to lookup table."""
