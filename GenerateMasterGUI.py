@@ -64,7 +64,7 @@ class GenMast(QMainWindow):
         """Creates UI window on launch."""
         # Button for generating the master list.
         self.btnGenMast = QPushButton('Process Files \n to Master', self)
-        self.btnGenMast.move(650, 300)
+        self.btnGenMast.move(650, 400)
         self.btnGenMast.resize(150, 150)
         self.btnGenMast.clicked.connect(self.genMastClicked)
 
@@ -85,6 +85,12 @@ class GenMast(QMainWindow):
         self.btnEditColumns.move(450, 30)
         self.btnEditColumns.resize(150, 100)
         self.btnEditColumns.clicked.connect(self.editColumnsClicked)
+
+        # Button for clearing filename and master choices.
+        self.btnClearAll = QPushButton('Clear Filenames \n and Master', self)
+        self.btnClearAll.move(650, 200)
+        self.btnClearAll.resize(150, 150)
+        self.btnClearAll.clicked.connect(self.clearAllClicked)
 
         # Create the text output widget.
         self.textBox = QTextEdit(self, readOnly=True)
@@ -116,6 +122,13 @@ class GenMast(QMainWindow):
         """Send the GenerateMaster execution to a worker thread."""
         worker = Worker(self.genMastExecute)
         self.threadpool.start(worker)
+
+    def clearAllClicked(self):
+        """Clear the filenames and master variables."""
+        self.filenames = []
+        self.master = []
+        print('All files and master cleared.')
+        print('---')
 
     def genMastExecute(self):
         """Runs function for processing new files to master."""
@@ -150,7 +163,7 @@ class GenMast(QMainWindow):
                 print('Caution!')
                 print('The file uploaded as master'
                       + 'does not appear to be a master list.')
-            print('---')
+                print('---')
 
     def openFilesClicked(self):
         """Provide filepaths for new data to process using GenerateMaster."""
