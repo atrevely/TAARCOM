@@ -11,10 +11,13 @@ del salespeople[salespeople == '']
 
 # Go through each salesperson and pull their data.
 for person in salespeople:
-    # Grab CM sales.
+    # Find sales entries for the salesperson.
     CM = runningMaster['CM Sales'] == person
-    # Grab design sales.
     Design = runningMaster['Design Sales'] == person
-    # Find matches to CM and/or Design sales.
-    salesData = runningMaster[[x or y for x, y in zip(CM, Design)]]
-    
+    # Grab entries that are CM Sales only.
+    CMSales = runningMaster[[x and not y for x, y in zip(CM, Design)]]
+    # Grab entries that are Design Sales only.
+    designSales = runningMaster[[not x and y for x, y in zip(CM, Design)]]
+    # Grab CM + Design Sales entries.
+    dualSales = runningMaster[[x and y for x, y in zip(CM, Design)]]
+
