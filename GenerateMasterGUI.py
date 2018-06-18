@@ -291,8 +291,10 @@ class ColumnEdit(QMainWindow):
         """Add new tag to a TCOM master data column."""
         # Check if we've selected a TCOM name to add tag to.
         if not self.colTree.currentIndex().parent().isValid():
-            text, ok = QInputDialog.getText(self, "Add Data Name",
-                                            "Enter new data name:")
+            text, ok = QInputDialog.getText(self, 'Add Data Name',
+                                            'Enter new data name for ' 
+                                            + str(self.colTree.currentItem().text(0)) 
+                                            + ':')
             # Check to see if we've entered text.
             if ok and text.strip() != '':
                 currentTCOM = self.colTree.currentItem()
