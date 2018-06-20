@@ -36,19 +36,19 @@ class GenMast(QMainWindow):
         # Custom output stream.
         sys.stdout = Stream(newText=self.onUpdateText)
         # Print welcome message.
-        print('Welcome to the TAARCOM List Generator.')
+        print('Welcome to the TAARCOM Commissions Manager.')
         print('Messages and updates will display here.')
         print('---')
 
-        # Create a global varaiable for the lookup table.
+        # Create a global varaiable for the field mappings.
         # We can now edit it in the ColumnEdit class, or just leave it alone.
-        global lookupTable
-        # Upload lookup table, if found.
-        if os.path.exists('lookupTable.xlsx'):
-            lookupTable = pd.read_excel('lookupTable.xlsx', index_col=False)
+        global fieldMappings
+        # Upload field mappings, if found.
+        if os.path.exists('fieldMappings.xlsx'):
+            fieldMappings = pd.read_excel('fieldMappings.xlsx', index_col=False)
         else:
-            print('No lookup table found!')
-            print('Please make sure lookupTable.xlsx is in the directory.')
+            print('No field mappings found!')
+            print('Please make sure fieldMappings.xlsx is in the directory.')
             print('***')
 
         # Try finding the supporting files.
@@ -78,7 +78,7 @@ class GenMast(QMainWindow):
     def initUI(self):
         """Creates UI window on launch."""
         # Button for generating the master list.
-        self.btnGenMast = QPushButton('Process Files \n to Master', self)
+        self.btnGenMast = QPushButton('Process Files \n to Running \n Commissions', self)
         self.btnGenMast.move(650, 400)
         self.btnGenMast.resize(150, 150)
         self.btnGenMast.clicked.connect(self.genMastClicked)
@@ -90,7 +90,7 @@ class GenMast(QMainWindow):
         self.btnOpenFiles.clicked.connect(self.openFilesClicked)
 
         # Button for selecting a current master to append to.
-        self.btnUploadMast = QPushButton('Select \n Running Master', self)
+        self.btnUploadMast = QPushButton('Select \n Running \n Commissions', self)
         self.btnUploadMast.move(250, 30)
         self.btnUploadMast.resize(150, 100)
         self.btnUploadMast.clicked.connect(self.uploadMastClicked)
@@ -118,21 +118,21 @@ class GenMast(QMainWindow):
 
         # Set window size and title, then show the window.
         self.setGeometry(300, 300, 900, 600)
-        self.setWindowTitle('Generate Master')
+        self.setWindowTitle('Commissions Manager 2.0')
         self.show()
 
     def editColumnsClicked(self):
-        """Opens new window for editing lookup table."""
+        """Opens new window for editing field mappings."""
         # Open new window with data tree and editing processes.
-        if os.path.exists('lookupTable.xlsx'):
-            global lookupTable
-            lookupTable = pd.read_excel('lookupTable.xlsx', index_col=False)
+        if os.path.exists('fieldMappings.xlsx'):
+            global fieldMappings
+            fieldMappings = pd.read_excel('fieldMappings.xlsx', index_col=False)
             self.columnsWindow = ColumnEdit()
             self.columnsWindow.show()
             self.lockButtons()
         else:
-            print('No lookup table file found!')
-            print('Please make sure lookupTable.xlsx is in the directory.')
+            print('No field mappings file found!')
+            print('Please make sure fieldMappings.xlsx is in the directory.')
             print('***')
 
     def genMastClicked(self):
@@ -150,15 +150,15 @@ class GenMast(QMainWindow):
     def genMastExecute(self):
         """Runs function for processing new files to master."""
         # Check to see if we've selected files to process.
-        if self.filenames and os.path.exists('lookupTable.xlsx'):
+        if self.filenames and os.path.exists('fieldMappings.xlsx'):
             # Turn buttons off.
             self.lockButtons()
             # Run the GenerateMaster.py file.
-            GenerateMaster.main(self.filenames, self.master, lookupTable)
+            GenerateMaster.main(self.filenames, self.master, fieldMappings)
             # Turn buttons back on.
             self.restoreButtons()
 
-        elif os.path.exists('lookupTable.xlsx'):
+        elif os.path.exists('fieldMappings.xlsx'):
             print('No commission files selected!')
             print('Use the Select Commission Files button to select files.')
             print('---')
@@ -214,7 +214,7 @@ class GenMast(QMainWindow):
 
 class Worker(QtCore.QRunnable):
     '''
-    Inherits from QRunnable to handler worker thread.
+    Inherits from QRunnable to handle worker thread.
 
     param args -- Arguments to pass to the callback function.
     param kwargs -- Keywords to pass to the callback function.
@@ -236,14 +236,14 @@ class Worker(QtCore.QRunnable):
 
 
 class ColumnEdit(QMainWindow):
-    """Window for editing lookup table contents."""
+    """Window for editing field mappings."""
     def __init__(self, parent=None):
         """Create UI for window on launch."""
         super().__init__()
 
         # Set window size and title.
         self.setGeometry(200, 200, 800, 550)
-        self.setWindowTitle('Column Name List')
+        self.setWindowTitle('Field Mappings')
 
         # Create the tree widget with column names.
         self.colTree = QTreeWidget(self)
@@ -252,7 +252,7 @@ class ColumnEdit(QMainWindow):
         self.colTree.setHeaderLabels(['TCOM Column Names'])
 
         # Create the button for adding data names.
-        btnAddName = QPushButton('Add Lookup Name', self)
+        btnAddName = QPushButton('Add Principal /n Field Name', self)
         btnAddName.move(630, 10)
         btnAddName.resize(150, 100)
         btnAddName.clicked.connect(self.addNameClicked)
@@ -275,13 +275,13 @@ class ColumnEdit(QMainWindow):
         btnCancelExit.resize(150, 100)
         btnCancelExit.clicked.connect(self.cancelExit)
 
-        # Populate the tree via the existing lookup table.
+        # Populate the tree via the existing field mappings.
         # Lookup table loaded from .xlsx during initial GUI setup.
         # Make the items editable via double-click.
-        for colName in list(lookupTable):
+        for colName in list(fieldMappings):
             dataCol = QTreeWidgetItem([colName])
             self.colTree.addTopLevelItem(dataCol)
-            for rawName in lookupTable[colName].dropna():
+            for rawName in fieldMappings[colName].dropna():
                 newChild = QTreeWidgetItem([rawName])
                 newChild.setFlags(newChild.flags() | QtCore.Qt.ItemIsEditable)
                 dataCol.addChild(newChild)
@@ -292,8 +292,8 @@ class ColumnEdit(QMainWindow):
         # Check if we've selected a TCOM name to add tag to.
         if not self.colTree.currentIndex().parent().isValid():
             text, ok = QInputDialog.getText(self, 'Add Data Name',
-                                            'Enter new data name for ' 
-                                            + str(self.colTree.currentItem().text(0)) 
+                                            'Enter new commission file name for ' 
+                                            + self.colTree.currentItem().text(0)
                                             + ':')
             # Check to see if we've entered text.
             if ok and text.strip() != '':
@@ -305,7 +305,7 @@ class ColumnEdit(QMainWindow):
     def addTCOMClicked(self):
         """Add new TCOM master column."""
         text, ok = QInputDialog.getText(self, "Add TCOM Name",
-                                        "Enter new TCOM name:")
+                                        "Enter new TCOM column name:")
         # Check to see if we've entered text.
         if ok and text.strip() != '':
             newTCOM = QTreeWidgetItem([text])
@@ -320,12 +320,12 @@ class ColumnEdit(QMainWindow):
                 (item.parent() or root).removeChild(item)
 
     def saveExit(self):
-        """Save changes to lookup table and close window."""
-        global lookupTable
-        lookupTable = pd.DataFrame()
+        """Save changes to field mappings and close window."""
+        global fieldMappings
+        fieldMappings = pd.DataFrame()
 
         # Save tree to application space.
-        # Iterate over branches to rebuild lookup table.
+        # Iterate over branches to rebuild field mappings.
         root = self.colTree.invisibleRootItem()
         for colNum in range(root.childCount()):
             newCol = pd.DataFrame(columns=[root.child(colNum).text(0)])
@@ -333,29 +333,28 @@ class ColumnEdit(QMainWindow):
                 newCol = newCol.append(
                         {root.child(colNum).text(0): root.child(colNum).child(childNum).text(0)},
                         ignore_index=True)
-            lookupTable = pd.concat([lookupTable, newCol], axis=1)
+            fieldMappings = pd.concat([fieldMappings, newCol], axis=1)
 
         # Save tree to .xlsx file.
-        writer = pd.ExcelWriter('lookupTable.xlsx', engine='xlsxwriter')
-        lookupTable.to_excel(writer, sheet_name='Lookup', index=False)
+        writer = pd.ExcelWriter('fieldMappings.xlsx', engine='xlsxwriter')
+        fieldMappings.to_excel(writer, sheet_name='Lookup', index=False)
         try:
             writer.save()
         except IOError:
-            print('Lookup table is open in Excel!')
+            print('Field mappings is open in Excel!')
             print('Please close the file and try again.')
             print('***')
             return
 
         # Save and exit if no error.
         writer.save()
-        print('Lookup table changes saved.')
+        print('Field mappings changes saved.')
         print('---')
         # Close window.
         self.close()
 
-
     def cancelExit(self):
-        """Close the window without saving changes to lookup table."""
+        """Close the window without saving changes to field mappings."""
         # Close window. Nothing gets saved.
         print('Tag edits canceled.')
         print('---')

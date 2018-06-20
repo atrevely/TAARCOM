@@ -9,6 +9,8 @@ salespeople = list(set().union(runningMaster['CM Sales'].unique(),
                        runningMaster['Design Sales'].unique()))
 del salespeople[salespeople == '']
 
+# SELECT SUBSET OF DATA BASED ON DATE(?)
+
 # Go through each salesperson and pull their data.
 for person in salespeople:
     # Find sales entries for the salesperson.

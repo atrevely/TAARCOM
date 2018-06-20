@@ -8,19 +8,19 @@ import re
 
 
 # The main function.
-def main(filepaths, oldMaster, lookupTable):
+def main(filepaths, oldMaster, fieldMappings):
     """Processes Excel files and appends them to a master list.
 
     Keyword arguments:
     filepaths -- paths for opening (Excel) files to process.
     oldMaster -- current master list (in Excel) to which we are appending data.
-    lookupTable -- dataframe which links master columns to file data columns.
+    fieldMappings -- dataframe which links master columns to file data columns.
     """
 
     # Get the master dataframe ready for the new data.
     # %%
     # Grab lookup table data names.
-    columnNames = list(lookupTable)
+    columnNames = list(fieldMappings)
     # Add in non-lookup'd data names.
     columnNames[0:0] = ['CM Sales', 'Design Sales', 'Quarter', 'Month', 'Year']
     columnNames[7:7] = ['T-End Cust', 'T-Name', 'CM',
@@ -34,16 +34,16 @@ def main(filepaths, oldMaster, lookupTable):
         finalData = pd.read_excel(oldMaster, 'Master').fillna('')
         oldMastLen = len(finalData)
         filesProcessed = pd.read_excel(oldMaster, 'Files Processed')
-        print('Appending files to old master.')
+        print('Appending files to Running Commissions.')
         if list(finalData) != columnNames:
             print('---')
-            print('Columns in old master do not match current columns!')
+            print('Columns in Running Commissions do not match fieldMappings.xlsx!')
             print('Please check column names and try again.')
             print('***')
             return
     # Start new master.
     else:
-        print('No existing master list provided. Starting a new one.')
+        print('No Running Commissions file provided. Starting a new one.')
         oldMastLen = 0
         # These are our names for the data in the master list.
         finalData = pd.DataFrame(columns=columnNames)
@@ -61,15 +61,15 @@ def main(filepaths, oldMaster, lookupTable):
     if duplicates:
         # Let us know we found duplictes and removed them.
         print('---')
-        print('The following files are already in the master:')
+        print('The following files are already in Running Commissions:')
         for file in list(duplicates):
             print(file)
         print('Duplicate files were removed from processing.')
         # Exit if no new files are left.
         if not filenames:
             print('---')
-            print('No new files selected.')
-            print('Please try again.')
+            print('No new commissions files selected.')
+            print('Please try selecting files again.')
             print('***')
             return
 
@@ -82,7 +82,7 @@ def main(filepaths, oldMaster, lookupTable):
         distMap = pd.read_excel('distributorLookup.xlsx', 'Distributors')
     else:
         print('---')
-        print('No distributor lookup found!')
+        print('No distributor lookup file found!')
         print('Please make sure distributorLookup.xlsx is in the directory.')
         print('***')
         return
@@ -103,7 +103,7 @@ def main(filepaths, oldMaster, lookupTable):
     else:
         print('---')
         print('No Lookup Master found!')
-        print('Please make sure LookupMaster*.xlsx is in the directory.')
+        print('Please make sure lookupMaster.xlsx is in the directory.')
         print('***')
         return
 
@@ -132,9 +132,9 @@ def main(filepaths, oldMaster, lookupTable):
                   + sheetName)
 
             # Iterate over each column of data that we want to append.
-            for dataName in list(lookupTable):
+            for dataName in list(fieldMappings):
                 # Grab list of names that the data could potentially be under.
-                nameList = lookupTable[dataName].dropna().tolist()
+                nameList = fieldMappings[dataName].dropna().tolist()
                 # Look for a match in the sheet column names.
                 sheetColumns = list(sheet)
                 columnName = [val for val in sheetColumns if val in nameList]
@@ -157,8 +157,8 @@ def main(filepaths, oldMaster, lookupTable):
             # append the new sheet to the master list, where only the properly
             # named columns are appended.
             if sheet.columns.duplicated().any():
-                print('Two items are being mapped to the same master column!')
-                print('Please check column mappings and try again.')
+                print('Two items are being mapped to the same column!')
+                print('Please check fieldMappings.xlsx and try again.')
                 print('***')
                 return
             elif 'Actual Comm Paid' not in list(sheet):
@@ -167,7 +167,7 @@ def main(filepaths, oldMaster, lookupTable):
                 print('Moving on.')
                 print('-')
             else:
-                matchingColumns = [val for val in list(sheet) if val in list(lookupTable)]
+                matchingColumns = [val for val in list(sheet) if val in list(fieldMappings)]
                 if len(matchingColumns) > 0:
                     # Sum commissions paid on sheet.
                     print('Commissions for this tab: '
@@ -253,7 +253,7 @@ def main(filepaths, oldMaster, lookupTable):
         # Reset match count.
         matches = 0
         # Find match from distMap.
-        for dist in distMap['Dist']:
+        for dist in distMap['Search Abbreviation']:
             if dist in distName:
                 # Check if it's already been matched.
                 if matches > 0:
@@ -261,7 +261,7 @@ def main(filepaths, oldMaster, lookupTable):
                     finalData.loc[row, 'Corrected Distributor'] = ''
                 else:
                     # Input corrected distributor name.
-                    finalData.loc[row, 'Corrected Distributor'] = distMap[distMap['Dist'] == dist]['Corrected Dist'].iloc[0]
+                    finalData.loc[row, 'Corrected Distributor'] = distMap[distMap['Search Abbreviation'] == dist]['Corrected Dist'].iloc[0]
                     matches += 1
 
         # If any data isn't found/parsed, copy entry to Fix Entries.
@@ -286,7 +286,7 @@ def main(filepaths, oldMaster, lookupTable):
     # Save the output as a .xlsx file.
     # %%
     # Save the Running Master file.
-    writer = pd.ExcelWriter('Running Master ' + time.strftime('%Y-%m-%d-%H%M')
+    writer = pd.ExcelWriter('Running Commissions ' + time.strftime('%Y-%m-%d-%H%M')
                             + '.xlsx', engine='xlsxwriter')
     finalData.to_excel(writer, sheet_name='Master', index=False)
     filesProcessed.to_excel(writer, sheet_name='Files Processed', index=False)
@@ -294,7 +294,7 @@ def main(filepaths, oldMaster, lookupTable):
         writer.save()
     except IOError:
         print('---')
-        print('Running Master is open in Excel!')
+        print('Running Commissions is open in Excel!')
         print('Please close the file and try again.')
         print('***')
         return
@@ -330,7 +330,7 @@ def main(filepaths, oldMaster, lookupTable):
     print('---')
     print('Updates completed successfully!')
     print('---')
-    print('Running Master updated.')
+    print('Running Commissions updated.')
     print('Lookup Master updated.')
     print('Entries Need Fixing updated.')
     print('+++')
