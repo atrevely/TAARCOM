@@ -25,6 +25,7 @@ def main(filepaths, oldMaster, fieldMappings):
     columnNames[0:0] = ['CM Sales', 'Design Sales', 'Quarter', 'Month', 'Year']
     columnNames[7:7] = ['T-End Cust', 'T-Name', 'CM',
                         'Principal', 'Corrected Distributor']
+    columnNames.append('CM/Sales Split %')
     columnNames.append('TEMP/FINAL')
     columnNames.append('Paid Date')
     columnNames.append('From File')
@@ -218,6 +219,7 @@ def main(filepaths, oldMaster, fieldMappings):
             finalData.loc[row, 'T-Name'] = customerMatches['Tname'][0]
             finalData.loc[row, 'CM'] = customerMatches['CM'][0]
             finalData.loc[row, 'T-End Cust'] = customerMatches['EndCustomer'][0]
+            finalData.loc[row, 'CM Split'] = customerMatches['CM Split'][0]
             # Update usage in lookup master.
             masterLookup.loc[customerMatches['index'], 'Last Used'] = time.strftime('%m/%d/%Y')
             # Update OOT city.

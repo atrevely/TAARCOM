@@ -204,12 +204,14 @@ class GenMast(QMainWindow):
         self.btnOpenFiles.setEnabled(False)
         self.btnUploadMast.setEnabled(False)
         self.btnEditColumns.setEnabled(False)
+        self.btnClearAll.setEnabled(False)
 
     def restoreButtons(self):
         self.btnGenMast.setEnabled(True)
         self.btnOpenFiles.setEnabled(True)
         self.btnUploadMast.setEnabled(True)
         self.btnEditColumns.setEnabled(True)
+        self.btnClearAll.setEnabled(True)
 
 
 class Worker(QtCore.QRunnable):
@@ -252,7 +254,7 @@ class ColumnEdit(QMainWindow):
         self.colTree.setHeaderLabels(['TCOM Column Names'])
 
         # Create the button for adding data names.
-        btnAddName = QPushButton('Add Principal /n Field Name', self)
+        btnAddName = QPushButton('Add Principal \n Field Name', self)
         btnAddName.move(630, 10)
         btnAddName.resize(150, 100)
         btnAddName.clicked.connect(self.addNameClicked)
@@ -342,13 +344,13 @@ class ColumnEdit(QMainWindow):
             writer.save()
         except IOError:
             print('Field mappings is open in Excel!')
-            print('Please close the file and try again.')
+            print('Please close fieldMappings.xlsx and try again.')
             print('***')
             return
 
         # Save and exit if no error.
         writer.save()
-        print('Field mappings changes saved.')
+        print('Changes saved to field mappings.')
         print('---')
         # Close window.
         self.close()
@@ -356,7 +358,7 @@ class ColumnEdit(QMainWindow):
     def cancelExit(self):
         """Close the window without saving changes to field mappings."""
         # Close window. Nothing gets saved.
-        print('Tag edits canceled.')
+        print('Mapping changes canceled.')
         print('---')
         self.close()
 
