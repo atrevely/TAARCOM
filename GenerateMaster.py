@@ -29,6 +29,7 @@ def main(filepaths, oldMaster, fieldMappings):
     columnNames.append('TEMP/FINAL')
     columnNames.append('Paid Date')
     columnNames.append('From File')
+    columnNames.append('Sales Report Date')
 
     # Check to see if we've supplied an existing master list to append to.
     if oldMaster:
