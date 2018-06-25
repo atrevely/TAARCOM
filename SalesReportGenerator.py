@@ -68,7 +68,7 @@ for person in salespeople:
     writer = pd.ExcelWriter(person + ' Sales Report '
                             + time.strftime('%Y-%m-%d')
                             + '.xlsx', engine='xlsxwriter')
-    finalReport.to_excel(writer, sheet_name='Report', index=False)
+    finalReport.to_excel(writer, sheet_name='Report Data', index=False)
     writer.save()
 
 # Fill in the Sales Report Date.

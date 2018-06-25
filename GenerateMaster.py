@@ -25,7 +25,7 @@ def main(filepaths, oldMaster, fieldMappings):
     columnNames[0:0] = ['CM Sales', 'Design Sales', 'Quarter', 'Month', 'Year']
     columnNames[7:7] = ['T-End Cust', 'T-Name', 'CM',
                         'Principal', 'Corrected Distributor']
-    columnNames.append('CM/Sales Split %')
+    columnNames.append('CM Split')
     columnNames.append('TEMP/FINAL')
     columnNames.append('Paid Date')
     columnNames.append('From File')
@@ -100,8 +100,8 @@ def main(filepaths, oldMaster, fieldMappings):
         return
 
     # Read in the Master Lookup. Exit if not found.
-    if os.path.exists('Lookup Master OOT Cities.xlsx'):
-        masterLookup = pd.read_excel('Lookup Master OOT Cities.xlsx').fillna('')
+    if os.path.exists('Lookup Master 6-22-18.xlsx'):
+        masterLookup = pd.read_excel('Lookup Master 6-22-18.xlsx').fillna('')
     else:
         print('---')
         print('No Lookup Master found!')
@@ -179,7 +179,7 @@ def main(filepaths, oldMaster, fieldMappings):
                     # Strip whitespace from strings.
                     stringCols = [val for val in list(sheet) if sheet[val].dtype == 'object']
                     for col in stringCols:
-                        sheet[col] = sheet[col].str.strip()
+                        sheet[col] = sheet[col].astype(str).map(lambda x: x.strip())
                     # Append matching data.
                     finalData = finalData.append(sheet[matchingColumns],
                                                  ignore_index=True)
@@ -205,6 +205,10 @@ def main(filepaths, oldMaster, fieldMappings):
     finalData.fillna('', inplace=True)
     # Find matches in Lookup Master and extract data from them.
     finalData['Reported Customer'] = finalData['Reported Customer'].astype(str)
+    # Let us know how many rows are being processed.
+    numRows = '{:,.0f}'.format(len(finalData) - oldMastLen)
+    print('---')
+    print('Beginning processing on ' + numRows + ' rows')
     # Iterate over each row of the newly appended data.
     for row in range(oldMastLen, len(finalData)):
         # First match part number.
@@ -225,7 +229,7 @@ def main(filepaths, oldMaster, fieldMappings):
             masterLookup.loc[customerMatches['index'], 'Last Used'] = time.strftime('%m/%d/%Y')
             # Update OOT city.
             if customerMatches['Tname'][0][0:3] == 'OOT' and not customerMatches['City'][0]:
-                 masterLookup.loc[customerMatches['index'], 'City'] = finalData.loc[row, 'City']
+                masterLookup.loc[customerMatches['index'], 'City'] = finalData.loc[row, 'City']
 
         # Try parsing the date.
         dateError = 0
