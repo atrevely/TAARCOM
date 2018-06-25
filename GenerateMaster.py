@@ -179,7 +179,7 @@ def main(filepaths, oldMaster, fieldMappings):
                     # Strip whitespace from strings.
                     stringCols = [val for val in list(sheet) if sheet[val].dtype == 'object']
                     for col in stringCols:
-                        sheet[col] = sheet[col].astype(str).map(lambda x: x.strip())
+                        sheet[col] = sheet[col].fillna('').astype(str).map(lambda x: x.strip())
                     # Append matching data.
                     finalData = finalData.append(sheet[matchingColumns],
                                                  ignore_index=True)
