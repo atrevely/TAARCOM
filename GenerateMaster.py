@@ -204,7 +204,6 @@ def main(filepaths, oldMaster, fieldMappings):
     # Fill NaNs left over from appending.
     finalData.fillna('', inplace=True)
     # Find matches in Lookup Master and extract data from them.
-    finalData['Reported Customer'] = finalData['Reported Customer'].astype(str)
     # Let us know how many rows are being processed.
     numRows = '{:,.0f}'.format(len(finalData) - oldMastLen)
     print('---')

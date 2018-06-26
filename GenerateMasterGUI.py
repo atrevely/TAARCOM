@@ -45,7 +45,8 @@ class GenMast(QMainWindow):
         global fieldMappings
         # Upload field mappings, if found.
         if os.path.exists('fieldMappings.xlsx'):
-            fieldMappings = pd.read_excel('fieldMappings.xlsx', index_col=False)
+            fieldMappings = pd.read_excel('fieldMappings.xlsx',
+                                          index_col=False)
         else:
             print('No field mappings found!')
             print('Please make sure fieldMappings.xlsx is in the directory.')
@@ -126,7 +127,8 @@ class GenMast(QMainWindow):
         # Open new window with data tree and editing processes.
         if os.path.exists('fieldMappings.xlsx'):
             global fieldMappings
-            fieldMappings = pd.read_excel('fieldMappings.xlsx', index_col=False)
+            fieldMappings = pd.read_excel('fieldMappings.xlsx',
+                                          index_col=False)
             self.columnsWindow = ColumnEdit()
             self.columnsWindow.show()
             self.lockButtons()
