@@ -53,7 +53,7 @@ class GenMast(QMainWindow):
             print('***')
 
         # Try finding the supporting files.
-        if not os.path.exists('Lookup Master 6-22-18.xlsx'):
+        if not os.path.exists('Lookup Master 6-27-18.xlsx'):
             print('No Lookup Master found!')
             print('Please make sure Lookup Master is in the directory.')
             print('***')

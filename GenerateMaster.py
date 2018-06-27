@@ -100,8 +100,8 @@ def main(filepaths, oldMaster, fieldMappings):
         return
 
     # Read in the Master Lookup. Exit if not found.
-    if os.path.exists('Lookup Master 6-22-18.xlsx'):
-        masterLookup = pd.read_excel('Lookup Master 6-22-18.xlsx').fillna('')
+    if os.path.exists('Lookup Master 6-27-18.xlsx'):
+        masterLookup = pd.read_excel('Lookup Master 6-27-18.xlsx').fillna('')
     else:
         print('---')
         print('No Lookup Master found!')
@@ -208,6 +208,10 @@ def main(filepaths, oldMaster, fieldMappings):
     numRows = '{:,.0f}'.format(len(finalData) - oldMastLen)
     print('---')
     print('Beginning processing on ' + numRows + ' rows')
+    # Remove entries with no commissions dollars.
+    finalData = finalData[finalData['Actual Comm Paid'] != '']
+    finalData.reset_index(inplace=True)
+
     # Iterate over each row of the newly appended data.
     for row in range(oldMastLen, len(finalData)):
         # First match part number.
@@ -292,7 +296,8 @@ def main(filepaths, oldMaster, fieldMappings):
     # Save the output as a .xlsx file.
     # %%
     # Save the Running Master file.
-    writer = pd.ExcelWriter('Running Commissions ' + time.strftime('%Y-%m-%d-%H%M')
+    writer = pd.ExcelWriter('Running Commissions '
+                            + time.strftime('%Y-%m-%d-%H%M')
                             + '.xlsx', engine='xlsxwriter')
     finalData.to_excel(writer, sheet_name='Master', index=False)
     filesProcessed.to_excel(writer, sheet_name='Files Processed', index=False)
