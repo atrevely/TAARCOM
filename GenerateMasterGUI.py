@@ -296,7 +296,7 @@ class ColumnEdit(QMainWindow):
         # Check if we've selected a TCOM name to add tag to.
         if not self.colTree.currentIndex().parent().isValid():
             text, ok = QInputDialog.getText(self, 'Add Data Name',
-                                            'Enter new commission file name for ' 
+                                            'Enter new commission file name for '
                                             + self.colTree.currentItem().text(0)
                                             + ':')
             # Check to see if we've entered text.

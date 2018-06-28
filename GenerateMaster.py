@@ -208,8 +208,19 @@ def main(filepaths, oldMaster, fieldMappings):
     numRows = '{:,.0f}'.format(len(finalData) - oldMastLen)
     print('---')
     print('Beginning processing on ' + numRows + ' rows')
+    # Check to make sure Actual Comm Paid is all convertible to numeric.
+    try:
+        pd.to_numeric(finalData['Actual Comm Paid']).fillna(0)
+    except ValueError:
+        print('---')
+        print('Error parsing commission dollars.')
+        print('Make sure all data going into Actual Comm Paid is numeric.')
+        print('Note: The $ sign should be ok to use in numeric columns.')
+        print('***')
+        return
     # Remove entries with no commissions dollars.
-    finalData = finalData[finalData['Actual Comm Paid'] != '']
+    finalData['Actual Comm Paid'] = pd.to_numeric(finalData['Actual Comm Paid']).fillna(0)
+    finalData = finalData[finalData['Actual Comm Paid'] != 0]
     finalData.reset_index(inplace=True)
 
     # Iterate over each row of the newly appended data.
@@ -218,7 +229,7 @@ def main(filepaths, oldMaster, fieldMappings):
         partNoMatches = masterLookup[finalData.loc[row, 'Part Number'] == masterLookup['PPN']]
         # Next match End Customer.
         customerMatches = partNoMatches[finalData.loc[row, 'Reported Customer'].lower() == partNoMatches['POSCustomer'].str.lower()]
-        customerMatches = customerMatches.reset_index()
+        customerMatches.reset_index(inplace=True)
         # Make sure we found exactly one match.
         if len(customerMatches) == 1:
             # Grab primary and secondary sales people from Lookup Master.
