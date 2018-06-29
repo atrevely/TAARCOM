@@ -164,7 +164,7 @@ def main(filepaths, oldMaster, fieldMappings):
                 print('***')
                 return
             elif 'Actual Comm Paid' not in list(sheet):
-                # Tab has no comission data, so it is ignored.
+                # Tab has no commission data, so it is ignored.
                 print('No commission data found on this tab.')
                 print('Moving on.')
                 print('-')
@@ -241,7 +241,7 @@ def main(filepaths, oldMaster, fieldMappings):
             finalData.loc[row, 'CM Split'] = customerMatches['CM Split'][0]
             # Update usage in lookup master.
             masterLookup.loc[customerMatches['index'], 'Last Used'] = time.strftime('%m/%d/%Y')
-            # Update OOT city.
+            # Update OOT city if not already filled in.
             if customerMatches['Tname'][0][0:3] == 'OOT' and not customerMatches['City'][0]:
                 masterLookup.loc[customerMatches['index'], 'City'] = finalData.loc[row, 'City']
 

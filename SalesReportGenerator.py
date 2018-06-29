@@ -3,16 +3,16 @@ import time
 
 
 # Load up the Running Master.
-runningMaster = pd.read_excel('Running Master INF FY2017.xlsx',
+runningCom = pd.read_excel('Running Commissions 2018-06-29-1347.xlsx',
                               'Master').fillna('')
 
 # Grab all of the salespeople initials.
-salespeople = list(set().union(runningMaster['CM Sales'].unique(),
-                               runningMaster['Design Sales'].unique()))
+salespeople = list(set().union(runningCom['CM Sales'].unique(),
+                               runningCom['Design Sales'].unique()))
 del salespeople[salespeople == '']
 
 # Select data that has not been reported yet.
-unreportedCommissions = runningMaster[runningMaster['Sales Report Date'] == '']
+unreportedCommissions = runningCom[runningCom['Sales Report Date'] == '']
 
 # Go through each salesperson and pull their data.
 for person in salespeople:
@@ -63,14 +63,17 @@ for person in salespeople:
 
     # Fill in salesperson initials.
     finalReport['Salesperson'] = person
+    
+    # Reorder columns.
+    finalReport = finalReport.loc[:, reportCols]
 
     # Write report to file.
-    writer = pd.ExcelWriter(person + ' Sales Report '
+    writer = pd.ExcelWriter('Sales Report  - ' + person
                             + time.strftime('%Y-%m-%d')
                             + '.xlsx', engine='xlsxwriter')
     finalReport.to_excel(writer, sheet_name='Report Data', index=False)
     writer.save()
 
 # Fill in the Sales Report Date.
-runningMaster.loc[runningMaster['Sales Report Date'] == '',
+runningCom.loc[runningCom['Sales Report Date'] == '',
                   'Sales Report Date'] = time.strftime('%m/%d/%Y')
