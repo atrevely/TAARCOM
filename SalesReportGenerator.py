@@ -63,17 +63,17 @@ for person in salespeople:
 
     # Fill in salesperson initials.
     finalReport['Salesperson'] = person
-    
+
     # Reorder columns.
     finalReport = finalReport.loc[:, reportCols]
 
     # Write report to file.
-    writer = pd.ExcelWriter('Sales Report  - ' + person
-                            + time.strftime('%Y-%m-%d')
+    writer = pd.ExcelWriter('Sales Report - ' + person
+                            + time.strftime(' %Y-%m-%d')
                             + '.xlsx', engine='xlsxwriter')
     finalReport.to_excel(writer, sheet_name='Report Data', index=False)
     writer.save()
 
 # Fill in the Sales Report Date.
 runningCom.loc[runningCom['Sales Report Date'] == '',
-                  'Sales Report Date'] = time.strftime('%m/%d/%Y')
+               'Sales Report Date'] = time.strftime('%m/%d/%Y')
