@@ -4,7 +4,7 @@ import time
 
 # Load up the Running Master.
 runningCom = pd.read_excel('Running Commissions 2018-06-29-1347.xlsx',
-                              'Master').fillna('')
+                           'Master').fillna('')
 
 # Grab all of the salespeople initials.
 salespeople = list(set().union(runningCom['CM Sales'].unique(),

@@ -221,7 +221,7 @@ def main(filepaths, oldMaster, fieldMappings):
     # Remove entries with no commissions dollars.
     finalData['Actual Comm Paid'] = pd.to_numeric(finalData['Actual Comm Paid']).fillna(0)
     finalData = finalData[finalData['Actual Comm Paid'] != 0]
-    finalData.reset_index(inplace=True)
+    finalData.reset_index(inplace=True, drop=True)
 
     # Iterate over each row of the newly appended data.
     for row in range(oldMastLen, len(finalData)):
@@ -288,7 +288,7 @@ def main(filepaths, oldMaster, fieldMappings):
         # If any data isn't found/parsed, copy entry to Fix Entries.
         if len(customerMatches) != 1 or matches != 1 or dateError:
             fixList = fixList.append(finalData.loc[row, :])
-            fixList.loc[row, 'Master Index'] = row
+            fixList.loc[row, 'Running Com Index'] = row
             fixList.loc[row, 'Distributor Matches'] = matches
             fixList.loc[row, 'Lookup Master Matches'] = len(customerMatches)
             fixList.loc[row, 'Date Added'] = time.strftime('%m/%d/%Y')
@@ -303,6 +303,7 @@ def main(filepaths, oldMaster, fieldMappings):
 
     # Reorder columns to match the desired layout in columnNames.
     finalData = finalData.loc[:, columnNames]
+    fixList = fixList.loc[:, columnNames.insert(0, 'Master Index')]
 
     # Save the output as a .xlsx file.
     # %%
