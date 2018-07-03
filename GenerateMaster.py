@@ -11,7 +11,7 @@ import re
 def main(filepaths, runningCom, fieldMappings):
     """Processes Excel files and appends them to Running Commissions.
 
-    Keyword arguments:
+    Arguments:
     filepaths -- paths for opening (Excel) files to process.
     runningCom -- current Running Commissions file (in Excel) to
                   which we are appending data.
@@ -27,11 +27,8 @@ def main(filepaths, runningCom, fieldMappings):
     columnNames[0:0] = ['CM Sales', 'Design Sales', 'Quarter', 'Month', 'Year']
     columnNames[7:7] = ['T-End Cust', 'T-Name', 'CM',
                         'Principal', 'Corrected Distributor']
-    columnNames.append('CM Split')
-    columnNames.append('TEMP/FINAL')
-    columnNames.append('Paid Date')
-    columnNames.append('From File')
-    columnNames.append('Sales Report Date')
+    columnNames.extend(['CM Split', 'TEMP/FINAL', 'Paid Date', 'From File',
+                        'Sales Report Date'])
 
     # Check to see if there's an existing Running Commissions to append to.
     if runningCom:
@@ -305,7 +302,9 @@ def main(filepaths, runningCom, fieldMappings):
 
     # Reorder columns to match the desired layout in columnNames.
     finalData = finalData.loc[:, columnNames]
-    fixList = fixList.loc[:, columnNames.insert(0, 'Master Index')]
+    columnNames.extend(['Distributor Matches', 'Lookup Master Matches',
+                        'Date Added', 'TEMP/FINAL', 'Master Index'])
+    fixList = fixList.loc[:, columnNames]
 
     # Save the output as a .xlsx file.
     # %%
