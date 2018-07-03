@@ -8,13 +8,15 @@ import re
 
 
 # The main function.
-def main(filepaths, oldMaster, fieldMappings):
-    """Processes Excel files and appends them to a master list.
+def main(filepaths, runningCom, fieldMappings):
+    """Processes Excel files and appends them to Running Commissions.
 
     Keyword arguments:
     filepaths -- paths for opening (Excel) files to process.
-    oldMaster -- current master list (in Excel) to which we are appending data.
-    fieldMappings -- dataframe which links master columns to file data columns.
+    runningCom -- current Running Commissions file (in Excel) to
+                  which we are appending data.
+    fieldMappings -- dataframe which links Running Commissions columns to
+                     file data columns.
     """
 
     # Get the master dataframe ready for the new data.
@@ -31,11 +33,11 @@ def main(filepaths, oldMaster, fieldMappings):
     columnNames.append('From File')
     columnNames.append('Sales Report Date')
 
-    # Check to see if we've supplied an existing master list to append to.
-    if oldMaster:
-        finalData = pd.read_excel(oldMaster, 'Master').fillna('')
-        oldMastLen = len(finalData)
-        filesProcessed = pd.read_excel(oldMaster, 'Files Processed')
+    # Check to see if there's an existing Running Commissions to append to.
+    if runningCom:
+        finalData = pd.read_excel(runningCom, 'Master').fillna('')
+        runComLen = len(finalData)
+        filesProcessed = pd.read_excel(runningCom, 'Files Processed')
         print('Appending files to Running Commissions.')
         if list(finalData) != columnNames:
             print('---')
@@ -43,11 +45,11 @@ def main(filepaths, oldMaster, fieldMappings):
             print('Please check column names and try again.')
             print('***')
             return
-    # Start new master.
+    # Start new Running Commissions.
     else:
         print('No Running Commissions file provided. Starting a new one.')
-        oldMastLen = 0
-        # These are our names for the data in the master list.
+        runComLen = 0
+        # These are our names for the data in Running Commissions.
         finalData = pd.DataFrame(columns=columnNames)
         filesProcessed = pd.DataFrame(columns=['Filename',
                                                'Total Commissions',
@@ -109,9 +111,9 @@ def main(filepaths, oldMaster, fieldMappings):
         print('***')
         return
 
-    # Go through each file, grab the new data, and put it in the master list.
+    # Go through each file, grab the data, and put it in Running Commissions.
     # %%
-    # Iterate through each file that we're appending to the master list.
+    # Iterate through each file that we're appending to Running Commissions.
     fileNum = 0
     for filename in filenames:
         # Grab the next file from the list.
@@ -156,8 +158,8 @@ def main(filepaths, oldMaster, fieldMappings):
                                  inplace=True)
 
             # Now that we've renamed all of the relevant columns,
-            # append the new sheet to the master list, where only the properly
-            # named columns are appended.
+            # append the new sheet to Running Commissions, where only the
+            # properly named columns are appended.
             if sheet.columns.duplicated().any():
                 print('Two items are being mapped to the same column!')
                 print('Please check fieldMappings.xlsx and try again.')
@@ -205,7 +207,7 @@ def main(filepaths, oldMaster, fieldMappings):
     finalData.fillna('', inplace=True)
     # Find matches in Lookup Master and extract data from them.
     # Let us know how many rows are being processed.
-    numRows = '{:,.0f}'.format(len(finalData) - oldMastLen)
+    numRows = '{:,.0f}'.format(len(finalData) - runComLen)
     print('---')
     print('Beginning processing on ' + numRows + ' rows')
     # Check to make sure Actual Comm Paid is all convertible to numeric.
@@ -224,7 +226,7 @@ def main(filepaths, oldMaster, fieldMappings):
     finalData.reset_index(inplace=True, drop=True)
 
     # Iterate over each row of the newly appended data.
-    for row in range(oldMastLen, len(finalData)):
+    for row in range(runComLen, len(finalData)):
         # First match part number.
         partNoMatches = masterLookup[finalData.loc[row, 'Part Number'] == masterLookup['PPN']]
         # Next match End Customer.
@@ -239,7 +241,7 @@ def main(filepaths, oldMaster, fieldMappings):
             finalData.loc[row, 'CM'] = customerMatches['CM'][0]
             finalData.loc[row, 'T-End Cust'] = customerMatches['EndCustomer'][0]
             finalData.loc[row, 'CM Split'] = customerMatches['CM Split'][0]
-            # Update usage in lookup master.
+            # Update usage in lookup Master.
             masterLookup.loc[customerMatches['index'], 'Last Used'] = time.strftime('%m/%d/%Y')
             # Update OOT city if not already filled in.
             if customerMatches['Tname'][0][0:3] == 'OOT' and not customerMatches['City'][0]:
@@ -307,7 +309,7 @@ def main(filepaths, oldMaster, fieldMappings):
 
     # Save the output as a .xlsx file.
     # %%
-    # Save the Running Master file.
+    # Save the Running Commissions file.
     writer = pd.ExcelWriter('Running Commissions '
                             + time.strftime('%Y-%m-%d-%H%M')
                             + '.xlsx', engine='xlsxwriter')
