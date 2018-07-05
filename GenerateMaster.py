@@ -257,6 +257,7 @@ def main(filepaths, runningCom, fieldMappings):
                 finalData.loc[row, 'Invoice Date'] = str(finalData.loc[row, 'Invoice Date'])
             else:
                 dateError = 1
+        # If no error found in date, fill in the month/year/quarter
         if not dateError:
             dateParsed = parse(finalData.loc[row, 'Invoice Date'])
             # Cast date format into mm/dd/yyyy.
