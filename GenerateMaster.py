@@ -303,7 +303,7 @@ def main(filepaths, runningCom, fieldMappings):
     # Reorder columns to match the desired layout in columnNames.
     finalData = finalData.loc[:, columnNames]
     columnNames.extend(['Distributor Matches', 'Lookup Master Matches',
-                        'Date Added', 'TEMP/FINAL', 'Master Index'])
+                        'Date Added', 'Running Com Index'])
     fixList = fixList.loc[:, columnNames]
 
     # Save the output as a .xlsx file.
