@@ -55,7 +55,10 @@ for entry in range(len(fixedEntries)):
         
         # Append entry to Lookup Master, if applicable.
         if not fixedEntries.loc[entry, 'Lookup Master Matches']:
-            masterLookup.append(fixedEntries.loc[entry, list(masterLookup)]).fillna('')
+            masterLookup = masterLookup.append(fixedEntries.loc[entry, list(masterLookup)],
+                                ignore_index=True).fillna('')
+            
+            
 
 # Save the Running Commissions file.
 writer = pd.ExcelWriter('Running Commissions '
