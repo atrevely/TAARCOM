@@ -350,7 +350,7 @@ def main(filepaths, runningCom, fieldMappings):
         print('***')
         return
 
-    # If no errors, actually save the files.
+    # If no errors, save the files.
     writer1.save()
     writer2.save()
     writer3.save()

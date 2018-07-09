@@ -7,7 +7,6 @@ from cx_Freeze import setup, Executable
 
 You will need to copy the 'platforms' folder in the anaconda3 directory
 to the directory containing the exe file for the GUI to work.
-
 """
 
 # Dependencies are automatically detected, but it might need fine tuning.
