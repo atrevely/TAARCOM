@@ -61,43 +61,47 @@ for entry in range(len(fixedEntries)):
             
 
 # Save the Running Commissions file.
-writer = pd.ExcelWriter('Running Commissions '
-                        + time.strftime('%Y-%m-%d-%H%M')
-                        + '.xlsx', engine='xlsxwriter')
-runningCom.to_excel(writer, sheet_name='Master', index=False)
+writer1 = pd.ExcelWriter('Running Commissions '
+                         + time.strftime('%Y-%m-%d-%H%M')
+                         + '.xlsx', engine='xlsxwriter')
+finalData.to_excel(writer1, sheet_name='Master', index=False)
+filesProcessed.to_excel(writer1, sheet_name='Files Processed', index=False)
+
+# Save the Needs Fixing file.
+writer2 = pd.ExcelWriter('Entries Need Fixing.xlsx', engine='xlsxwriter')
+fixList.to_excel(writer2, sheet_name='Data', index=False)
+
+# Save the Lookup Master
+writer3 = pd.ExcelWriter('Lookup Master ' + time.strftime('%Y-%m-%d-%H%M')
+                         + '.xlsx', engine='xlsxwriter')
+masterLookup.to_excel(writer3, sheet_name='Lookup', index=False)
+
 try:
-    writer.save()
+    writer1.save()
 except IOError:
     print('---')
     print('Running Commissions is open in Excel!')
     print('Please close the file and try again.')
     print('***')
     return
-writer.save()
-
-# Save the Needs Fixing file.
-writer = pd.ExcelWriter('Entries Need Fixing.xlsx', engine='xlsxwriter')
-fixList.to_excel(writer, sheet_name='Data', index=False)
 try:
-    writer.save()
-except IOError:
-    print('---')
-    print('Entries Need Fixing is open in Excel!')
-    print('Please close the file and try again.')
-    print('***')
-    return
-writer.save()
-
-# Save the Lookup Master
-writer = pd.ExcelWriter('Lookup Master ' + time.strftime('%Y-%m-%d-%H%M')
-                        + '.xlsx', engine='xlsxwriter')
-masterLookup.to_excel(writer, sheet_name='Lookup', index=False)
-try:
-    writer.save()
+    writer2.save()
 except IOError:
     print('---')
     print('Lookup Master is open in Excel!')
     print('Please close the file and try again.')
     print('***')
     return
-writer.save()
+try:
+    writer3.save()
+except IOError:
+    print('---')
+    print('Entries Need Fixing is open in Excel!')
+    print('Please close the file and try again.')
+    print('***')
+    return
+
+# If no errors, actually save the files.
+writer1.save()
+writer2.save()
+writer3.save()

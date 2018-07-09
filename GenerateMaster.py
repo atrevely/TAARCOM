@@ -9,7 +9,7 @@ import re
 
 # The main function.
 def main(filepaths, runningCom, fieldMappings):
-    """Processes Excel files and appends them to Running Commissions.
+    """Processes commission files and appends them to Running Commissions.
 
     Arguments:
     filepaths -- paths for opening (Excel) files to process.
