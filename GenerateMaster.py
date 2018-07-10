@@ -309,18 +309,18 @@ def main(filepaths, runningCom, fieldMappings):
 
     # Save the output as a .xlsx file.
     # %%
-    # Save the Running Commissions file.
+    # Write the Running Commissions file.
     writer1 = pd.ExcelWriter('Running Commissions '
                              + time.strftime('%Y-%m-%d-%H%M')
                              + '.xlsx', engine='xlsxwriter')
     finalData.to_excel(writer1, sheet_name='Master', index=False)
     filesProcessed.to_excel(writer1, sheet_name='Files Processed', index=False)
 
-    # Save the Needs Fixing file.
+    # Write the Needs Fixing file.
     writer2 = pd.ExcelWriter('Entries Need Fixing.xlsx', engine='xlsxwriter')
     fixList.to_excel(writer2, sheet_name='Data', index=False)
 
-    # Save the Lookup Master
+    # Write the Lookup Master.
     writer3 = pd.ExcelWriter('Lookup Master ' + time.strftime('%Y-%m-%d-%H%M')
                              + '.xlsx', engine='xlsxwriter')
     masterLookup.to_excel(writer3, sheet_name='Lookup', index=False)

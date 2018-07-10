@@ -1,5 +1,6 @@
 import pandas as pd
 import time
+import datetime
 from dateutil.parser import parse
 import calendar
 import math
@@ -17,6 +18,9 @@ def main():
 
     # Load up the Master Lookup.
     masterLookup = pd.read_excel('Lookup Master 6-27-18.xlsx').fillna('')
+    
+    # Load the Quarantined Lookups.
+    quarantinedLookups = pd.read_excel('Quarantined Lookups.xlsx').fillna('')
 
     # Grab the lines that have been fixed.
     dateFixed = fixList['Invoice Date'] != ''
@@ -64,23 +68,42 @@ def main():
                 # Record the date that the new entry was added to Lookup Master.
                 masterLookup.loc[len(masterLookup)-1, 'Date Added'] =  time.strftime('%m/%d/%Y')
 
-    # DROP DUPLICATES IN LOOKUP MASTER AT THIS POINT?
+    # Check if any entries are duplicates, and if so quarantine old entries.
+    duplicates = masterLookup.duplicated(subset=['POSCustomer', 'PPN'],
+                                         keep='last')
+    deprecatedEntries = masterLookup[duplicates].reset_index(drop=True)
+    masterLookup = masterLookup[~duplicates].reset_index(drop=True)
+    # Check for entries that are too old and quarantine them.
+    twoYearsAgo = datetime.datetime.today() - datetime.timedelta(days=720)
+    dateCutoff = masterLookup['Last Used'] < twoYearsAgo.strftime('%m/%d/%Y')
+    oldEntries = masterLookup[dateCutoff].reset_index(drop=True)
+    masterLookup = masterLookup[~dateCutoff].reset_index(drop=True)
+    # Add deprecated entries to the quarantine.
+    quarantinedLookups = quarantinedLookups.append(oldEntries,
+                                                   ignore_index=True)
+    quarantinedLookups = quarantinedLookups.append(deprecatedEntries,
+                                                   ignore_index=True)
+    
 
-    # Save the Running Commissions file.
+    # Write the Running Commissions file.
     writer1 = pd.ExcelWriter('Running Commissions '
                              + time.strftime('%Y-%m-%d-%H%M')
                              + '.xlsx', engine='xlsxwriter')
     runningCom.to_excel(writer1, sheet_name='Master', index=False)
     filesProcessed.to_excel(writer1, sheet_name='Files Processed', index=False)
 
-    # Save the Needs Fixing file.
+    # Write the Needs Fixing file.
     writer2 = pd.ExcelWriter('Entries Need Fixing.xlsx', engine='xlsxwriter')
     fixList.to_excel(writer2, sheet_name='Data', index=False)
 
-    # Save the Lookup Master
-    writer3 = pd.ExcelWriter('Lookup Master ' + time.strftime('%Y-%m-%d-%H%M')
-                             + '.xlsx', engine='xlsxwriter')
+    # Write the Lookup Master file.
+    writer3 = pd.ExcelWriter('Lookup Master - Current.xlsx',
+                             engine='xlsxwriter')
     masterLookup.to_excel(writer3, sheet_name='Lookup', index=False)
+
+    # Write the Quarantined Lookups file.
+    writer4 = pd.ExcelWriter('Quarantined Lookups.xlsx', engine='xlsxwriter')
+    quarantinedLookups.to_excel(writer4, sheet_name='Lookup', index=False)
 
     try:
         writer1.save()
@@ -106,8 +129,17 @@ def main():
         print('Please close the file and try again.')
         print('***')
         return
+    try:
+        writer4.save()
+    except IOError:
+        print('---')
+        print('Quarantined Lookups is open in Excel!')
+        print('Please close the file and try again.')
+        print('***')
+        return
 
     # If no errors, save the files.
     writer1.save()
     writer2.save()
     writer3.save()
+    writer4.save()
