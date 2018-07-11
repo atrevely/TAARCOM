@@ -37,11 +37,11 @@ class GenMast(QMainWindow):
         sys.stdout = Stream(newText=self.onUpdateText)
         # Print welcome message.
         print('Welcome to the TAARCOM Commissions Manager.')
-        print('Messages and updates will display here.')
-        print('---')
+        print('Messages and updates will display below.')
+        print('----------------------------------'
+              '----------------------------------')
 
-        # Create a global varaiable for the field mappings.
-        # We can now edit it in the ColumnEdit class, or just leave it alone.
+        # Initialize global variables.
         global fieldMappings
         # Upload field mappings, if found.
         if os.path.exists('fieldMappings.xlsx'):
@@ -52,7 +52,7 @@ class GenMast(QMainWindow):
             print('Please make sure fieldMappings.xlsx is in the directory.')
             print('***')
 
-        # Try finding the supporting files.
+        # Try finding/loading the supporting files.
         if not os.path.exists('Lookup Master 6-27-18.xlsx'):
             print('No Lookup Master found!')
             print('Please make sure Lookup Master is in the directory.')
@@ -60,6 +60,11 @@ class GenMast(QMainWindow):
         if not os.path.exists('distributorLookup.xlsx'):
             print('No distributor lookup found!')
             print('Please make sure distributorLookup.xlsx '
+                  'is in the directory.')
+            print('***')
+        if not os.path.exists('principalList.xlsx'):
+            print('No principal list found!')
+            print('Please make sure principalList.xlsx '
                   'is in the directory.')
             print('***')
 
@@ -79,6 +84,13 @@ class GenMast(QMainWindow):
 
     def initUI(self):
         """Creates UI window on launch."""
+
+        # Check for existence of principal list file.
+        princList = None
+        if os.path.exists('principalList.xlsx'):
+            # Load principal list.
+            princList = pd.read_excel('principalList.xlsx', index_col=False)
+
         # Button for generating the master list.
         self.btnGenMast = QPushButton('Process Files \n to '
                                       'Running \n Commissions', self)
@@ -93,7 +105,7 @@ class GenMast(QMainWindow):
         self.btnOpenFiles.clicked.connect(self.openFilesClicked)
 
         # Button for selecting a current master to append to.
-        self.btnUploadMast = QPushButton('Select \n Running \n'
+        self.btnUploadMast = QPushButton('Select \n Running \n '
                                          'Commissions', self)
         self.btnUploadMast.move(250, 30)
         self.btnUploadMast.resize(150, 100)
@@ -116,6 +128,9 @@ class GenMast(QMainWindow):
         self.princMenu.resize(200, 30)
         self.princMenu.move(650, 100)
         self.princMenu.addItem('(No Selection)')
+        # Fill in principals, if file is found.
+        if princList is not None:
+            self.princMenu.addItems(list(princList['Principals']))
         self.princLabel = QLabel('Select Principal:', self)
         self.princLabel.resize(150, 100)
         self.princLabel.move(650, 35)
@@ -165,7 +180,8 @@ class GenMast(QMainWindow):
         """Runs function for processing new files to master."""
         # Check to see if we're ready to process.
         princ = self.princMenu.currentText()
-        if self.filenames and os.path.exists('fieldMappings.xlsx') and princ != '(No Selection)':
+        mapExists = os.path.exists('fieldMappings.xlsx')
+        if self.filenames and mapExists and princ != '(No Selection)':
             # Turn buttons off.
             self.lockButtons()
             # Run the GenerateMaster.py file.
@@ -174,7 +190,7 @@ class GenMast(QMainWindow):
             # Turn buttons back on.
             self.restoreButtons()
 
-        elif not os.path.exists('fieldMappings.xlsx'):
+        elif not mapExists:
             print('File fieldMappings.xlsx not found!')
             print('Please check file location and try again.')
             print('---')
