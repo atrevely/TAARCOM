@@ -24,7 +24,8 @@ def main(filepaths, runningCom, fieldMappings):
     # Grab lookup table data names.
     columnNames = list(fieldMappings)
     # Add in non-lookup'd data names.
-    columnNames[0:0] = ['CM Sales', 'Design Sales', 'Quarter', 'Month', 'Year']
+    columnNames[0:0] = ['CM Sales', 'Design Sales', 'Quarter', 'Month',
+                        'Year']
     columnNames[7:7] = ['T-End Cust', 'T-Name', 'CM',
                         'Principal', 'Corrected Distributor']
     columnNames.extend(['CM Split', 'TEMP/FINAL', 'Paid Date', 'From File',
@@ -38,7 +39,8 @@ def main(filepaths, runningCom, fieldMappings):
         print('Appending files to Running Commissions.')
         if list(finalData) != columnNames:
             print('---')
-            print('Columns in Running Commissions do not match fieldMappings.xlsx!')
+            print('Columns in Running Commissions'
+                  'do not match fieldMappings.xlsx!')
             print('Please check column names and try again.')
             print('***')
             return
@@ -94,7 +96,8 @@ def main(filepaths, runningCom, fieldMappings):
     else:
         print('---')
         print('No Entries Need Fixing file found!')
-        print('Please make sure Entries Need Fixing.xlsx is in the directory.')
+        print('Please make sure Entries Need Fixing.xlsx'
+              'is in the directory.')
         print('***')
         return
 
@@ -175,11 +178,11 @@ def main(filepaths, runningCom, fieldMappings):
                           + '${:,.2f}'.format(sheet['Actual Comm Paid'].sum()))
                     print('-')
                     totalComm += sheet['Actual Comm Paid'].sum()
-                    # Strip whitespace from strings.
+                    # Strip whitespace from all strings in dataframe.
                     stringCols = [val for val in list(sheet) if sheet[val].dtype == 'object']
                     for col in stringCols:
                         sheet[col] = sheet[col].fillna('').astype(str).map(lambda x: x.strip())
-                    # Append matching data.
+                    # Append matching columns of data.
                     finalData = finalData.append(sheet[matchingColumns],
                                                  ignore_index=True)
                 else:
@@ -189,7 +192,7 @@ def main(filepaths, runningCom, fieldMappings):
         # Show total commissions.
         print('Total commissions for this file: '
               '${:,.2f}'.format(totalComm))
-        # Append filename and commissions to Files Processed sheet.
+        # Append filename and total commissions to Files Processed sheet.
         newFile = pd.DataFrame({'Filename': [filename],
                                 'Total Commissions': [totalComm],
                                 'Date Added': [time.strftime('%m/%d/%Y')],
@@ -225,47 +228,53 @@ def main(filepaths, runningCom, fieldMappings):
     # Iterate over each row of the newly appended data.
     for row in range(runComLen, len(finalData)):
         # First match part number.
-        partNoMatches = masterLookup[finalData.loc[row, 'Part Number'] == masterLookup['PPN']]
-        # Next match End Customer.
-        customerMatches = partNoMatches[finalData.loc[row, 'Reported Customer'].lower() == partNoMatches['POSCustomer'].str.lower()]
-        customerMatches.reset_index(inplace=True)
+        partMatch = finalData.loc[row, 'Part Number'] == masterLookup['PPN']
+        partNoMatches = masterLookup[partMatch]
+        # Next match Reported Customer.
+        custMatch = finalData.loc[row, 'Reported Customer'].lower() == partNoMatches['POSCustomer'].str.lower()
+        custMatches = partNoMatches[custMatch].reset_index()
         # Make sure we found exactly one match.
-        if len(customerMatches) == 1:
+        if len(custMatches) == 1:
             # Grab primary and secondary sales people from Lookup Master.
-            finalData.loc[row, 'CM Sales'] = customerMatches['CM Sales'][0]
-            finalData.loc[row, 'Design Sales'] = customerMatches['Design Sales'][0]
-            finalData.loc[row, 'T-Name'] = customerMatches['Tname'][0]
-            finalData.loc[row, 'CM'] = customerMatches['CM'][0]
-            finalData.loc[row, 'T-End Cust'] = customerMatches['EndCustomer'][0]
-            finalData.loc[row, 'CM Split'] = customerMatches['CM Split'][0]
+            finalData.loc[row, 'CM Sales'] = custMatches['CM Sales'][0]
+            finalData.loc[row, 'Design Sales'] = custMatches['Design Sales'][0]
+            finalData.loc[row, 'T-Name'] = custMatches['Tname'][0]
+            finalData.loc[row, 'CM'] = custMatches['CM'][0]
+            finalData.loc[row, 'T-End Cust'] = custMatches['EndCustomer'][0]
+            finalData.loc[row, 'CM Split'] = custMatches['CM Split'][0]
             # Update usage in lookup Master.
-            masterLookup.loc[customerMatches['index'], 'Last Used'] = time.strftime('%m/%d/%Y')
+            masterLookup.loc[custMatches['index'],
+                             'Last Used'] = time.strftime('%m/%d/%Y')
             # Update OOT city if not already filled in.
-            if customerMatches['Tname'][0][0:3] == 'OOT' and not customerMatches['City'][0]:
-                masterLookup.loc[customerMatches['index'], 'City'] = finalData.loc[row, 'City']
+            if custMatches['Tname'][0][0:3] == 'OOT' and not custMatches['City'][0]:
+                masterLookup.loc[custMatches['index'],
+                                 'City'] = finalData.loc[row, 'City']
 
         # Try parsing the date.
         dateError = 0
         try:
             parse(finalData.loc[row, 'Invoice Date'])
         except ValueError:
+            # The date isn't recognized by the parser.
             dateError = 1
         except TypeError:
             # Check if Pandas read it in as a Timestamp object.
             # If so, turn it back into a string.
             if isinstance(finalData.loc[row, 'Invoice Date'], pd.Timestamp):
-                finalData.loc[row, 'Invoice Date'] = str(finalData.loc[row, 'Invoice Date'])
+                finalData.loc[row,'Invoice Date'] = str(finalData.loc[row, 'Invoice Date'])
             else:
                 dateError = 1
         # If no error found in date, fill in the month/year/quarter
         if not dateError:
-            dateParsed = parse(finalData.loc[row, 'Invoice Date'])
+            date = parse(finalData.loc[row, 'Invoice Date'])
             # Cast date format into mm/dd/yyyy.
-            finalData.loc[row, 'Invoice Date'] = dateParsed.strftime('%m/%d/%Y')
+            finalData.loc[row, 'Invoice Date'] = date.strftime('%m/%d/%Y')
             # Fill in quarter/year/month data.
-            finalData.loc[row, 'Year'] = dateParsed.year
-            finalData.loc[row, 'Month'] = calendar.month_name[dateParsed.month][0:3]
-            finalData.loc[row, 'Quarter'] = str(dateParsed.year) + 'Q' + str(math.ceil(dateParsed.month/3))
+            finalData.loc[row, 'Year'] = date.year
+            finalData.loc[row, 'Month'] = calendar.month_name[date.month][0:3]
+            finalData.loc[row, 'Quarter'] = (str(date.year)
+                                             + 'Q'
+                                             + str(math.ceil(date.month/3)))
 
         # Find a corrected distributor match.
         # Strip extraneous characters and all spaces, and make lowercase.
@@ -286,11 +295,11 @@ def main(filepaths, runningCom, fieldMappings):
                     matches += 1
 
         # If any data isn't found/parsed, copy entry to Fix Entries.
-        if len(customerMatches) != 1 or matches != 1 or dateError:
+        if len(custMatches) != 1 or matches != 1 or dateError:
             fixList = fixList.append(finalData.loc[row, :])
             fixList.loc[row, 'Running Com Index'] = row
             fixList.loc[row, 'Distributor Matches'] = matches
-            fixList.loc[row, 'Lookup Master Matches'] = len(customerMatches)
+            fixList.loc[row, 'Lookup Master Matches'] = len(custMatches)
             fixList.loc[row, 'Date Added'] = time.strftime('%m/%d/%Y')
             finalData.loc[row, 'TEMP/FINAL'] = 'TEMP'
         else:
@@ -314,12 +323,11 @@ def main(filepaths, runningCom, fieldMappings):
                              + time.strftime('%Y-%m-%d-%H%M')
                              + '.xlsx', engine='xlsxwriter')
     finalData.to_excel(writer1, sheet_name='Master', index=False)
-    filesProcessed.to_excel(writer1, sheet_name='Files Processed', index=False)
-
+    filesProcessed.to_excel(writer1, sheet_name='Files Processed',
+                            index=False)
     # Write the Needs Fixing file.
     writer2 = pd.ExcelWriter('Entries Need Fixing.xlsx', engine='xlsxwriter')
     fixList.to_excel(writer2, sheet_name='Data', index=False)
-
     # Write the Lookup Master.
     writer3 = pd.ExcelWriter('Lookup Master ' + time.strftime('%Y-%m-%d-%H%M')
                              + '.xlsx', engine='xlsxwriter')

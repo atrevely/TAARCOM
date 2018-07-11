@@ -12,13 +12,14 @@ def main():
     fixList = pd.read_excel('Entries Need Fixing.xlsx', 'Data').fillna('')
 
     # Load up the current Running Commissions file.
-    runningCom = pd.read_excel('Running Commissions.xlsx', 'Master').fillna('')
+    runningCom = pd.read_excel('Running Commissions.xlsx',
+                               'Master').fillna('')
     filesProcessed = pd.read_excel('Running Commissions.xlsx',
                                    'Files Processed').fillna('')
 
     # Load up the Master Lookup.
     masterLookup = pd.read_excel('Lookup Master 6-27-18.xlsx').fillna('')
-    
+
     # Load the Quarantined Lookups.
     quarantinedLookups = pd.read_excel('Quarantined Lookups.xlsx').fillna('')
 
@@ -34,7 +35,8 @@ def main():
 
     for entry in range(len(fixedEntries)):
         # Replace the Running Commissions entry with the fixed one.
-        runningCom.loc[fixedEntries.loc[entry, 'Running Com Index'], :] = fixedEntries.loc[entry, :]
+        RCIndex = fixedEntries.loc[entry, 'Running Com Index']
+        runningCom.loc[RCIndex, :] = fixedEntries.loc[entry, :]
 
         # Try parsing the date.
         dateError = 0
@@ -45,8 +47,9 @@ def main():
         except TypeError:
             # Check if Pandas read it in as a Timestamp object.
             # If so, turn it back into a string.
-            if isinstance(fixedEntries.loc[entry, 'Invoice Date'], pd.Timestamp):
-                fixedEntries.loc[entry, 'Invoice Date'] = str(fixedEntries.loc[entry, 'Invoice Date'])
+            invDate = fixedEntries.loc[entry, 'Invoice Date']
+            if isinstance(invDate, pd.Timestamp):
+                fixedEntries.loc[entry, 'Invoice Date'] = str(invDate)
             else:
                 dateError = 1
         # If no error found in date, finish filling out the fixed entry.
@@ -66,9 +69,10 @@ def main():
                 masterLookup = masterLookup.append(fixedEntries.loc[entry, list(masterLookup)],
                                                    ignore_index=True).fillna('')
                 # Record the date that the new entry was added to Lookup Master.
-                masterLookup.loc[len(masterLookup)-1, 'Date Added'] =  time.strftime('%m/%d/%Y')
+                masterLookup.loc[len(masterLookup)-1,
+                                 'Date Added'] =  time.strftime('%m/%d/%Y')
 
-    # Check if any entries are duplicates, and if so quarantine old entries.
+    # Check if any entries are duplicates, then quarantine old versions.
     duplicates = masterLookup.duplicated(subset=['POSCustomer', 'PPN'],
                                          keep='last')
     deprecatedEntries = masterLookup[duplicates].reset_index(drop=True)
@@ -78,29 +82,34 @@ def main():
     dateCutoff = masterLookup['Last Used'] < twoYearsAgo.strftime('%m/%d/%Y')
     oldEntries = masterLookup[dateCutoff].reset_index(drop=True)
     masterLookup = masterLookup[~dateCutoff].reset_index(drop=True)
+    # Record the date we quarantined the entries.
+    deprecatedEntries.loc[:, 'Date Quarantined'] = time.strftime('%m/%d/%Y')
+    oldEntries.loc[:, 'Date Quarantined'] = time.strftime('%m/%d/%Y')
     # Add deprecated entries to the quarantine.
     quarantinedLookups = quarantinedLookups.append(oldEntries,
                                                    ignore_index=True)
     quarantinedLookups = quarantinedLookups.append(deprecatedEntries,
                                                    ignore_index=True)
-    
+    # Notify us of changes.
+    print(str(len(oldEntries))
+          + 'entries quarantied for being more than 2 years old.')
+    print(str(len(deprecatedEntries))
+          + 'entries quarantined for being deprecated (old duplicates).')
 
     # Write the Running Commissions file.
     writer1 = pd.ExcelWriter('Running Commissions '
                              + time.strftime('%Y-%m-%d-%H%M')
                              + '.xlsx', engine='xlsxwriter')
     runningCom.to_excel(writer1, sheet_name='Master', index=False)
-    filesProcessed.to_excel(writer1, sheet_name='Files Processed', index=False)
-
+    filesProcessed.to_excel(writer1, sheet_name='Files Processed',
+                            index=False)
     # Write the Needs Fixing file.
     writer2 = pd.ExcelWriter('Entries Need Fixing.xlsx', engine='xlsxwriter')
     fixList.to_excel(writer2, sheet_name='Data', index=False)
-
     # Write the Lookup Master file.
     writer3 = pd.ExcelWriter('Lookup Master - Current.xlsx',
                              engine='xlsxwriter')
     masterLookup.to_excel(writer3, sheet_name='Lookup', index=False)
-
     # Write the Quarantined Lookups file.
     writer4 = pd.ExcelWriter('Quarantined Lookups.xlsx', engine='xlsxwriter')
     quarantinedLookups.to_excel(writer4, sheet_name='Lookup', index=False)
