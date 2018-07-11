@@ -4,7 +4,7 @@ import os.path
 from PyQt5 import QtCore, QtGui
 from PyQt5.QtWidgets import QMainWindow, QPushButton, QApplication, \
                             QFileDialog, QTextEdit, QTreeWidget, \
-                            QTreeWidgetItem, QInputDialog
+                            QTreeWidgetItem, QInputDialog, QComboBox, QLabel
 from PyQt5.QtCore import pyqtSlot
 import GenerateMaster
 
@@ -59,7 +59,8 @@ class GenMast(QMainWindow):
             print('***')
         if not os.path.exists('distributorLookup.xlsx'):
             print('No distributor lookup found!')
-            print('Please make sure distributorLookup.xlsx is in the directory.')
+            print('Please make sure distributorLookup.xlsx '
+                  'is in the directory.')
             print('***')
 
     def onUpdateText(self, text):
@@ -79,7 +80,8 @@ class GenMast(QMainWindow):
     def initUI(self):
         """Creates UI window on launch."""
         # Button for generating the master list.
-        self.btnGenMast = QPushButton('Process Files \n to Running \n Commissions', self)
+        self.btnGenMast = QPushButton('Process Files \n to '
+                                      'Running \n Commissions', self)
         self.btnGenMast.move(650, 400)
         self.btnGenMast.resize(150, 150)
         self.btnGenMast.clicked.connect(self.genMastClicked)
@@ -91,7 +93,8 @@ class GenMast(QMainWindow):
         self.btnOpenFiles.clicked.connect(self.openFilesClicked)
 
         # Button for selecting a current master to append to.
-        self.btnUploadMast = QPushButton('Select \n Running \n Commissions', self)
+        self.btnUploadMast = QPushButton('Select \n Running \n'
+                                         'Commissions', self)
         self.btnUploadMast.move(250, 30)
         self.btnUploadMast.resize(150, 100)
         self.btnUploadMast.clicked.connect(self.uploadMastClicked)
@@ -107,6 +110,15 @@ class GenMast(QMainWindow):
         self.btnClearAll.move(650, 200)
         self.btnClearAll.resize(150, 150)
         self.btnClearAll.clicked.connect(self.clearAllClicked)
+
+        # Dropdown menu for selecting principal.
+        self.princMenu = QComboBox(self)
+        self.princMenu.resize(200, 30)
+        self.princMenu.move(650, 100)
+        self.princMenu.addItem('(No Selection)')
+        self.princLabel = QLabel('Select Principal:', self)
+        self.princLabel.resize(150, 100)
+        self.princLabel.move(650, 35)
 
         # Create the text output widget.
         self.textBox = QTextEdit(self, readOnly=True)
@@ -151,18 +163,29 @@ class GenMast(QMainWindow):
 
     def genMastExecute(self):
         """Runs function for processing new files to master."""
-        # Check to see if we've selected files to process.
-        if self.filenames and os.path.exists('fieldMappings.xlsx'):
+        # Check to see if we're ready to process.
+        princ = self.princMenu.currentText()
+        if self.filenames and os.path.exists('fieldMappings.xlsx') and princ != '(No Selection)':
             # Turn buttons off.
             self.lockButtons()
             # Run the GenerateMaster.py file.
-            GenerateMaster.main(self.filenames, self.master, fieldMappings)
+            GenerateMaster.main(self.filenames, self.master,
+                                fieldMappings, princ)
             # Turn buttons back on.
             self.restoreButtons()
 
-        elif os.path.exists('fieldMappings.xlsx'):
+        elif not os.path.exists('fieldMappings.xlsx'):
+            print('File fieldMappings.xlsx not found!')
+            print('Please check file location and try again.')
+            print('---')
+
+        elif not self.filenames:
             print('No commission files selected!')
             print('Use the Select Commission Files button to select files.')
+            print('---')
+
+        elif princ == '(No Selection)':
+            print('Please select a principal from the dropdown menu!')
             print('---')
 
     def uploadMastClicked(self):

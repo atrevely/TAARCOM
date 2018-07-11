@@ -54,23 +54,25 @@ def main():
                 dateError = 1
         # If no error found in date, finish filling out the fixed entry.
         if not dateError:
-            dateParsed = parse(fixedEntries.loc[entry, 'Invoice Date'])
+            date = parse(fixedEntries.loc[entry, 'Invoice Date'])
             # Cast date format into mm/dd/yyyy.
-            fixedEntries.loc[entry, 'Invoice Date'] = dateParsed.strftime('%m/%d/%Y')
+            fixedEntries.loc[entry, 'Invoice Date'] = date.strftime('%m/%d/%Y')
             # Fill in quarter/year/month data.
-            fixedEntries.loc[entry, 'Year'] = dateParsed.year
-            fixedEntries.loc[entry, 'Month'] = calendar.month_name[dateParsed.month][0:3]
-            fixedEntries.loc[entry, 'Quarter'] = str(dateParsed.year) + 'Q' + str(math.ceil(dateParsed.month/3))
+            fixedEntries.loc[entry, 'Year'] = date.year
+            fixedEntries.loc[entry, 'Month'] = calendar.month_name[date.month][0:3]
+            fixedEntries.loc[entry, 'Quarter'] = (str(date.year)
+                                                  + 'Q'
+                                                  + str(math.ceil(date.month/3)))
             # Delete the fixed entry from the Needs Fixing file.
-            fixList.drop(fixList[fixList['Running Com Index'] == fixedEntries.loc[entry, 'Running Com Index']].index, inplace=True)
+            ID = fixList['Running Com Index'] == fixedEntries.loc[entry, 'Running Com Index']
+            fixList.drop(fixList[ID].index, inplace=True)
 
             # Append entry to Lookup Master, if applicable.
             if not fixedEntries.loc[entry, 'Lookup Master Matches']:
                 masterLookup = masterLookup.append(fixedEntries.loc[entry, list(masterLookup)],
                                                    ignore_index=True).fillna('')
                 # Record the date that the new entry was added to Lookup Master.
-                masterLookup.loc[len(masterLookup)-1,
-                                 'Date Added'] =  time.strftime('%m/%d/%Y')
+                masterLookup.loc[len(masterLookup)-1, 'Date Added'] =  time.strftime('%m/%d/%Y')
 
     # Check if any entries are duplicates, then quarantine old versions.
     duplicates = masterLookup.duplicated(subset=['POSCustomer', 'PPN'],

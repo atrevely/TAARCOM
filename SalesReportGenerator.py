@@ -14,16 +14,16 @@ def main():
     del salespeople[salespeople == '']
 
     # Select data that has not been reported yet.
-    unreportedCommissions = runningCom[runningCom['Sales Report Date'] == '']
+    unrepComms = runningCom[runningCom['Sales Report Date'] == '']
 
     # Go through each salesperson and pull their data.
     for person in salespeople:
         # Find sales entries for the salesperson.
-        CM = unreportedCommissions['CM Sales'] == person
-        Design = unreportedCommissions['Design Sales'] == person
+        CM = unrepComms['CM Sales'] == person
+        Design = unrepComms['Design Sales'] == person
 
         # Grab entries that are CM Sales for this salesperson.
-        CMSales = unreportedCommissions[[x and not y for x, y in zip(CM, Design)]]
+        CMSales = unrepComms[[x and not y for x, y in zip(CM, Design)]]
         # Determine share of sales.
         CMOnly = CMSales[CMSales['Design Sales'] == '']
         CMOnly['Sales Percent'] = 100
@@ -31,7 +31,7 @@ def main():
         CMWithDesign['Sales Percent'] = CMWithDesign['CM Split']
 
         # Grab entries that are Design Sales only.
-        designSales = unreportedCommissions[[not x and y for x, y in zip(CM, Design)]]
+        designSales = unrepComms[[not x and y for x, y in zip(CM, Design)]]
         # Determine share of sales.
         designOnly = designSales[designSales['CM Sales'] == '']
         designOnly['Sales Percent'] = 100
@@ -39,7 +39,7 @@ def main():
         designWithCM['Sales Percent'] = 100 - designWithCM['CM Split']
 
         # Grab CM + Design Sales entries.
-        dualSales = unreportedCommissions[[x and y for x, y in zip(CM, Design)]]
+        dualSales = unrepComms[[x and y for x, y in zip(CM, Design)]]
         dualSales['Sales Percent'] = 100
 
         # Set report columns.

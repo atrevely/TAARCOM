@@ -8,7 +8,7 @@ import re
 
 
 # The main function.
-def main(filepaths, runningCom, fieldMappings):
+def main(filepaths, runningCom, fieldMappings, principal):
     """Processes commission files and appends them to Running Commissions.
 
     Arguments:
@@ -39,7 +39,7 @@ def main(filepaths, runningCom, fieldMappings):
         print('Appending files to Running Commissions.')
         if list(finalData) != columnNames:
             print('---')
-            print('Columns in Running Commissions'
+            print('Columns in Running Commissions '
                   'do not match fieldMappings.xlsx!')
             print('Please check column names and try again.')
             print('***')
@@ -247,8 +247,7 @@ def main(filepaths, runningCom, fieldMappings):
                              'Last Used'] = time.strftime('%m/%d/%Y')
             # Update OOT city if not already filled in.
             if custMatches['Tname'][0][0:3] == 'OOT' and not custMatches['City'][0]:
-                masterLookup.loc[custMatches['index'],
-                                 'City'] = finalData.loc[row, 'City']
+                masterLookup.loc[custMatches['index'], 'City'] = finalData.loc[row, 'City']
 
         # Try parsing the date.
         dateError = 0
@@ -261,7 +260,7 @@ def main(filepaths, runningCom, fieldMappings):
             # Check if Pandas read it in as a Timestamp object.
             # If so, turn it back into a string.
             if isinstance(finalData.loc[row, 'Invoice Date'], pd.Timestamp):
-                finalData.loc[row,'Invoice Date'] = str(finalData.loc[row, 'Invoice Date'])
+                finalData.loc[row, 'Invoice Date'] = str(finalData.loc[row, 'Invoice Date'])
             else:
                 dateError = 1
         # If no error found in date, fill in the month/year/quarter
@@ -291,7 +290,8 @@ def main(filepaths, runningCom, fieldMappings):
                     finalData.loc[row, 'Corrected Distributor'] = ''
                 else:
                     # Input corrected distributor name.
-                    finalData.loc[row, 'Corrected Distributor'] = distMap[distMap['Search Abbreviation'] == dist]['Corrected Dist'].iloc[0]
+                    corrDist = distMap[distMap['Search Abbreviation'] == dist]
+                    finalData.loc[row, 'Corrected Distributor'] = corrDist['Corrected Dist'].iloc[0]
                     matches += 1
 
         # If any data isn't found/parsed, copy entry to Fix Entries.
@@ -312,6 +312,8 @@ def main(filepaths, runningCom, fieldMappings):
 
     # Reorder columns to match the desired layout in columnNames.
     finalData = finalData.loc[:, columnNames]
+    # Fill in principal.
+    finalData.loc[:, 'Principal'] = principal
     columnNames.extend(['Distributor Matches', 'Lookup Master Matches',
                         'Date Added', 'Running Com Index'])
     fixList = fixList.loc[:, columnNames]
