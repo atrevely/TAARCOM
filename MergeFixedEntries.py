@@ -119,34 +119,34 @@ def main():
     try:
         writer1.save()
     except IOError:
-        print('---')
-        print('Running Commissions is open in Excel!')
-        print('Please close the file and try again.')
-        print('***')
+        print('---\n'
+              'Running Commissions is open in Excel!\n'
+              'Please close the file and try again.\n'
+              '***')
         return
     try:
         writer2.save()
     except IOError:
-        print('---')
-        print('Lookup Master is open in Excel!')
-        print('Please close the file and try again.')
-        print('***')
+        print('---\n'
+              'Lookup Master is open in Excel!\n'
+              'Please close the file and try again.\n'
+              '***')
         return
     try:
         writer3.save()
     except IOError:
-        print('---')
-        print('Entries Need Fixing is open in Excel!')
-        print('Please close the file and try again.')
-        print('***')
+        print('---\n'
+              'Entries Need Fixing is open in Excel!\n'
+              'Please close the file and try again.\n'
+              '***')
         return
     try:
         writer4.save()
     except IOError:
-        print('---')
-        print('Quarantined Lookups is open in Excel!')
-        print('Please close the file and try again.')
-        print('***')
+        print('---\n'
+              'Quarantined Lookups is open in Excel!\n'
+              'Please close the file and try again.\n'
+              '***')
         return
 
     # If no errors, save the files.

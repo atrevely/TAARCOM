@@ -38,11 +38,11 @@ def main(filepaths, runningCom, fieldMappings, principal):
         filesProcessed = pd.read_excel(runningCom, 'Files Processed')
         print('Appending files to Running Commissions.')
         if list(finalData) != columnNames:
-            print('---')
-            print('Columns in Running Commissions '
-                  'do not match fieldMappings.xlsx!')
-            print('Please check column names and try again.')
-            print('***')
+            print('---\n'
+                  'Columns in Running Commissions '
+                  'do not match fieldMappings.xlsx!\n'
+                  'Please check column names and try again.\n'
+                  '***')
             return
     # Start new Running Commissions.
     else:
@@ -63,17 +63,17 @@ def main(filepaths, runningCom, fieldMappings, principal):
     filenames = [val for val in filenames if val not in duplicates]
     if duplicates:
         # Let us know we found duplictes and removed them.
-        print('---')
-        print('The following files are already in Running Commissions:')
+        print('---\n'
+              'The following files are already in Running Commissions:')
         for file in list(duplicates):
             print(file)
         print('Duplicate files were removed from processing.')
         # Exit if no new files are left.
         if not filenames:
-            print('---')
-            print('No new commissions files selected.')
-            print('Please try selecting files again.')
-            print('***')
+            print('---\n'
+                  'No new commissions files selected.\n'
+                  'Please try selecting files again.\n'
+                  '***')
             return
 
     # Read in each new file with Pandas and store them as dictionaries.
@@ -84,31 +84,31 @@ def main(filepaths, runningCom, fieldMappings, principal):
     if os.path.exists('distributorLookup.xlsx'):
         distMap = pd.read_excel('distributorLookup.xlsx', 'Distributors')
     else:
-        print('---')
-        print('No distributor lookup file found!')
-        print('Please make sure distributorLookup.xlsx is in the directory.')
-        print('***')
+        print('---\n'
+              'No distributor lookup file found!\n'
+              'Please make sure distributorLookup.xlsx is in the directory.\n'
+              '***')
         return
 
     # Read in file of entries that need fixing. Exit if not found.
     if os.path.exists('Entries Need Fixing.xlsx'):
         fixList = pd.read_excel('Entries Need Fixing.xlsx', 'Data').fillna('')
     else:
-        print('---')
-        print('No Entries Need Fixing file found!')
-        print('Please make sure Entries Need Fixing.xlsx'
-              'is in the directory.')
-        print('***')
+        print('---\n'
+              'No Entries Need Fixing file found!\n'
+              'Please make sure Entries Need Fixing.xlsx'
+              'is in the directory.\n'
+              '***')
         return
 
     # Read in the Master Lookup. Exit if not found.
     if os.path.exists('Lookup Master 6-27-18.xlsx'):
         masterLookup = pd.read_excel('Lookup Master 7-12-18.xlsx').fillna('')
     else:
-        print('---')
-        print('No Lookup Master found!')
-        print('Please make sure lookupMaster.xlsx is in the directory.')
-        print('***')
+        print('---\n'
+              'No Lookup Master found!\n'
+              'Please make sure lookupMaster.xlsx is in the directory.\n'
+              '***')
         return
 
     # Go through each file, grab the data, and put it in Running Commissions.
@@ -161,15 +161,15 @@ def main(filepaths, runningCom, fieldMappings, principal):
             # append the new sheet to Running Commissions, where only the
             # properly named columns are appended.
             if sheet.columns.duplicated().any():
-                print('Two items are being mapped to the same column!')
-                print('Please check fieldMappings.xlsx and try again.')
-                print('***')
+                print('Two items are being mapped to the same column!\n'
+                      'Please check fieldMappings.xlsx and try again.\n'
+                      '***')
                 return
             elif 'Actual Comm Paid' not in list(sheet):
                 # Tab has no commission data, so it is ignored.
-                print('No commission data found on this tab.')
-                print('Moving on.')
-                print('-')
+                print('No commission data found on this tab.\n'
+                      'Moving on.\n'
+                      '-')
             else:
                 matchingColumns = [val for val in list(sheet)
                                    if val in list(fieldMappings)]
@@ -189,8 +189,8 @@ def main(filepaths, runningCom, fieldMappings, principal):
                     finalData = finalData.append(sheet[matchingColumns],
                                                  ignore_index=True)
                 else:
-                    print('Found no data on this tab. Moving on.')
-                    print('-')
+                    print('Found no data on this tab. Moving on.\n'
+                          '-')
 
         # Show total commissions.
         print('Total commissions for this file: '
@@ -211,17 +211,17 @@ def main(filepaths, runningCom, fieldMappings, principal):
     # Find matches in Lookup Master and extract data from them.
     # Let us know how many rows are being processed.
     numRows = '{:,.0f}'.format(len(finalData) - runComLen)
-    print('---')
-    print('Beginning processing on ' + numRows + ' rows')
+    print('---\n'
+          'Beginning processing on ' + numRows + ' rows of data.')
     # Check to make sure Actual Comm Paid is all convertible to numeric.
     try:
         pd.to_numeric(finalData['Actual Comm Paid']).fillna(0)
     except ValueError:
-        print('---')
-        print('Error parsing commission dollars.')
-        print('Make sure all data going into Actual Comm Paid is numeric.')
-        print('Note: The $ sign should be ok to use in numeric columns.')
-        print('***')
+        print('---\n'
+              'Error parsing commission dollars.\n'
+              'Make sure all data going into Actual Comm Paid is numeric.\n'
+              'Note: The $ sign should be ok to use in numeric columns.\n'
+              '***')
         return
     # Remove entries with no commissions dollars.
     finalData['Actual Comm Paid'] = pd.to_numeric(finalData['Actual Comm Paid']).fillna(0)
@@ -344,26 +344,26 @@ def main(filepaths, runningCom, fieldMappings, principal):
     try:
         writer1.save()
     except IOError:
-        print('---')
-        print('Running Commissions is open in Excel!')
-        print('Please close the file and try again.')
-        print('***')
+        print('---\n'
+              'Running Commissions is open in Excel!\n'
+              'Please close the file and try again.\n'
+              '***')
         return
     try:
         writer2.save()
     except IOError:
-        print('---')
-        print('Lookup Master is open in Excel!')
-        print('Please close the file and try again.')
-        print('***')
+        print('---\n'
+              'Lookup Master is open in Excel!\n'
+              'Please close the file and try again.\n'
+              '***')
         return
     try:
         writer3.save()
     except IOError:
-        print('---')
-        print('Entries Need Fixing is open in Excel!')
-        print('Please close the file and try again.')
-        print('***')
+        print('---\n'
+              'Entries Need Fixing is open in Excel!\n'
+              'Please close the file and try again.\n'
+              '***')
         return
 
     # If no errors, save the files.
@@ -371,10 +371,10 @@ def main(filepaths, runningCom, fieldMappings, principal):
     writer2.save()
     writer3.save()
 
-    print('---')
-    print('Updates completed successfully!')
-    print('---')
-    print('Running Commissions updated.')
-    print('Lookup Master updated.')
-    print('Entries Need Fixing updated.')
-    print('+++')
+    print('---\n'
+          'Updates completed successfully!\n'
+          '---\n'
+          'Running Commissions updated.\n'
+          'Lookup Master updated.\n'
+          'Entries Need Fixing updated.\n'
+          '+++')

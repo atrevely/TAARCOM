@@ -36,9 +36,9 @@ class GenMast(QMainWindow):
         # Custom output stream.
         sys.stdout = Stream(newText=self.onUpdateText)
         # Print welcome message.
-        print('Welcome to the TAARCOM Commissions Manager.')
-        print('Messages and updates will display below.')
-        print('----------------------------------'
+        print('Welcome to the TAARCOM Commissions Manager.\n'
+              'Messages and updates will display below.\n'
+              '----------------------------------'
               '----------------------------------')
 
         # Initialize global variables.
@@ -48,25 +48,25 @@ class GenMast(QMainWindow):
             fieldMappings = pd.read_excel('fieldMappings.xlsx',
                                           index_col=False)
         else:
-            print('No field mappings found!')
-            print('Please make sure fieldMappings.xlsx is in the directory.')
-            print('***')
+            print('No field mappings found!\n'
+                  'Please make sure fieldMappings.xlsx is in the directory.\n'
+                  '***')
 
         # Try finding/loading the supporting files.
         if not os.path.exists('Lookup Master 7-12-18.xlsx'):
-            print('No Lookup Master found!')
-            print('Please make sure Lookup Master is in the directory.')
-            print('***')
+            print('No Lookup Master found!\n'
+                  'Please make sure Lookup Master is in the directory.\n'
+                  '***')
         if not os.path.exists('distributorLookup.xlsx'):
-            print('No distributor lookup found!')
-            print('Please make sure distributorLookup.xlsx '
-                  'is in the directory.')
-            print('***')
+            print('No distributor lookup found!\n'
+                  'Please make sure distributorLookup.xlsx '
+                  'is in the directory.\n'
+                  '***')
         if not os.path.exists('principalList.xlsx'):
-            print('No principal list found!')
-            print('Please make sure principalList.xlsx '
-                  'is in the directory.')
-            print('***')
+            print('No principal list found!\n'
+                  'Please make sure principalList.xlsx '
+                  'is in the directory.\n'
+                  '***')
 
     def onUpdateText(self, text):
         """Write console output to text widget."""
@@ -160,9 +160,9 @@ class GenMast(QMainWindow):
             self.columnsWindow.show()
             self.lockButtons()
         else:
-            print('No field mappings file found!')
-            print('Please make sure fieldMappings.xlsx is in the directory.')
-            print('***')
+            print('No field mappings file found!\n'
+                  'Please make sure fieldMappings.xlsx is in the directory.\n'
+                  '***')
 
     def genMastClicked(self):
         """Send the GenerateMaster execution to a worker thread."""
@@ -173,8 +173,8 @@ class GenMast(QMainWindow):
         """Clear the filenames and master variables."""
         self.filenames = []
         self.master = []
-        print('All file selections cleared.')
-        print('---')
+        print('All file selections cleared.\n'
+              '---')
 
     def genMastExecute(self):
         """Runs function for processing new files to master."""
@@ -191,18 +191,18 @@ class GenMast(QMainWindow):
             self.restoreButtons()
 
         elif not mapExists:
-            print('File fieldMappings.xlsx not found!')
-            print('Please check file location and try again.')
-            print('---')
+            print('File fieldMappings.xlsx not found!\n'
+                  'Please check file location and try again.\n'
+                  '---')
 
         elif not self.filenames:
-            print('No commission files selected!')
-            print('Use the Select Commission Files button to select files.')
-            print('---')
+            print('No commission files selected!\n'
+                  'Use the Select Commission Files button to select files.\n'
+                  '---')
 
         elif princ == '(No Selection)':
-            print('Please select a principal from the dropdown menu!')
-            print('---')
+            print('Please select a principal from the dropdown menu!\n'
+                  '---')
 
     def uploadMastClicked(self):
         """Upload an existing master list."""
@@ -214,10 +214,10 @@ class GenMast(QMainWindow):
             print(self.master)
             print('---')
             if 'Running Master' not in self.master:
-                print('Caution!')
-                print('The file uploaded as master'
-                      + 'does not appear to be a master list.')
-                print('---')
+                print('Caution!\n'
+                      'The file uploaded as a Running Commissions'
+                      'does not appear to be correct.\n'
+                      '---')
 
     def openFilesClicked(self):
         """Provide filepaths for new data to process using GenerateMaster."""
@@ -226,16 +226,16 @@ class GenMast(QMainWindow):
         if self.filenames:
             print('Selecting new files, old selection(s) cleared...')
 
-        # Grab the filenames to be passed into GenerateMaster.py
+        # Grab the filenames to be passed into GenerateMaster.
         self.filenames, _ = QFileDialog.getOpenFileNames(
                 self, filter="Excel files (*.xls *.xlsx *.xlsm)")
 
         # Check if the current master got uploaded as a new file.
         for names in self.filenames:
             if 'Running Master' in names:
-                print('Master uploaded as new file.')
-                print('Try uploading files again.')
-                print('---')
+                print('Master uploaded as new file.\n'
+                      'Try uploading files again.'
+                      '---')
                 return
 
         # Print out the selected filenames.
@@ -388,9 +388,9 @@ class ColumnEdit(QMainWindow):
         try:
             writer.save()
         except IOError:
-            print('Field mappings is open in Excel!')
-            print('Please close fieldMappings.xlsx and try again.')
-            print('***')
+            print('Field mappings is open in Excel!\n'
+                  'Please close fieldMappings.xlsx and try again.\n'
+                  '***')
             return
 
         # Save and exit if no error.
