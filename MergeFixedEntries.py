@@ -18,7 +18,7 @@ def main():
                                    'Files Processed').fillna('')
 
     # Load up the Master Lookup.
-    masterLookup = pd.read_excel('Lookup Master 6-27-18.xlsx').fillna('')
+    mastLook = pd.read_excel('Lookup Master 6-27-18.xlsx').fillna('')
 
     # Load the Quarantined Lookups.
     quarantinedLookups = pd.read_excel('Quarantined Lookups.xlsx').fillna('')
@@ -64,26 +64,26 @@ def main():
                                                   + 'Q'
                                                   + str(math.ceil(date.month/3)))
             # Delete the fixed entry from the Needs Fixing file.
-            ID = fixList['Running Com Index'] == fixedEntries.loc[entry, 'Running Com Index']
-            fixList.drop(fixList[ID].index, inplace=True)
+            fixIndex = fixList['Running Com Index']
+            fixList.drop(fixList[fixIndex == RCIndex].index, inplace=True)
 
             # Append entry to Lookup Master, if applicable.
             if not fixedEntries.loc[entry, 'Lookup Master Matches']:
-                masterLookup = masterLookup.append(fixedEntries.loc[entry, list(masterLookup)],
-                                                   ignore_index=True).fillna('')
-                # Record the date that the new entry was added to Lookup Master.
-                masterLookup.loc[len(masterLookup)-1, 'Date Added'] =  time.strftime('%m/%d/%Y')
+                mastLook = mastLook.append(fixedEntries.loc[entry, list(mastLook)],
+                                           ignore_index=True).fillna('')
+                # Record date that the new entry was added to Lookup Master.
+                mastLook.loc[len(mastLook)-1, 'Date Added'] =  time.strftime('%m/%d/%Y')
 
     # Check if any entries are duplicates, then quarantine old versions.
-    duplicates = masterLookup.duplicated(subset=['POSCustomer', 'PPN'],
-                                         keep='last')
-    deprecatedEntries = masterLookup[duplicates].reset_index(drop=True)
-    masterLookup = masterLookup[~duplicates].reset_index(drop=True)
+    duplicates = mastLook.duplicated(subset=['POSCustomer', 'PPN'],
+                                     keep='last')
+    deprecatedEntries = mastLook[duplicates].reset_index(drop=True)
+    mastLook = mastLook[~duplicates].reset_index(drop=True)
     # Check for entries that are too old and quarantine them.
     twoYearsAgo = datetime.datetime.today() - datetime.timedelta(days=720)
-    dateCutoff = masterLookup['Last Used'] < twoYearsAgo.strftime('%m/%d/%Y')
-    oldEntries = masterLookup[dateCutoff].reset_index(drop=True)
-    masterLookup = masterLookup[~dateCutoff].reset_index(drop=True)
+    dateCutoff = mastLook['Last Used'] < twoYearsAgo.strftime('%m/%d/%Y')
+    oldEntries = mastLook[dateCutoff].reset_index(drop=True)
+    mastLook = mastLook[~dateCutoff].reset_index(drop=True)
     # Record the date we quarantined the entries.
     deprecatedEntries.loc[:, 'Date Quarantined'] = time.strftime('%m/%d/%Y')
     oldEntries.loc[:, 'Date Quarantined'] = time.strftime('%m/%d/%Y')
@@ -111,7 +111,7 @@ def main():
     # Write the Lookup Master file.
     writer3 = pd.ExcelWriter('Lookup Master - Current.xlsx',
                              engine='xlsxwriter')
-    masterLookup.to_excel(writer3, sheet_name='Lookup', index=False)
+    mastLook.to_excel(writer3, sheet_name='Lookup', index=False)
     # Write the Quarantined Lookups file.
     writer4 = pd.ExcelWriter('Quarantined Lookups.xlsx', engine='xlsxwriter')
     quarantinedLookups.to_excel(writer4, sheet_name='Lookup', index=False)

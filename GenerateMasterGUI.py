@@ -53,7 +53,7 @@ class GenMast(QMainWindow):
             print('***')
 
         # Try finding/loading the supporting files.
-        if not os.path.exists('Lookup Master 6-27-18.xlsx'):
+        if not os.path.exists('Lookup Master 7-12-18.xlsx'):
             print('No Lookup Master found!')
             print('Please make sure Lookup Master is in the directory.')
             print('***')
@@ -84,7 +84,6 @@ class GenMast(QMainWindow):
 
     def initUI(self):
         """Creates UI window on launch."""
-
         # Check for existence of principal list file.
         princList = None
         if os.path.exists('principalList.xlsx'):
@@ -118,7 +117,8 @@ class GenMast(QMainWindow):
         self.btnEditColumns.clicked.connect(self.editColumnsClicked)
 
         # Button for clearing filename and master choices.
-        self.btnClearAll = QPushButton('Clear Filenames \n and Master', self)
+        self.btnClearAll = QPushButton('Clear Filename(s) \n and Running \n '
+                                       'Commissions \n Selection.', self)
         self.btnClearAll.move(650, 200)
         self.btnClearAll.resize(150, 150)
         self.btnClearAll.clicked.connect(self.clearAllClicked)
@@ -130,7 +130,7 @@ class GenMast(QMainWindow):
         self.princMenu.addItem('(No Selection)')
         # Fill in principals, if file is found.
         if princList is not None:
-            self.princMenu.addItems(list(princList['Principals']))
+            self.princMenu.addItems(list(princList['Abbreviation']))
         self.princLabel = QLabel('Select Principal:', self)
         self.princLabel.resize(150, 100)
         self.princLabel.move(650, 35)
@@ -173,7 +173,7 @@ class GenMast(QMainWindow):
         """Clear the filenames and master variables."""
         self.filenames = []
         self.master = []
-        print('All files and master cleared.')
+        print('All file selections cleared.')
         print('---')
 
     def genMastExecute(self):
@@ -221,6 +221,11 @@ class GenMast(QMainWindow):
 
     def openFilesClicked(self):
         """Provide filepaths for new data to process using GenerateMaster."""
+
+        # Let us know we're clearing old selections.
+        if self.filenames:
+            print('Selecting new files, old selection(s) cleared...')
+
         # Grab the filenames to be passed into GenerateMaster.py
         self.filenames, _ = QFileDialog.getOpenFileNames(
                 self, filter="Excel files (*.xls *.xlsx *.xlsm)")
@@ -256,13 +261,12 @@ class GenMast(QMainWindow):
 
 
 class Worker(QtCore.QRunnable):
-    '''
+    """
     Inherits from QRunnable to handle worker thread.
 
     param args -- Arguments to pass to the callback function.
     param kwargs -- Keywords to pass to the callback function.
-    '''
-
+    """
     def __init__(self, fn, *args, **kwargs):
         super(Worker, self).__init__()
         # Store constructor arguments (re-used for processing)

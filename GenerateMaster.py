@@ -103,7 +103,7 @@ def main(filepaths, runningCom, fieldMappings, principal):
 
     # Read in the Master Lookup. Exit if not found.
     if os.path.exists('Lookup Master 6-27-18.xlsx'):
-        masterLookup = pd.read_excel('Lookup Master 6-27-18.xlsx').fillna('')
+        masterLookup = pd.read_excel('Lookup Master 7-12-18.xlsx').fillna('')
     else:
         print('---')
         print('No Lookup Master found!')
@@ -171,7 +171,8 @@ def main(filepaths, runningCom, fieldMappings, principal):
                 print('Moving on.')
                 print('-')
             else:
-                matchingColumns = [val for val in list(sheet) if val in list(fieldMappings)]
+                matchingColumns = [val for val in list(sheet)
+                                   if val in list(fieldMappings)]
                 if len(matchingColumns) > 0:
                     # Sum commissions paid on sheet.
                     print('Commissions for this tab: '
@@ -179,9 +180,11 @@ def main(filepaths, runningCom, fieldMappings, principal):
                     print('-')
                     totalComm += sheet['Actual Comm Paid'].sum()
                     # Strip whitespace from all strings in dataframe.
-                    stringCols = [val for val in list(sheet) if sheet[val].dtype == 'object']
+                    stringCols = [val for val in list(sheet)
+                                  if sheet[val].dtype == 'object']
                     for col in stringCols:
-                        sheet[col] = sheet[col].fillna('').astype(str).map(lambda x: x.strip())
+                        sheet[col] = sheet[col].fillna('').astype(str).map(
+                                lambda x: x.strip())
                     # Append matching columns of data.
                     finalData = finalData.append(sheet[matchingColumns],
                                                  ignore_index=True)
@@ -230,9 +233,10 @@ def main(filepaths, runningCom, fieldMappings, principal):
         # First match part number.
         partMatch = finalData.loc[row, 'Part Number'] == masterLookup['PPN']
         partNoMatches = masterLookup[partMatch]
-        # Next match Reported Customer.
-        custMatch = finalData.loc[row, 'Reported Customer'].lower() == partNoMatches['POSCustomer'].str.lower()
-        custMatches = partNoMatches[custMatch].reset_index()
+        # Next match reported customer.
+        repCust = finalData.loc[row, 'Reported Customer'].lower()
+        POSCust = partNoMatches['POSCustomer'].str.lower()
+        custMatches = partNoMatches[repCust == POSCust].reset_index()
         # Make sure we found exactly one match.
         if len(custMatches) == 1:
             # Grab primary and secondary sales people from Lookup Master.
@@ -247,7 +251,8 @@ def main(filepaths, runningCom, fieldMappings, principal):
                              'Last Used'] = time.strftime('%m/%d/%Y')
             # Update OOT city if not already filled in.
             if custMatches['Tname'][0][0:3] == 'OOT' and not custMatches['City'][0]:
-                masterLookup.loc[custMatches['index'], 'City'] = finalData.loc[row, 'City']
+                masterLookup.loc[custMatches['index'],
+                                 'City'] = finalData.loc[row, 'City']
 
         # Try parsing the date.
         dateError = 0
@@ -258,9 +263,10 @@ def main(filepaths, runningCom, fieldMappings, principal):
             dateError = 1
         except TypeError:
             # Check if Pandas read it in as a Timestamp object.
-            # If so, turn it back into a string.
+            # If so, turn it back into a string (a bit roundabout, oh well).
             if isinstance(finalData.loc[row, 'Invoice Date'], pd.Timestamp):
-                finalData.loc[row, 'Invoice Date'] = str(finalData.loc[row, 'Invoice Date'])
+                finalData.loc[row, 'Invoice Date'] = str(
+                        finalData.loc[row, 'Invoice Date'])
             else:
                 dateError = 1
         # If no error found in date, fill in the month/year/quarter
