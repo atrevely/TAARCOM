@@ -119,8 +119,8 @@ def main(filepaths, runningCom, fieldMappings, principal):
         # Grab the next file from the list.
         newData = inputData[fileNum]
         fileNum += 1
-        print('---')
-        print('Working on file: ' + filename)
+        print('---\n'
+              'Working on file: ' + filename)
         # Set total commissions for file back to zero.
         totalComm = 0
 
@@ -149,9 +149,9 @@ def main(filepaths, runningCom, fieldMappings, principal):
                 if not columnName:
                     print('No column found for: ' + dataName)
                 elif len(columnName) > 1:
-                    print('Found multiple matches for: ' + dataName)
-                    print('Please fix column names and try again.')
-                    print('***')
+                    print('Found multiple matches for: ' + dataName
+                          + '\nPlease fix column names and try again.\n'
+                          '***')
                     return
                 else:
                     sheet.rename(columns={columnName[0]: dataName},
@@ -176,8 +176,8 @@ def main(filepaths, runningCom, fieldMappings, principal):
                 if len(matchingColumns) > 0:
                     # Sum commissions paid on sheet.
                     print('Commissions for this tab: '
-                          + '${:,.2f}'.format(sheet['Actual Comm Paid'].sum()))
-                    print('-')
+                          + '${:,.2f}'.format(sheet['Actual Comm Paid'].sum())
+                          + '-')
                     totalComm += sheet['Actual Comm Paid'].sum()
                     # Strip whitespace from all strings in dataframe.
                     stringCols = [val for val in list(sheet)
@@ -224,7 +224,8 @@ def main(filepaths, runningCom, fieldMappings, principal):
               '***')
         return
     # Remove entries with no commissions dollars.
-    finalData['Actual Comm Paid'] = pd.to_numeric(finalData['Actual Comm Paid']).fillna(0)
+    finalData['Actual Comm Paid'] = pd.to_numeric(
+            finalData['Actual Comm Paid']).fillna(0)
     finalData = finalData[finalData['Actual Comm Paid'] != 0]
     finalData.reset_index(inplace=True, drop=True)
 
@@ -239,18 +240,19 @@ def main(filepaths, runningCom, fieldMappings, principal):
         custMatches = partNoMatches[repCust == POSCust].reset_index()
         # Make sure we found exactly one match.
         if len(custMatches) == 1:
+            custMatches = custMatches.iloc[0]
             # Grab primary and secondary sales people from Lookup Master.
-            finalData.loc[row, 'CM Sales'] = custMatches['CM Sales'][0]
-            finalData.loc[row, 'Design Sales'] = custMatches['Design Sales'][0]
-            finalData.loc[row, 'T-Name'] = custMatches['Tname'][0]
-            finalData.loc[row, 'CM'] = custMatches['CM'][0]
-            finalData.loc[row, 'T-End Cust'] = custMatches['EndCustomer'][0]
-            finalData.loc[row, 'CM Split'] = custMatches['CM Split'][0]
+            finalData.loc[row, 'CM Sales'] = custMatches['CM Sales']
+            finalData.loc[row, 'Design Sales'] = custMatches['Design Sales']
+            finalData.loc[row, 'T-Name'] = custMatches['Tname']
+            finalData.loc[row, 'CM'] = custMatches['CM']
+            finalData.loc[row, 'T-End Cust'] = custMatches['EndCustomer']
+            finalData.loc[row, 'CM Split'] = custMatches['CM Split']
             # Update usage in lookup Master.
             masterLookup.loc[custMatches['index'],
                              'Last Used'] = time.strftime('%m/%d/%Y')
             # Update OOT city if not already filled in.
-            if custMatches['Tname'][0][0:3] == 'OOT' and not custMatches['City'][0]:
+            if custMatches['Tname'][0:3] == 'OOT' and not custMatches['City']:
                 masterLookup.loc[custMatches['index'],
                                  'City'] = finalData.loc[row, 'City']
 
@@ -296,8 +298,8 @@ def main(filepaths, runningCom, fieldMappings, principal):
                     finalData.loc[row, 'Corrected Distributor'] = ''
                 else:
                     # Input corrected distributor name.
-                    corrDist = distMap[distMap['Search Abbreviation'] == dist]
-                    finalData.loc[row, 'Corrected Distributor'] = corrDist['Corrected Dist'].iloc[0]
+                    corrDist = distMap[distMap['Search Abbreviation'] == dist].iloc[0]
+                    finalData.loc[row, 'Corrected Distributor'] = corrDist['Corrected Dist']
                     matches += 1
 
         # If any data isn't found/parsed, copy entry to Fix Entries.

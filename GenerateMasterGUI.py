@@ -35,7 +35,7 @@ class GenMast(QMainWindow):
 
         # Custom output stream.
         sys.stdout = Stream(newText=self.onUpdateText)
-        # Print welcome message.
+        # Show welcome message.
         print('Welcome to the TAARCOM Commissions Manager.\n'
               'Messages and updates will display below.\n'
               '----------------------------------'
@@ -210,9 +210,9 @@ class GenMast(QMainWindow):
         self.master, _ = QFileDialog.getOpenFileName(
                 self, filter="Excel files (*.xls *.xlsx *.xlsm)")
         if self.master:
-            print('Current master list provided:')
-            print(self.master)
-            print('---')
+            print('Current master list provided:\n'
+                  + self.master
+                  + '\n---')
             if 'Running Master' not in self.master:
                 print('Caution!\n'
                       'The file uploaded as a Running Commissions'
@@ -339,7 +339,7 @@ class ColumnEdit(QMainWindow):
         # Check if we've selected a TCOM name to add tag to.
         if not self.colTree.currentIndex().parent().isValid():
             text, ok = QInputDialog.getText(self, 'Add Data Name',
-                                            'Enter new commission file name for '
+                                            'Enter new mapping for '
                                             + self.colTree.currentItem().text(0)
                                             + ':')
             # Check to see if we've entered text.
@@ -395,16 +395,16 @@ class ColumnEdit(QMainWindow):
 
         # Save and exit if no error.
         writer.save()
-        print('Changes saved to field mappings.')
-        print('---')
+        print('Changes saved to field mappings.\n'
+              '---')
         # Close window.
         self.close()
 
     def cancelExit(self):
         """Close the window without saving changes to field mappings."""
         # Close window. Nothing gets saved.
-        print('Mapping changes canceled.')
-        print('---')
+        print('Mapping changes canceled.\n'
+              '---')
         self.close()
 
     def closeEvent(self, event):
