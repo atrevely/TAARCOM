@@ -128,7 +128,10 @@ def main(filepaths, runningCom, fieldMappings, principal):
         # Each sheet in the file is its own dataframe in the dictionary.
         for sheetName in list(newData):
             # Grab next sheet in file.
-            sheet = newData[sheetName]
+            # Rework the index just in case it got read in wrong.
+            sheet = newData[sheetName].reset_index(drop=True)
+            # Clear out unnamed columns.
+            sheet = sheet.loc[:, ~sheet.columns.str.contains('^Unnamed')]
             # Make sure index is an integer, not a string.
             sheet.index = sheet.index.map(int)
             totalRows = sheet.shape[0]
@@ -150,6 +153,8 @@ def main(filepaths, runningCom, fieldMappings, principal):
                     print('No column found for: ' + dataName)
                 elif len(columnName) > 1:
                     print('Found multiple matches for: ' + dataName
+                          + '\nMatching columns: %s' %
+                          ', '.join(map(str, columnName))
                           + '\nPlease fix column names and try again.\n'
                           '***')
                     return
@@ -177,7 +182,7 @@ def main(filepaths, runningCom, fieldMappings, principal):
                     # Sum commissions paid on sheet.
                     print('Commissions for this tab: '
                           + '${:,.2f}'.format(sheet['Actual Comm Paid'].sum())
-                          + '-')
+                          + '\n-')
                     totalComm += sheet['Actual Comm Paid'].sum()
                     # Strip whitespace from all strings in dataframe.
                     stringCols = [val for val in list(sheet)
@@ -228,6 +233,8 @@ def main(filepaths, runningCom, fieldMappings, principal):
             finalData['Actual Comm Paid']).fillna(0)
     finalData = finalData[finalData['Actual Comm Paid'] != 0]
     finalData.reset_index(inplace=True, drop=True)
+    # Fill in principal.
+    finalData.loc[:, 'Principal'] = principal
 
     # Iterate over each row of the newly appended data.
     for row in range(runComLen, len(finalData)):
@@ -238,8 +245,10 @@ def main(filepaths, runningCom, fieldMappings, principal):
         repCust = finalData.loc[row, 'Reported Customer'].lower()
         POSCust = partNoMatches['POSCustomer'].str.lower()
         custMatches = partNoMatches[repCust == POSCust].reset_index()
+        # Record number of Lookup Master matches.
+        lookMatches = len(custMatches)
         # Make sure we found exactly one match.
-        if len(custMatches) == 1:
+        if lookMatches == 1:
             custMatches = custMatches.iloc[0]
             # Grab primary and secondary sales people from Lookup Master.
             finalData.loc[row, 'CM Sales'] = custMatches['CM Sales']
@@ -288,26 +297,26 @@ def main(filepaths, runningCom, fieldMappings, principal):
         distName = re.sub('[^a-zA-Z0-9]', '',
                           finalData.loc[row, 'Distributor']).lower()
         # Reset match count.
-        matches = 0
+        distMatches = 0
         # Find match from distMap.
         for dist in distMap['Search Abbreviation']:
             if dist in distName:
                 # Check if it's already been matched.
-                if matches > 0:
+                if distMatches > 0:
                     # Too many matches, so clear them and check by hand.
                     finalData.loc[row, 'Corrected Distributor'] = ''
                 else:
                     # Input corrected distributor name.
                     corrDist = distMap[distMap['Search Abbreviation'] == dist].iloc[0]
                     finalData.loc[row, 'Corrected Distributor'] = corrDist['Corrected Dist']
-                    matches += 1
+                    distMatches += 1
 
         # If any data isn't found/parsed, copy entry to Fix Entries.
-        if len(custMatches) != 1 or matches != 1 or dateError:
+        if lookMatches != 1 or distMatches != 1 or dateError:
             fixList = fixList.append(finalData.loc[row, :])
             fixList.loc[row, 'Running Com Index'] = row
-            fixList.loc[row, 'Distributor Matches'] = matches
-            fixList.loc[row, 'Lookup Master Matches'] = len(custMatches)
+            fixList.loc[row, 'Distributor Matches'] = distMatches
+            fixList.loc[row, 'Lookup Master Matches'] = lookMatches
             fixList.loc[row, 'Date Added'] = time.strftime('%m/%d/%Y')
             finalData.loc[row, 'TEMP/FINAL'] = 'TEMP'
         else:
@@ -320,8 +329,6 @@ def main(filepaths, runningCom, fieldMappings, principal):
 
     # Reorder columns to match the desired layout in columnNames.
     finalData = finalData.loc[:, columnNames]
-    # Fill in principal.
-    finalData.loc[:, 'Principal'] = principal
     columnNames.extend(['Distributor Matches', 'Lookup Master Matches',
                         'Date Added', 'Running Com Index'])
     fixList = fixList.loc[:, columnNames]

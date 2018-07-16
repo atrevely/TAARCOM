@@ -117,7 +117,7 @@ class GenMast(QMainWindow):
         self.btnEditColumns.clicked.connect(self.editColumnsClicked)
 
         # Button for clearing filename and master choices.
-        self.btnClearAll = QPushButton('Clear Filename(s) \n and Running \n '
+        self.btnClearAll = QPushButton('Clear Filename(s) \n and Running \n'
                                        'Commissions \n Selection.', self)
         self.btnClearAll.move(650, 200)
         self.btnClearAll.resize(150, 150)
