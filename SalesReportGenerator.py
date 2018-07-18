@@ -4,6 +4,13 @@ import time
 
 # The main function.
 def main():
+    """Generates sales reports for each salesperson.
+
+    Finds entries in Running Commissions that are marked as currently
+    unreported and filters them into reports for each salesperson. Entries are
+    marked as reported in Running Commissions after being assigned to a report
+    by this function.
+    """
     # Load up the Running Master.
     runningCom = pd.read_excel('Running Commissions 2018-06-29-1347.xlsx',
                                'Master').fillna('')

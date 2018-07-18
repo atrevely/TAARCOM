@@ -8,6 +8,19 @@ import math
 
 # The main function.
 def main():
+    """Replaces bad entries in Running Commissions with their fixed versions.
+
+    Entries in Running Commissions which need attention are copied to the
+    Entries Need Fixing file. This function merges fixed entries in the Need
+    Fixing file into the Running Commissions file by overwriting the existing
+    (bad) entry with the fixed one, then removing it from the Needs Fixing
+    file.
+
+    Additionally, this function maintains the Lookup Master by adding new
+    entries when needed, and quarantining old entries that have not been
+    used in 2+ years.
+    """
+
     # Load up the Entries Need Fixing file.
     fixList = pd.read_excel('Entries Need Fixing.xlsx', 'Data').fillna('')
 

@@ -11,12 +11,21 @@ import re
 def main(filepaths, runningCom, fieldMappings, principal):
     """Processes commission files and appends them to Running Commissions.
 
+    Columns in individual commission files are identified and appended to the
+    Running Commissions under the appropriate column, as identified by the
+    fieldMappings file. Entries are then passed through the Lookup Master in
+    search of a match to Reported Customer + Part Number. Distributors are
+    corrected to consistent names. Entries with missing information are copied
+    to Entries Need Fixing for further attention.
+
     Arguments:
     filepaths -- paths for opening (Excel) files to process.
     runningCom -- current Running Commissions file (in Excel) to
                   which we are appending data.
     fieldMappings -- dataframe which links Running Commissions columns to
                      file data columns.
+    principal -- the principal that supplied the commission file(s). Chosen
+                 from the dropdown menu on the GUI main window.
     """
 
     # Get the master dataframe ready for the new data.
@@ -102,8 +111,8 @@ def main(filepaths, runningCom, fieldMappings, principal):
         return
 
     # Read in the Master Lookup. Exit if not found.
-    if os.path.exists('Lookup Master 6-27-18.xlsx'):
-        masterLookup = pd.read_excel('Lookup Master 7-12-18.xlsx').fillna('')
+    if os.path.exists('Lookup Master 7-16-18.xlsx'):
+        masterLookup = pd.read_excel('Lookup Master 7-16-18.xlsx').fillna('')
     else:
         print('---\n'
               'No Lookup Master found!\n'
