@@ -82,6 +82,14 @@ def main():
                                 + time.strftime(' %Y-%m-%d')
                                 + '.xlsx', engine='xlsxwriter')
         finalReport.to_excel(writer, sheet_name='Report Data', index=False)
+        try:
+            writer.save()
+        except IOError:
+            print('---\n'
+                  'File is open in Excel!\n'
+                  'Please close the file and try again.\n'
+                  '***')
+            return
         writer.save()
 
     # Fill in the Sales Report Date.

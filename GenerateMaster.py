@@ -351,13 +351,38 @@ def main(filepaths, runningCom, fieldMappings, principal):
     finalData.to_excel(writer1, sheet_name='Master', index=False)
     filesProcessed.to_excel(writer1, sheet_name='Files Processed',
                             index=False)
+    sheet1a = writer1.sheets['Master']
+    sheet1b = writer1.sheets['Files Processed']
+    # Format as table.
+    header1a = [{'header': val} for val in sheet1a.columns.tolist()]
+    header1b = [{'header': val} for val in sheet1b.columns.tolist()]
+    set1a = {'header_row': True, 'style': 'TableStyleMedium5',
+             'columns': header1a}
+    set1b = {'header_row': True, 'style': 'TableStyleMedium5',
+             'columns': header1b}
+    sheet1a.add_table(0, 0, len(sheet1a.index), len(sheet1a.columns)-1, set1a)
+    sheet1b.add_table(0, 0, len(sheet1b.index), len(sheet1b.columns)-1, set1b)
+
     # Write the Needs Fixing file.
     writer2 = pd.ExcelWriter('Entries Need Fixing.xlsx', engine='xlsxwriter')
     fixList.to_excel(writer2, sheet_name='Data', index=False)
+    sheet2 = writer2.sheets['Data']
+    # Format as table.
+    header2 = [{'header': val} for val in sheet2.columns.tolist()]
+    set2 = {'header_row': True, 'style': 'TableStyleMedium5',
+            'columns': header2}
+    sheet2.add_table(0, 0, len(sheet2.index), len(sheet2.columns)-1, set2)
+
     # Write the Lookup Master.
     writer3 = pd.ExcelWriter('Lookup Master ' + time.strftime('%Y-%m-%d-%H%M')
                              + '.xlsx', engine='xlsxwriter')
     masterLookup.to_excel(writer3, sheet_name='Lookup', index=False)
+    sheet3 = writer3.sheets['Lookup']
+    # Format as table.
+    header3 = [{'header': val} for val in sheet3.columns.tolist()]
+    set3 = {'header_row': True, 'style': 'TableStyleMedium5',
+            'columns': header3}
+    sheet3.add_table(0, 0, len(sheet3.index), len(sheet3.columns)-1, set3)
 
     try:
         writer1.save()
