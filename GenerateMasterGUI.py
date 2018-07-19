@@ -392,6 +392,7 @@ class ColumnEdit(QMainWindow):
                'columns': header}
         sheet.add_table(0, 0, len(fieldMappings.index),
                         len(fieldMappings.columns)-1, set)
+
         # Try saving the file, exit with error if file is currently open.
         try:
             writer.save()

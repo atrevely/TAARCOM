@@ -25,6 +25,7 @@ def main():
     # Select data that has not been reported yet.
     unrepComms = runningCom[runningCom['Sales Report Date'] == '']
 
+    # %%
     # Go through each salesperson and pull their data.
     for person in salespeople:
         # Find sales entries for the salesperson.
@@ -91,6 +92,7 @@ def main():
                'columns': header}
         sheet.add_table(0, 0, len(finalReport.index),
                         len(finalReport.columns)-1, set)
+
         # Try saving the file, exit with error if file is currently open.
         try:
             writer.save()
@@ -102,7 +104,8 @@ def main():
             return
         writer.save()
 
-    # Fill in the Sales Report Date.
+    # %%
+    # Fill in the Sales Report Date in Running Commissions.
     runningCom.loc[runningCom['Sales Report Date'] == '',
                    'Sales Report Date'] = time.strftime('%m/%d/%Y')
     # Save the Running Commissions with entered report date.
@@ -125,3 +128,14 @@ def main():
                       len(runningCom.columns)-1, set1a)
     sheet1b.add_table(0, 0, len(filesProcessed.index),
                       len(filesProcessed.columns)-1, set1b)
+
+    # Try saving the file, exit with error if file is currently open.
+    try:
+        writer1.save()
+    except IOError:
+        print('---\n'
+              'File is open in Excel!\n'
+              'Please close the file and try again.\n'
+              '***')
+        return
+    writer1.save()

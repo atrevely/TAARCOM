@@ -28,8 +28,6 @@ def main(filepaths, runningCom, fieldMappings, principal):
                  from the dropdown menu on the GUI main window.
     """
 
-    # Get the master dataframe ready for the new data.
-    # %%
     # Grab lookup table data names.
     columnNames = list(fieldMappings)
     # Add in non-lookup'd data names.
@@ -120,7 +118,6 @@ def main(filepaths, runningCom, fieldMappings, principal):
               '***')
         return
 
-    # Go through each file, grab the data, and put it in Running Commissions.
     # %%
     # Iterate through each file that we're appending to Running Commissions.
     fileNum = 0
@@ -218,7 +215,6 @@ def main(filepaths, runningCom, fieldMappings, principal):
         # Fill the NaNs in From File with the filename.
         finalData['From File'].fillna(filename, inplace=True)
 
-    # Create and fill columns of derived data.
     # %%
     # Fill NaNs left over from appending.
     finalData.fillna('', inplace=True)
@@ -342,7 +338,6 @@ def main(filepaths, runningCom, fieldMappings, principal):
                         'Date Added', 'Running Com Index'])
     fixList = fixList.loc[:, columnNames]
 
-    # Save the output as a .xlsx file.
     # %%
     # Write the Running Commissions file.
     writer1 = pd.ExcelWriter('Running Commissions '

@@ -46,6 +46,8 @@ def main():
                                                         distFixed)]]
     fixdDat.reset_index(inplace=True, drop=True)
 
+    # %%
+    # Go through each entry that's fixed and replace it in Running Commissions.
     for entry in range(len(fixdDat)):
         # Replace the Running Commissions entry with the fixed one.
         RCIndex = fixdDat.loc[entry, 'Running Com Index']
@@ -88,6 +90,7 @@ def main():
                 mastLook.loc[len(mastLook)-1, 'Date Added'] = time.strftime(
                         '%m/%d/%Y')
 
+    # %%
     # Check if any entries are duplicates, then quarantine old versions.
     duplicates = mastLook.duplicated(subset=['POSCustomer', 'PPN'],
                                      keep='last')
@@ -165,6 +168,7 @@ def main():
     sheet4.add_table(0, 0, len(quarantinedLookups.index),
                      len(quarantinedLookups.columns)-1, set4)
 
+    # Try saving the files, exit with error if any file is currently open.
     try:
         writer1.save()
     except IOError:
