@@ -14,6 +14,8 @@ def main():
     # Load up the Running Master.
     runningCom = pd.read_excel('Running Commissions 2018-06-29-1347.xlsx',
                                'Master').fillna('')
+    filesProcessed = pd.read_excel('Running Commissions 2018-06-29-1347.xlsx',
+                                   'Files Processed').fillna('')
 
     # Grab all of the salespeople initials.
     salespeople = list(set().union(runningCom['CM Sales'].unique(),
@@ -82,6 +84,14 @@ def main():
                                 + time.strftime(' %Y-%m-%d')
                                 + '.xlsx', engine='xlsxwriter')
         finalReport.to_excel(writer, sheet_name='Report Data', index=False)
+        sheet = writer.sheets['Lookup']
+        # Format as table.
+        header = [{'header': val} for val in finalReport.columns.tolist()]
+        set = {'header_row': True, 'style': 'TableStyleMedium5',
+               'columns': header}
+        sheet.add_table(0, 0, len(finalReport.index),
+                        len(finalReport.columns)-1, set)
+        # Try saving the file, exit with error if file is currently open.
         try:
             writer.save()
         except IOError:
@@ -95,3 +105,23 @@ def main():
     # Fill in the Sales Report Date.
     runningCom.loc[runningCom['Sales Report Date'] == '',
                    'Sales Report Date'] = time.strftime('%m/%d/%Y')
+    # Save the Running Commissions with entered report date.
+    writer1 = pd.ExcelWriter('Running Commissions '
+                             + time.strftime('%Y-%m-%d-%H%M')
+                             + '.xlsx', engine='xlsxwriter')
+    runningCom.to_excel(writer1, sheet_name='Master', index=False)
+    filesProcessed.to_excel(writer1, sheet_name='Files Processed',
+                            index=False)
+    sheet1a = writer1.sheets['Master']
+    sheet1b = writer1.sheets['Files Processed']
+    # Format as table.
+    header1a = [{'header': val} for val in runningCom.columns.tolist()]
+    header1b = [{'header': val} for val in filesProcessed.columns.tolist()]
+    set1a = {'header_row': True, 'style': 'TableStyleMedium5',
+             'columns': header1a}
+    set1b = {'header_row': True, 'style': 'TableStyleMedium5',
+             'columns': header1b}
+    sheet1a.add_table(0, 0, len(runningCom.index),
+                      len(runningCom.columns)-1, set1a)
+    sheet1b.add_table(0, 0, len(filesProcessed.index),
+                      len(filesProcessed.columns)-1, set1b)

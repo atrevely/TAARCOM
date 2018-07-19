@@ -385,6 +385,14 @@ class ColumnEdit(QMainWindow):
         # Save tree to .xlsx file.
         writer = pd.ExcelWriter('fieldMappings.xlsx', engine='xlsxwriter')
         fieldMappings.to_excel(writer, sheet_name='Lookup', index=False)
+        sheet = writer.sheets['Lookup']
+        # Format as table.
+        header = [{'header': val} for val in fieldMappings.columns.tolist()]
+        set = {'header_row': True, 'style': 'TableStyleMedium5',
+               'columns': header}
+        sheet.add_table(0, 0, len(fieldMappings.index),
+                        len(fieldMappings.columns)-1, set)
+        # Try saving the file, exit with error if file is currently open.
         try:
             writer.save()
         except IOError:

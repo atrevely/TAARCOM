@@ -119,16 +119,51 @@ def main():
     runningCom.to_excel(writer1, sheet_name='Master', index=False)
     filesProcessed.to_excel(writer1, sheet_name='Files Processed',
                             index=False)
+    sheet1a = writer1.sheets['Master']
+    sheet1b = writer1.sheets['Files Processed']
+    # Format as table.
+    header1a = [{'header': val} for val in runningCom.columns.tolist()]
+    header1b = [{'header': val} for val in filesProcessed.columns.tolist()]
+    set1a = {'header_row': True, 'style': 'TableStyleMedium5',
+             'columns': header1a}
+    set1b = {'header_row': True, 'style': 'TableStyleMedium5',
+             'columns': header1b}
+    sheet1a.add_table(0, 0, len(runningCom.index),
+                      len(runningCom.columns)-1, set1a)
+    sheet1b.add_table(0, 0, len(filesProcessed.index),
+                      len(filesProcessed.columns)-1, set1b)
+
     # Write the Needs Fixing file.
     writer2 = pd.ExcelWriter('Entries Need Fixing.xlsx', engine='xlsxwriter')
     fixList.to_excel(writer2, sheet_name='Data', index=False)
+    sheet2 = writer2.sheets['Data']
+    # Format as table.
+    header2 = [{'header': val} for val in fixList.columns.tolist()]
+    set2 = {'header_row': True, 'style': 'TableStyleMedium5',
+            'columns': header2}
+    sheet2.add_table(0, 0, len(fixList.index), len(fixList.columns)-1, set2)
+
     # Write the Lookup Master file.
     writer3 = pd.ExcelWriter('Lookup Master - Current.xlsx',
                              engine='xlsxwriter')
     mastLook.to_excel(writer3, sheet_name='Lookup', index=False)
+    sheet3 = writer3.sheets['Lookup']
+    # Format as table.
+    header3 = [{'header': val} for val in mastLook.columns.tolist()]
+    set3 = {'header_row': True, 'style': 'TableStyleMedium5',
+            'columns': header3}
+    sheet3.add_table(0, 0, len(mastLook.index), len(mastLook.columns)-1, set3)
+
     # Write the Quarantined Lookups file.
     writer4 = pd.ExcelWriter('Quarantined Lookups.xlsx', engine='xlsxwriter')
     quarantinedLookups.to_excel(writer4, sheet_name='Lookup', index=False)
+    sheet4 = writer4.sheets['Lookup']
+    # Format as table.
+    header4 = [{'header': val} for val in quarantinedLookups.columns.tolist()]
+    set4 = {'header_row': True, 'style': 'TableStyleMedium5',
+            'columns': header4}
+    sheet4.add_table(0, 0, len(quarantinedLookups.index),
+                     len(quarantinedLookups.columns)-1, set4)
 
     try:
         writer1.save()
