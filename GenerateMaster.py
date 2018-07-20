@@ -7,6 +7,24 @@ import os.path
 import re
 
 
+def tableFormat(sheetData, sheetName, book):
+    """Formats the Excel output as a table."""
+
+    # Create the table.
+    sheet = book.sheets[sheetName]
+    header = [{'header': val} for val in sheetData.columns.tolist()]
+    set = {'header_row': True, 'style': 'TableStyleMedium5',
+           'columns': header}
+    sheet.add_table(0, 0, len(sheetData.index),
+                    len(sheetData.columns)-1, set)
+    # Fit to the column width.
+    i = 0
+    for col in sheetData.columns:
+        maxWidth = max([len(str(val)) for val in sheetData[col].values])
+        sheet.set_column(i, i, maxWidth+0.5)
+        i += 1
+
+
 # The main function.
 def main(filepaths, runningCom, fieldMappings, principal):
     """Processes commission files and appends them to Running Commissions.
@@ -346,41 +364,22 @@ def main(filepaths, runningCom, fieldMappings, principal):
     finalData.to_excel(writer1, sheet_name='Master', index=False)
     filesProcessed.to_excel(writer1, sheet_name='Files Processed',
                             index=False)
-    sheet1a = writer1.sheets['Master']
-    sheet1b = writer1.sheets['Files Processed']
-    # Format as table.
-    header1a = [{'header': val} for val in finalData.columns.tolist()]
-    header1b = [{'header': val} for val in filesProcessed.columns.tolist()]
-    set1a = {'header_row': True, 'style': 'TableStyleMedium5',
-             'columns': header1a}
-    set1b = {'header_row': True, 'style': 'TableStyleMedium5',
-             'columns': header1b}
-    sheet1a.add_table(0, 0, len(finalData.index),
-                      len(finalData.columns)-1, set1a)
-    sheet1b.add_table(0, 0, len(filesProcessed.index),
-                      len(filesProcessed.columns)-1, set1b)
+    # Format as table in Excel.
+    tableFormat(finalData, 'Master', writer1)
+    tableFormat(filesProcessed, 'Files Processed', writer1)
 
     # Write the Needs Fixing file.
     writer2 = pd.ExcelWriter('Entries Need Fixing.xlsx', engine='xlsxwriter')
     fixList.to_excel(writer2, sheet_name='Data', index=False)
-    sheet2 = writer2.sheets['Data']
-    # Format as table.
-    header2 = [{'header': val} for val in fixList.columns.tolist()]
-    set2 = {'header_row': True, 'style': 'TableStyleMedium5',
-            'columns': header2}
-    sheet2.add_table(0, 0, len(fixList.index), len(fixList.columns)-1, set2)
+    # Format as table in Excel.
+    tableFormat(fixList, 'Data', writer2)
 
     # Write the Lookup Master.
     writer3 = pd.ExcelWriter('Lookup Master ' + time.strftime('%Y-%m-%d-%H%M')
                              + '.xlsx', engine='xlsxwriter')
     masterLookup.to_excel(writer3, sheet_name='Lookup', index=False)
-    sheet3 = writer3.sheets['Lookup']
-    # Format as table.
-    header3 = [{'header': val} for val in masterLookup.columns.tolist()]
-    set3 = {'header_row': True, 'style': 'TableStyleMedium5',
-            'columns': header3}
-    sheet3.add_table(0, 0, len(masterLookup.index),
-                     len(masterLookup.columns)-1, set3)
+    # Format as table in Excel.
+    tableFormat(masterLookup, 'Lookup', writer3)
 
     # Try saving the files, exit with error if any file is currently open.
     try:
@@ -408,7 +407,7 @@ def main(filepaths, runningCom, fieldMappings, principal):
               '***')
         return
 
-    # If no errors, save the files.
+    # No errors, so save the files.
     writer1.save()
     writer2.save()
     writer3.save()

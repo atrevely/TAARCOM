@@ -402,7 +402,7 @@ class ColumnEdit(QMainWindow):
                   '***')
             return
 
-        # Save and exit if no error.
+        # Save and exit.
         writer.save()
         print('Changes saved to field mappings.\n'
               '---')

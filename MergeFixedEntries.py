@@ -6,6 +6,24 @@ import calendar
 import math
 
 
+def tableFormat(sheetData, sheetName, book):
+    """Formats the Excel output as a table."""
+
+    # Create the table.
+    sheet = book.sheets[sheetName]
+    header = [{'header': val} for val in sheetData.columns.tolist()]
+    set = {'header_row': True, 'style': 'TableStyleMedium5',
+           'columns': header}
+    sheet.add_table(0, 0, len(sheetData.index),
+                    len(sheetData.columns)-1, set)
+    # Fit to the column width.
+    i = 0
+    for col in sheetData.columns:
+        maxWidth = max([len(str(val)) for val in sheetData[col].values])
+        sheet.set_column(i, i, maxWidth+0.5)
+        i += 1
+
+
 # The main function.
 def main():
     """Replaces bad entries in Running Commissions with their fixed versions.
@@ -122,51 +140,28 @@ def main():
     runningCom.to_excel(writer1, sheet_name='Master', index=False)
     filesProcessed.to_excel(writer1, sheet_name='Files Processed',
                             index=False)
-    sheet1a = writer1.sheets['Master']
-    sheet1b = writer1.sheets['Files Processed']
-    # Format as table.
-    header1a = [{'header': val} for val in runningCom.columns.tolist()]
-    header1b = [{'header': val} for val in filesProcessed.columns.tolist()]
-    set1a = {'header_row': True, 'style': 'TableStyleMedium5',
-             'columns': header1a}
-    set1b = {'header_row': True, 'style': 'TableStyleMedium5',
-             'columns': header1b}
-    sheet1a.add_table(0, 0, len(runningCom.index),
-                      len(runningCom.columns)-1, set1a)
-    sheet1b.add_table(0, 0, len(filesProcessed.index),
-                      len(filesProcessed.columns)-1, set1b)
+    # Format as table in Excel.
+    tableFormat(runningCom, 'Master', writer1)
+    tableFormat(filesProcessed, 'Files Processed', writer1)
 
     # Write the Needs Fixing file.
     writer2 = pd.ExcelWriter('Entries Need Fixing.xlsx', engine='xlsxwriter')
     fixList.to_excel(writer2, sheet_name='Data', index=False)
-    sheet2 = writer2.sheets['Data']
-    # Format as table.
-    header2 = [{'header': val} for val in fixList.columns.tolist()]
-    set2 = {'header_row': True, 'style': 'TableStyleMedium5',
-            'columns': header2}
-    sheet2.add_table(0, 0, len(fixList.index), len(fixList.columns)-1, set2)
+    # Format as table in Excel.
+    tableFormat(fixList, 'Data', writer2)
 
     # Write the Lookup Master file.
     writer3 = pd.ExcelWriter('Lookup Master - Current.xlsx',
                              engine='xlsxwriter')
     mastLook.to_excel(writer3, sheet_name='Lookup', index=False)
-    sheet3 = writer3.sheets['Lookup']
-    # Format as table.
-    header3 = [{'header': val} for val in mastLook.columns.tolist()]
-    set3 = {'header_row': True, 'style': 'TableStyleMedium5',
-            'columns': header3}
-    sheet3.add_table(0, 0, len(mastLook.index), len(mastLook.columns)-1, set3)
+    # Format as table in Excel.
+    tableFormat(mastLook, 'Lookup', writer3)
 
     # Write the Quarantined Lookups file.
     writer4 = pd.ExcelWriter('Quarantined Lookups.xlsx', engine='xlsxwriter')
     quarantinedLookups.to_excel(writer4, sheet_name='Lookup', index=False)
-    sheet4 = writer4.sheets['Lookup']
-    # Format as table.
-    header4 = [{'header': val} for val in quarantinedLookups.columns.tolist()]
-    set4 = {'header_row': True, 'style': 'TableStyleMedium5',
-            'columns': header4}
-    sheet4.add_table(0, 0, len(quarantinedLookups.index),
-                     len(quarantinedLookups.columns)-1, set4)
+    # Format as table in Excel.
+    tableFormat(quarantinedLookups, 'Lookup', writer4)
 
     # Try saving the files, exit with error if any file is currently open.
     try:
@@ -202,7 +197,7 @@ def main():
               '***')
         return
 
-    # If no errors, save the files.
+    # No errors, so save the files.
     writer1.save()
     writer2.save()
     writer3.save()

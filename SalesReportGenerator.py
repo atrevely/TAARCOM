@@ -2,6 +2,24 @@ import pandas as pd
 import time
 
 
+def tableFormat(sheetData, sheetName, book):
+    """Formats the Excel output as a table."""
+
+    # Create the table.
+    sheet = book.sheets[sheetName]
+    header = [{'header': val} for val in sheetData.columns.tolist()]
+    set = {'header_row': True, 'style': 'TableStyleMedium5',
+           'columns': header}
+    sheet.add_table(0, 0, len(sheetData.index),
+                    len(sheetData.columns)-1, set)
+    # Fit to the column width.
+    i = 0
+    for col in sheetData.columns:
+        maxWidth = max([len(str(val)) for val in sheetData[col].values])
+        sheet.set_column(i, i, maxWidth+0.5)
+        i += 1
+
+
 # The main function.
 def main():
     """Generates sales reports for each salesperson.
@@ -85,13 +103,8 @@ def main():
                                 + time.strftime(' %Y-%m-%d')
                                 + '.xlsx', engine='xlsxwriter')
         finalReport.to_excel(writer, sheet_name='Report Data', index=False)
-        sheet = writer.sheets['Lookup']
-        # Format as table.
-        header = [{'header': val} for val in finalReport.columns.tolist()]
-        set = {'header_row': True, 'style': 'TableStyleMedium5',
-               'columns': header}
-        sheet.add_table(0, 0, len(finalReport.index),
-                        len(finalReport.columns)-1, set)
+        # Format as table in Excel.
+        tableFormat(finalReport, 'Report Data', writer)
 
         # Try saving the file, exit with error if file is currently open.
         try:
@@ -102,6 +115,7 @@ def main():
                   'Please close the file and try again.\n'
                   '***')
             return
+        # No errors, so save the file.
         writer.save()
 
     # %%
@@ -115,19 +129,9 @@ def main():
     runningCom.to_excel(writer1, sheet_name='Master', index=False)
     filesProcessed.to_excel(writer1, sheet_name='Files Processed',
                             index=False)
-    sheet1a = writer1.sheets['Master']
-    sheet1b = writer1.sheets['Files Processed']
-    # Format as table.
-    header1a = [{'header': val} for val in runningCom.columns.tolist()]
-    header1b = [{'header': val} for val in filesProcessed.columns.tolist()]
-    set1a = {'header_row': True, 'style': 'TableStyleMedium5',
-             'columns': header1a}
-    set1b = {'header_row': True, 'style': 'TableStyleMedium5',
-             'columns': header1b}
-    sheet1a.add_table(0, 0, len(runningCom.index),
-                      len(runningCom.columns)-1, set1a)
-    sheet1b.add_table(0, 0, len(filesProcessed.index),
-                      len(filesProcessed.columns)-1, set1b)
+    # Format as table in Excel.
+    tableFormat(runningCom, 'Master', writer1)
+    tableFormat(filesProcessed, 'Files Processed', writer1)
 
     # Try saving the file, exit with error if file is currently open.
     try:
@@ -138,4 +142,5 @@ def main():
               'Please close the file and try again.\n'
               '***')
         return
+    # No errors, so save the file.
     writer1.save()
