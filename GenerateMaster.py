@@ -13,16 +13,25 @@ def tableFormat(sheetData, sheetName, book):
     # Create the table.
     sheet = book.sheets[sheetName]
     header = [{'header': val} for val in sheetData.columns.tolist()]
-    set = {'header_row': True, 'style': 'TableStyleMedium5',
-           'columns': header}
+    setStyle = {'header_row': True, 'style': 'TableStyleMedium5',
+                'columns': header}
     sheet.add_table(0, 0, len(sheetData.index),
-                    len(sheetData.columns)-1, set)
+                    len(sheetData.columns)-1, setStyle)
     # Fit to the column width.
     i = 0
     for col in sheetData.columns:
         maxWidth = max([len(str(val)) for val in sheetData[col].values])
         sheet.set_column(i, i, maxWidth+0.5)
         i += 1
+
+
+def saveError(excelFile):
+    # Try saving the file, return true if any file is currently open.
+    try:
+        excelFile.save()
+    except IOError:
+        return True
+    return False
 
 
 # The main function.
@@ -382,28 +391,10 @@ def main(filepaths, runningCom, fieldMappings, principal):
     tableFormat(masterLookup, 'Lookup', writer3)
 
     # Try saving the files, exit with error if any file is currently open.
-    try:
-        writer1.save()
-    except IOError:
+    if saveError(writer1) or saveError(writer2) or saveError(writer3):
         print('---\n'
-              'Running Commissions is open in Excel!\n'
-              'Please close the file and try again.\n'
-              '***')
-        return
-    try:
-        writer2.save()
-    except IOError:
-        print('---\n'
-              'Lookup Master is open in Excel!\n'
-              'Please close the file and try again.\n'
-              '***')
-        return
-    try:
-        writer3.save()
-    except IOError:
-        print('---\n'
-              'Entries Need Fixing is open in Excel!\n'
-              'Please close the file and try again.\n'
+              'One or more files are currently open in Excel!\n'
+              'Please close the files and try again.\n'
               '***')
         return
 

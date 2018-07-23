@@ -8,10 +8,10 @@ def tableFormat(sheetData, sheetName, book):
     # Create the table.
     sheet = book.sheets[sheetName]
     header = [{'header': val} for val in sheetData.columns.tolist()]
-    set = {'header_row': True, 'style': 'TableStyleMedium5',
-           'columns': header}
+    setStyle = {'header_row': True, 'style': 'TableStyleMedium5',
+                'columns': header}
     sheet.add_table(0, 0, len(sheetData.index),
-                    len(sheetData.columns)-1, set)
+                    len(sheetData.columns)-1, setStyle)
     # Fit to the column width.
     i = 0
     for col in sheetData.columns:
