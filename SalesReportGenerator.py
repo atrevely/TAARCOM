@@ -2,21 +2,40 @@ import pandas as pd
 import time
 
 
-def tableFormat(sheetData, sheetName, book):
+def tableFormat(sheetData, sheetName, wbook):
     """Formats the Excel output as a table."""
-
     # Create the table.
-    sheet = book.sheets[sheetName]
+    sheet = wbook.sheets[sheetName]
     header = [{'header': val} for val in sheetData.columns.tolist()]
     setStyle = {'header_row': True, 'style': 'TableStyleMedium5',
                 'columns': header}
     sheet.add_table(0, 0, len(sheetData.index),
                     len(sheetData.columns)-1, setStyle)
+    # Set document formatting.
+    docFormat = wbook.book.add_format({'font': 'Century Gothic',
+                                       'font_size': 8})
+    acctFormat = wbook.book.add_format({'font': 'Century Gothic',
+                                        'font_size': 8,
+                                        'num_format': 44})
+    commaFormat = wbook.book.add_format({'font': 'Century Gothic',
+                                         'font_size': 8,
+                                         'num_format': 3})
     # Fit to the column width.
     i = 0
     for col in sheetData.columns:
+        # Match the correct formatting to each column.
+        acctCols = ['Unit Price', 'Invoiced Dollars', 'Paid-On Revenue',
+                    'Actual Comm Paid', 'Total NDS', 'Post-Split NDS',
+                    'Customer Revenue YTD']
+        if col in acctCols:
+            formatting = acctFormat
+        elif col == 'Quantity':
+            formatting = commaFormat
+        else:
+            formatting = docFormat
+        # Set column width and formatting
         maxWidth = max([len(str(val)) for val in sheetData[col].values])
-        sheet.set_column(i, i, maxWidth+0.5)
+        sheet.set_column(i, i, maxWidth+0.8, formatting)
         i += 1
 
 

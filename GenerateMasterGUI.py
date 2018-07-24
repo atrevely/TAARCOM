@@ -388,10 +388,16 @@ class ColumnEdit(QMainWindow):
         sheet = writer.sheets['Lookup']
         # Format as table.
         header = [{'header': val} for val in fieldMappings.columns.tolist()]
-        set = {'header_row': True, 'style': 'TableStyleMedium5',
-               'columns': header}
+        setStyle = {'header_row': True, 'style': 'TableStyleMedium5',
+                    'columns': header}
         sheet.add_table(0, 0, len(fieldMappings.index),
-                        len(fieldMappings.columns)-1, set)
+                        len(fieldMappings.columns)-1, setStyle)
+        # Fit to the column width.
+        i = 0
+        for col in sheet.columns:
+            maxWidth = max([len(str(val)) for val in sheet[col].values])
+            sheet.set_column(i, i, maxWidth+0.8)
+        i += 1
 
         # Try saving the file, exit with error if file is currently open.
         try:

@@ -6,30 +6,50 @@ import calendar
 import math
 
 
-def tableFormat(sheetData, sheetName, book):
+def tableFormat(sheetData, sheetName, wbook):
     """Formats the Excel output as a table."""
-
     # Create the table.
-    sheet = book.sheets[sheetName]
+    sheet = wbook.sheets[sheetName]
     header = [{'header': val} for val in sheetData.columns.tolist()]
     setStyle = {'header_row': True, 'style': 'TableStyleMedium5',
-                'columns': header}
+                'columns': header, 'font': 'Century Gothic'}
     sheet.add_table(0, 0, len(sheetData.index),
                     len(sheetData.columns)-1, setStyle)
+    # Set document formatting.
+    docFormat = wbook.book.add_format({'font': 'Century Gothic',
+                                       'font_size': 8})
+    acctFormat = wbook.book.add_format({'font': 'Century Gothic',
+                                        'font_size': 8,
+                                        'num_format': 44})
+    commaFormat = wbook.book.add_format({'font': 'Century Gothic',
+                                         'font_size': 8,
+                                         'num_format': 3})
     # Fit to the column width.
     i = 0
     for col in sheetData.columns:
+        # Match the correct formatting to each column.
+        acctCols = ['Unit Price', 'Invoiced Dollars', 'Paid-On Revenue',
+                    'Actual Comm Paid', 'Total NDS', 'Post-Split NDS',
+                    'Customer Revenue YTD']
+        if col in acctCols:
+            formatting = acctFormat
+        elif col == 'Quantity':
+            formatting = commaFormat
+        else:
+            formatting = docFormat
+        # Set column width and formatting
         maxWidth = max([len(str(val)) for val in sheetData[col].values])
-        sheet.set_column(i, i, maxWidth+0.5)
+        sheet.set_column(i, i, maxWidth+0.8, formatting)
         i += 1
 
 
-def saveError(excelFile):
-    # Try saving the file, return true if any file is currently open.
-    try:
-        excelFile.save()
-    except IOError:
-        return True
+def saveError(*excelFiles):
+    """Try saving Excel files and return True if any file is open."""
+    for file in excelFiles:
+        try:
+            file.save()
+        except IOError:
+            return True
     return False
 
 
@@ -47,7 +67,6 @@ def main():
     entries when needed, and quarantining old entries that have not been
     used in 2+ years.
     """
-
     # Load up the Entries Need Fixing file.
     fixList = pd.read_excel('Entries Need Fixing.xlsx', 'Data').fillna('')
 
@@ -173,7 +192,7 @@ def main():
     tableFormat(quarantinedLookups, 'Lookup', writer4)
 
     # Try saving the files, exit with error if any file is currently open.
-    if saveError(writer1) or saveError(writer2) or saveError(writer3) or saveError(writer4):
+    if saveError(writer1, writer2, writer3, writer4):
         print('---\n'
               'One or more files are currently open in Excel!\n'
               'Please close the files and try again.\n'
