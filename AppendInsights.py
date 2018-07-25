@@ -25,6 +25,7 @@ def main(filepath):
     if filename in filesProcessed['Filename']:
         # Let us know the file is a duplicte.
         print('---\n'
-              'The Insight file is already in the Insight Master!\n'
+              'The selected Insight file is already in the Insight Master!\n'
               '***')
         return
+

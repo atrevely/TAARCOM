@@ -79,7 +79,7 @@ def main(filepaths, runningCom, fieldMappings, principal):
     # Add in non-lookup'd data names.
     columnNames[0:0] = ['CM Sales', 'Design Sales', 'Quarter', 'Month',
                         'Year']
-    columnNames[7:7] = ['T-End Cust', 'T-Name', 'CM',
+    columnNames[8:8] = ['T-End Cust', 'T-Name', 'CM',
                         'Principal', 'Corrected Distributor']
     columnNames.extend(['CM Split', 'TEMP/FINAL', 'Paid Date', 'From File',
                         'Sales Report Date'])
@@ -243,6 +243,10 @@ def main(filepaths, runningCom, fieldMappings, principal):
                     for col in stringCols:
                         sheet[col] = sheet[col].fillna('').astype(str).map(
                                 lambda x: x.strip())
+                    # Convert all applicable entries to numeric.
+                    for col in list(sheet):
+                        sheet[col] = sheet[col].map(lambda x: pd.to_numeric(
+                                x, errors='ignore')).fillna('')
                     # Append matching columns of data.
                     finalData = finalData.append(sheet[matchingColumns],
                                                  ignore_index=True)
