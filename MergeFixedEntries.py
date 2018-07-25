@@ -7,7 +7,7 @@ import math
 
 
 def tableFormat(sheetData, sheetName, wbook):
-    """Formats the Excel output as a table."""
+    """Formats the Excel output as a table with correct column formatting."""
     # Create the table.
     sheet = wbook.sheets[sheetName]
     header = [{'header': val} for val in sheetData.columns.tolist()]
@@ -24,7 +24,7 @@ def tableFormat(sheetData, sheetName, wbook):
     commaFormat = wbook.book.add_format({'font': 'Century Gothic',
                                          'font_size': 8,
                                          'num_format': 3})
-    # Fit to the column width.
+    # Format and fit each column.
     i = 0
     for col in sheetData.columns:
         # Match the correct formatting to each column.
@@ -37,7 +37,7 @@ def tableFormat(sheetData, sheetName, wbook):
             formatting = commaFormat
         else:
             formatting = docFormat
-        # Set column width and formatting
+        # Set column width and formatting.
         maxWidth = max([len(str(val)) for val in sheetData[col].values])
         sheet.set_column(i, i, maxWidth+0.8, formatting)
         i += 1

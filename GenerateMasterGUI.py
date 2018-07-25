@@ -234,7 +234,7 @@ class GenMast(QMainWindow):
         for names in self.filenames:
             if 'Running Master' in names:
                 print('Master uploaded as new file.\n'
-                      'Try uploading files again.'
+                      'Try uploading files again.\n'
                       '---')
                 return
 
@@ -261,8 +261,7 @@ class GenMast(QMainWindow):
 
 
 class Worker(QtCore.QRunnable):
-    """
-    Inherits from QRunnable to handle worker thread.
+    """Inherits from QRunnable to handle worker thread.
 
     param args -- Arguments to pass to the callback function.
     param kwargs -- Keywords to pass to the callback function.
@@ -276,9 +275,7 @@ class Worker(QtCore.QRunnable):
 
     @pyqtSlot()
     def run(self):
-        '''
-        Initialise the runner function with passed args, kwargs.
-        '''
+        """Initialise the runner function with passed args, kwargs."""
         self.fn(*self.args, **self.kwargs)
 
 
@@ -397,7 +394,7 @@ class ColumnEdit(QMainWindow):
         for col in sheet.columns:
             maxWidth = max([len(str(val)) for val in sheet[col].values])
             sheet.set_column(i, i, maxWidth+0.8)
-        i += 1
+            i += 1
 
         # Try saving the file, exit with error if file is currently open.
         try:
