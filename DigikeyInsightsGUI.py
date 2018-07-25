@@ -30,6 +30,7 @@ class GenMast(QMainWindow):
         self.threadpool = QtCore.QThreadPool()
         # Initialize UI and supporting filenames.
         self.initUI()
+        self.filename = []
 
         # Custom output stream.
         sys.stdout = Stream(newText=self.onUpdateText)
@@ -71,7 +72,7 @@ class GenMast(QMainWindow):
         self.btnAddIns.clicked.connect(self.addInsClicked)
 
         # Button for selecting files to compile into master list.
-        self.btnOpenInsight = QPushButton('Select \n Digikey Insight \n File',
+        self.btnOpenInsight = QPushButton('Select Digikey \n Insight File',
                                           self)
         self.btnOpenInsight.move(50, 30)
         self.btnOpenInsight.resize(150, 100)
@@ -92,26 +93,19 @@ class GenMast(QMainWindow):
         self.show()
 
     def addInsClicked(self):
-        """Send the GenerateMaster execution to a worker thread."""
+        """Send the AppendInsights execution to a worker thread."""
         worker = Worker(self.addInsExecute)
         self.threadpool.start(worker)
-
-    def clearAllClicked(self):
-        """Clear the filenames and master variables."""
-        self.filenames = []
-        self.master = []
-        print('All file selections cleared.\n'
-              '---')
 
     def addInsExecute(self):
         """Runs function for processing new files to master."""
         # Check to see if we're ready to process.
         mapExists = os.path.exists('rootCustomerMappings.xlsx')
-        if self.filenames and mapExists:
+        if self.filename and mapExists:
             # Turn buttons off.
             self.lockButtons()
             # Run the GenerateMaster.py file.
-            AppendInsights.main()
+            AppendInsights.main(self.filename)
             # Turn buttons back on.
             self.restoreButtons()
 
@@ -120,12 +114,12 @@ class GenMast(QMainWindow):
                   'Please check file location and try again.\n'
                   '---')
 
-        elif not self.filenames:
+        elif not self.filename:
             print('No Insight file selected!\n'
                   'Use the Select Commission Files button to select files.\n'
                   '---')
 
-    def openOpenInsight(self):
+    def openInsightClicked(self):
         """Provide filepath for new data to process using AppendInsights."""
 
         # Let us know we're clearing old selections.
@@ -148,18 +142,12 @@ class GenMast(QMainWindow):
             print('File selected:' + self.filename + '\n---')
 
     def lockButtons(self):
-        self.btnGenMast.setEnabled(False)
-        self.btnOpenFiles.setEnabled(False)
-        self.btnUploadMast.setEnabled(False)
-        self.btnEditColumns.setEnabled(False)
-        self.btnClearAll.setEnabled(False)
+        self.btnAddIns.setEnabled(False)
+        self.btnOpenInsight.setEnabled(False)
 
     def restoreButtons(self):
-        self.btnGenMast.setEnabled(True)
-        self.btnOpenFiles.setEnabled(True)
-        self.btnUploadMast.setEnabled(True)
-        self.btnEditColumns.setEnabled(True)
-        self.btnClearAll.setEnabled(True)
+        self.btnAddIns.setEnabled(True)
+        self.btnOpenInsight.setEnabled(True)
 
 
 class Worker(QtCore.QRunnable):

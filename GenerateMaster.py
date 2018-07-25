@@ -88,7 +88,8 @@ def main(filepaths, runningCom, fieldMappings, principal):
     if runningCom:
         finalData = pd.read_excel(runningCom, 'Master').fillna('')
         runComLen = len(finalData)
-        filesProcessed = pd.read_excel(runningCom, 'Files Processed')
+        filesProcessed = pd.read_excel(runningCom,
+                                       'Files Processed').fillna('')
         print('Appending files to Running Commissions.')
         if list(finalData) != columnNames:
             print('---\n'
