@@ -34,7 +34,7 @@ def saveError(*excelFiles):
 
 
 # The main function.
-def main(filepath):
+def main(filepaths):
     """Appends new Digikey Insight file to the Digikey Insight Master.
 
     Arguments:
@@ -55,26 +55,27 @@ def main(filepath):
     # Get column name layout.
     colNames = list(insMast)
 
-    # Load the New Root Customers file.
-    if os.path.exists('New Root Customers.xlsx'):
-        newRootCusts = pd.read_excel('New Root Customers.xlsx',
-                                     'Data').fillna('')
-    else:
+    # Strip the root off of the filepaths and leave just the filenames.
+    filenames = [os.path.basename(val) for val in filepaths]
+    # Check if we've duplicated any files.
+    duplicates = list(set(filenames).intersection(filesProcessed['Filename']))
+    # Don't let duplicate files get processed.
+    filenames = [val for val in filenames if val not in duplicates]
+    if duplicates:
+        # Let us know we found duplictes and removed them.
         print('---\n'
-              'No New Root Customers file found!\n'
-              'Please make sure New Root Customers'
-              'is in the directory.\n'
-              '***')
-        return
+              'The following files are already in Digikey Master:')
+        for file in list(duplicates):
+            print(file)
+        print('Duplicate files were removed from processing.')
+        # Exit if no new files are left.
+        if not filenames:
+            print('---\n'
+                  'No new commissions files selected.\n'
+                  'Please try selecting files again.\n'
+                  '***')
+            return
 
-    # Strip the root off of the filepath and leave just the filename.
-    filename = os.path.basename(filepath)
-    if filename in filesProcessed['Filename']:
-        # Let us know the file is a duplicte.
-        print('---\n'
-              'The selected Insight file is already in the Insight Master!\n'
-              '***')
-        return
     newFile = pd.DataFrame({'Filename': [filename]})
     filesProcessed = filesProcessed.append(newFile, ignore_index=True)
     # Load the Insight file.
@@ -90,27 +91,12 @@ def main(filepath):
         print('***')
         return
 
-    # Go through each entry in the Insight file and look for a sales match.
-    for row in range(len(insFile)):
-        # Check for individuals and CMs and note them in comments.
-        if 'contract' in insFile.loc[row, 'Root Customer Class'].lower():
-            insFile.loc[row, 'TAARCOM Comments'] = 'Contract Manufacturer'
-        if 'individual' in insFile.loc[row, 'Root Customer Class'].lower():
-            insFile.loc[row, 'TAARCOM Comments'] = 'Individual'
-        salesMatch = insFile.loc[row, 'Root Customer..'] == rootCustMap['Root Customer']
-        match = rootCustMap[salesMatch]
-        if len(match) == 1:
-            # Match to salesperson if exactly one match is found.
-            insFile.loc[row, 'Sales'] = match['Salesperson'].iloc[0]
-        else:
-            # Append to the New Root Customers file.
-            newRootCusts = newRootCusts.append(insFile.loc[row, :],
-                                               ignore_index=True)
+
+
 
     # Append the new data to the Insight Master.
     insMast = insMast.append(insFile, ignore_index=True)
     insMast = insMast.loc[:, colNames]
-    newRootCusts = newRootCusts.loc[:, colNames]
 
     # Write the Insight Master file.
     writer1 = pd.ExcelWriter('Digikey Insight Master.xlsx',
@@ -122,12 +108,6 @@ def main(filepath):
     tableFormat(insMast, 'Master', writer1)
     tableFormat(filesProcessed, 'Files Processed', writer1)
 
-    # Write the New Root Customers file.
-    writer2 = pd.ExcelWriter('New Root Customers.xlsx', engine='xlsxwriter')
-    newRootCusts.to_excel(writer2, sheet_name='Data', index=False)
-    # Format as table in Excel.
-    tableFormat(newRootCusts, 'Data', writer2)
-
     # Try saving the files, exit with error if any file is currently open.
     if saveError(writer1, writer2):
         print('---\n'
@@ -138,7 +118,6 @@ def main(filepath):
 
     # No errors, so save the files.
     writer1.save()
-    writer2.save()
 
     print('---\n'
           'Updates completed successfully!\n'

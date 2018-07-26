@@ -224,15 +224,15 @@ class GenMast(QMainWindow):
 
         # Let us know we're clearing old selections.
         if self.filenames:
-            print('Selecting new files, old selection(s) cleared...')
+            print('Selecting new files, old selections cleared...')
 
         # Grab the filenames to be passed into GenerateMaster.
         self.filenames, _ = QFileDialog.getOpenFileNames(
                 self, filter="Excel files (*.xls *.xlsx *.xlsm)")
 
         # Check if the current master got uploaded as a new file.
-        for names in self.filenames:
-            if 'Running Master' in names:
+        for name in self.filenames:
+            if 'Running Master' in name:
                 print('Master uploaded as new file.\n'
                       'Try uploading files again.\n'
                       '---')

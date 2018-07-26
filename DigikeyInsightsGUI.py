@@ -71,18 +71,27 @@ class GenMast(QMainWindow):
         self.btnLookSales.clicked.connect(self.lookSalesClicked)
 
         # Button for appending the Insight to the Insight Master.
-        self.btnAddIns = QPushButton('Process Files \n to '
+        self.btnAddIns = QPushButton('Generate Report \n and Append \n to '
                                      'Insight \n Master', self)
         self.btnAddIns.move(650, 400)
         self.btnAddIns.resize(150, 150)
         self.btnAddIns.clicked.connect(self.addInsClicked)
 
-        # Button for selecting files to compile into master list.
-        self.btnOpenInsight = QPushButton('Select Digikey \n Insight File',
+        # Button for selecting new file to lookup salespeople.
+        self.btnOpenInsight = QPushButton('Select New \n Digikey Insight \n'
+                                          'File',
                                           self)
         self.btnOpenInsight.move(50, 30)
         self.btnOpenInsight.resize(150, 100)
         self.btnOpenInsight.clicked.connect(self.openInsightClicked)
+
+        # Button for selecting files to append to master.
+        self.btnOpenFinished = QPushButton('Select Files \n Ready to Add'
+                                           '\n to Master',
+                                           self)
+        self.btnOpenFinished.move(250, 30)
+        self.btnOpenFinished.resize(150, 100)
+        self.btnOpenFinished.clicked.connect(self.openFinishedClicked)
 
         # Create the text output widget.
         self.textBox = QTextEdit(self, readOnly=True)
@@ -110,23 +119,17 @@ class GenMast(QMainWindow):
 
     def addInsExecute(self):
         """Runs function for processing new files to master."""
-        # Check to see if we're ready to process.
-        mapExists = os.path.exists('rootCustomerMappings.xlsx')
-        if self.filename and mapExists:
+        # Check to make sure we've selected files.
+        if self.filenames:
             # Turn buttons off.
             self.lockButtons()
             # Run the GenerateMaster.py file.
-            AppendInsights.main(self.filename)
+            AppendInsights.main(self.filenames)
             # Turn buttons back on.
             self.restoreButtons()
 
-        elif not mapExists:
-            print('File rootCustomerMappings.xlsx not found!\n'
-                  'Please check file location and try again.\n'
-                  '---')
-
         elif not self.filename:
-            print('No Insight file selected!\n'
+            print('No Sales-lookuped Insight files selected!\n'
                   'Use the Select Commission Files button to select files.\n'
                   '---')
 
@@ -153,13 +156,13 @@ class GenMast(QMainWindow):
                   '---')
 
     def openInsightClicked(self):
-        """Provide filepath for new data to process using AppendInsights."""
+        """Provide filepath for new data to process using LookupSales."""
 
         # Let us know we're clearing old selections.
         if self.filename:
             print('Selecting new file, old selection cleared...')
 
-        # Grab the filenames to be passed into GenerateMaster.
+        # Grab the filenames to be passed into LookupSales.
         self.filename, _ = QFileDialog.getOpenFileName(
                 self, filter="Excel files (*.xls *.xlsx *.xlsm)")
 
@@ -173,6 +176,32 @@ class GenMast(QMainWindow):
         # Print out the selected filenames.
         if self.filename:
             print('File selected:' + self.filename + '\n---')
+
+    def openFinishedClicked(self):
+        """Provide filepath for new data to process using AppendInsights."""
+
+        # Let us know we're clearing old selections.
+        if self.filenames:
+            print('Selecting new files, old selections cleared...')
+
+        # Grab the filenames to be passed into AppendInsights.
+        self.filenames, _ = QFileDialog.getOpenFileNames(
+                self, filter="Excel files (*.xls *.xlsx *.xlsm)")
+
+        # Check if the current master got uploaded as a new file.
+        for name in self.filenames:
+            if 'Digikey Insight Master' in name:
+                print('Master uploaded as new file.\n'
+                      'Try uploading files again.\n'
+                      '---')
+                return
+
+        # Print out the selected filenames.
+        if self.filenames:
+            print('Files selected:')
+            for file in self.filenames:
+                print(file)
+            print('---')
 
     def lockButtons(self):
         self.btnAddIns.setEnabled(False)
