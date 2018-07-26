@@ -40,55 +40,28 @@ def main(filepath):
     Arguments:
     filepath -- The filepath to the new Digikey Insight file.
     """
-    # Load the Digikey Insights Master file.
-    if os.path.exists('Digikey Insight Master.xlsx'):
-        insMast = pd.read_excel('Digikey Insight Master.xlsx',
-                                'Master').fillna('')
-        filesProcessed = pd.read_excel('Digikey Insight Master.xlsx',
-                                       'Files Processed').fillna('')
+    # Load the Root Customer Mappings file.
+    if os.path.exists('rootCustomerMappings.xlsx'):
+        rootCustMap = pd.read_excel('rootCustomerMappings.xlsx',
+                                    'Sales Lookup').fillna('')
     else:
         print('---\n'
-              'No Insight Master file found!\n'
-              'Please make sure Digikey Insight Master is in the directory.\n'
-              '***')
-        return
-    # Get column name layout.
-    colNames = list(insMast)
-
-    # Load the New Root Customers file.
-    if os.path.exists('New Root Customers.xlsx'):
-        newRootCusts = pd.read_excel('New Root Customers.xlsx',
-                                     'Data').fillna('')
-    else:
-        print('---\n'
-              'No New Root Customers file found!\n'
-              'Please make sure New Root Customers'
+              'No Root Customer Mappings file found!\n'
+              'Please make sure rootCustomerMappings.xlsx'
               'is in the directory.\n'
               '***')
         return
 
     # Strip the root off of the filepath and leave just the filename.
     filename = os.path.basename(filepath)
-    if filename in filesProcessed['Filename']:
-        # Let us know the file is a duplicte.
-        print('---\n'
-              'The selected Insight file is already in the Insight Master!\n'
-              '***')
-        return
-    newFile = pd.DataFrame({'Filename': [filename]})
-    filesProcessed = filesProcessed.append(newFile, ignore_index=True)
+
     # Load the Insight file.
     insFile = pd.read_excel(filepath, None)
     insFile = insFile[list(insFile)[0]].fillna('')
 
-    # Check to see if column names match.
-    noMatch = [val for val in list(insMast) if val not in list(insFile)]
-    if noMatch:
-        print('The following Digikey Master columns were not found:')
-        for colName in noMatch:
-            print(colName)
-        print('***')
-        return
+    # Get the output files ready.
+    newInsFile = pd.DataFrame(columns=list(insFile))
+    newRootCusts = pd.DataFrame(columns=list(insFile))
 
     # Go through each entry in the Insight file and look for a sales match.
     for row in range(len(insFile)):
@@ -102,28 +75,23 @@ def main(filepath):
         if len(match) == 1:
             # Match to salesperson if exactly one match is found.
             insFile.loc[row, 'Sales'] = match['Salesperson'].iloc[0]
+            newInsFile = newInsFile.append(insFile.loc[row, :],
+                                           ignore_index=True)
         else:
             # Append to the New Root Customers file.
             newRootCusts = newRootCusts.append(insFile.loc[row, :],
                                                ignore_index=True)
 
-    # Append the new data to the Insight Master.
-    insMast = insMast.append(insFile, ignore_index=True)
-    insMast = insMast.loc[:, colNames]
-    newRootCusts = newRootCusts.loc[:, colNames]
-
-    # Write the Insight Master file.
-    writer1 = pd.ExcelWriter('Digikey Insight Master.xlsx',
+    # Write the Insight file, which now contains salespeople.
+    writer1 = pd.ExcelWriter(filename[:-5] + ' With Salespeople.xlsx',
                              engine='xlsxwriter')
-    insMast.to_excel(writer1, sheet_name='Master', index=False)
-    filesProcessed.to_excel(writer1, sheet_name='Files Processed',
-                            index=False)
+    newInsFile.to_excel(writer1, sheet_name='Data', index=False)
     # Format as table in Excel.
-    tableFormat(insMast, 'Master', writer1)
-    tableFormat(filesProcessed, 'Files Processed', writer1)
+    tableFormat(newInsFile, 'Data', writer1)
 
     # Write the New Root Customers file.
-    writer2 = pd.ExcelWriter('New Root Customers.xlsx', engine='xlsxwriter')
+    writer2 = pd.ExcelWriter(filename[:-5] + ' New Root Customers.xlsx',
+                             engine='xlsxwriter')
     newRootCusts.to_excel(writer2, sheet_name='Data', index=False)
     # Format as table in Excel.
     tableFormat(newRootCusts, 'Data', writer2)

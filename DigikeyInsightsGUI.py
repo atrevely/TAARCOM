@@ -4,6 +4,7 @@ from PyQt5 import QtCore, QtGui
 from PyQt5.QtWidgets import QMainWindow, QPushButton, QApplication, \
                             QFileDialog, QTextEdit
 from PyQt5.QtCore import pyqtSlot
+import LookupSales
 import AppendInsights
 
 
@@ -62,6 +63,13 @@ class GenMast(QMainWindow):
     def initUI(self):
         """Creates UI window on launch."""
 
+        # Button for looking up salespeople in Insight Report.
+        self.btnLookSales = QPushButton('Lookup \n Salespeople \n'
+                                        'for \n Insight File', self)
+        self.btnLookSales.move(650, 200)
+        self.btnLookSales.resize(150, 150)
+        self.btnLookSales.clicked.connect(self.lookSalesClicked)
+
         # Button for appending the Insight to the Insight Master.
         self.btnAddIns = QPushButton('Process Files \n to '
                                      'Insight \n Master', self)
@@ -95,6 +103,11 @@ class GenMast(QMainWindow):
         worker = Worker(self.addInsExecute)
         self.threadpool.start(worker)
 
+    def lookSalesClicked(self):
+        """Send the AppendInsights execution to a worker thread."""
+        worker = Worker(self.lookSalesExecute)
+        self.threadpool.start(worker)
+
     def addInsExecute(self):
         """Runs function for processing new files to master."""
         # Check to see if we're ready to process.
@@ -104,6 +117,28 @@ class GenMast(QMainWindow):
             self.lockButtons()
             # Run the GenerateMaster.py file.
             AppendInsights.main(self.filename)
+            # Turn buttons back on.
+            self.restoreButtons()
+
+        elif not mapExists:
+            print('File rootCustomerMappings.xlsx not found!\n'
+                  'Please check file location and try again.\n'
+                  '---')
+
+        elif not self.filename:
+            print('No Insight file selected!\n'
+                  'Use the Select Commission Files button to select files.\n'
+                  '---')
+
+    def lookSalesExecute(self):
+        """Runs function for looking up salespeople."""
+        # Check to see if we're ready to process.
+        mapExists = os.path.exists('rootCustomerMappings.xlsx')
+        if self.filename and mapExists:
+            # Turn buttons off.
+            self.lockButtons()
+            # Run the GenerateMaster.py file.
+            LookupSales.main(self.filename)
             # Turn buttons back on.
             self.restoreButtons()
 
@@ -142,10 +177,12 @@ class GenMast(QMainWindow):
     def lockButtons(self):
         self.btnAddIns.setEnabled(False)
         self.btnOpenInsight.setEnabled(False)
+        self.btnLookSales.setEnabled(False)
 
     def restoreButtons(self):
         self.btnAddIns.setEnabled(True)
         self.btnOpenInsight.setEnabled(True)
+        self.btnLookSales.setEnabled(True)
 
 
 class Worker(QtCore.QRunnable):
