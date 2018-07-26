@@ -270,16 +270,6 @@ def main(filepaths, runningCom, fieldMappings, principal):
     numRows = '{:,.0f}'.format(len(finalData) - runComLen)
     print('---\n'
           'Beginning processing on ' + numRows + ' rows of data.')
-    # Check to make sure Actual Comm Paid is all convertible to numeric.
-    try:
-        pd.to_numeric(finalData['Actual Comm Paid']).fillna(0)
-    except ValueError:
-        print('---\n'
-              'Error parsing commission dollars.\n'
-              'Make sure all data going into Actual Comm Paid is numeric.\n'
-              'Note: The $ sign should be ok to use in numeric columns.\n'
-              '***')
-        return
     # Remove entries with no commissions dollars.
     # Coerce entries with bad data, meaning that non-numeric gets set to 0.
     finalData['Actual Comm Paid'] = pd.to_numeric(

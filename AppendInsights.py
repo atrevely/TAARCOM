@@ -35,7 +35,7 @@ def saveError(*excelFiles):
 
 # The main function.
 def main(filepath):
-    """Appends new Digikey Insight files to the Digikey Insight Master.
+    """Appends new Digikey Insight file to the Digikey Insight Master.
 
     Arguments:
     filepath -- The filepath to the new Digikey Insight file.
@@ -52,6 +52,8 @@ def main(filepath):
               'Please make sure Digikey Insight Master is in the directory.\n'
               '***')
         return
+    # Get column name layout.
+    colNames = list(insMast)
 
     # Load the Root Customer Mappings file.
     if os.path.exists('rootCustomerMappings.xlsx'):
@@ -85,6 +87,8 @@ def main(filepath):
               'The selected Insight file is already in the Insight Master!\n'
               '***')
         return
+    newFile = pd.DataFrame({'Filename': [filename]})
+    filesProcessed = filesProcessed.append(newFile, ignore_index=True)
     # Load the Insight file.
     insFile = pd.read_excel(filepath, None)
     insFile = insFile[list(insFile)[0]].fillna('')
@@ -101,10 +105,10 @@ def main(filepath):
     # Go through each entry in the Insight file and look for a sales match.
     for row in range(len(insFile)):
         # Check for individuals and CMs and note them in comments.
-        if 'Contract' in insFile[row, 'Root Customer Class']:
-            insFile[row, 'TAARCOM Comments'] = 'Contract Manufacturer'
-        if 'Individual' in insFile[row, 'Root Customer Class']:
-            insFile[row, 'TAARCOM Comments'] = 'Individual'
+        if 'contract' in insFile.loc[row, 'Root Customer Class'].lower():
+            insFile.loc[row, 'TAARCOM Comments'] = 'Contract Manufacturer'
+        if 'individual' in insFile.loc[row, 'Root Customer Class'].lower():
+            insFile.loc[row, 'TAARCOM Comments'] = 'Individual'
         salesMatch = insFile.loc[row, 'Root Customer..'] == rootCustMap['Root Customer']
         match = rootCustMap[salesMatch]
         if len(match) == 1:
@@ -112,9 +116,13 @@ def main(filepath):
             insFile.loc[row, 'Sales'] = match['Salesperson'].iloc[0]
         else:
             # Append to the New Root Customers file.
-            newRootCusts = newRootCusts.append(insFile.loc[row, :])
+            newRootCusts = newRootCusts.append(insFile.loc[row, :],
+                                               ignore_index=True)
 
     # Append the new data to the Insight Master.
+    insMast = insMast.append(insFile, ignore_index=True)
+    insMast = insMast.loc[:, colNames]
+    newRootCusts = newRootCusts.loc[:, colNames]
 
     # Write the Insight Master file.
     writer1 = pd.ExcelWriter('Digikey Insight Master.xlsx',
@@ -123,7 +131,7 @@ def main(filepath):
     filesProcessed.to_excel(writer1, sheet_name='Files Processed',
                             index=False)
     # Format as table in Excel.
-    tableFormat(insMast, 'Data', writer1)
+    tableFormat(insMast, 'Master', writer1)
     tableFormat(filesProcessed, 'Files Processed', writer1)
 
     # Write the New Root Customers file.
@@ -144,5 +152,9 @@ def main(filepath):
     writer1.save()
     writer2.save()
 
-
-
+    print('---\n'
+          'Updates completed successfully!\n'
+          '---\n'
+          'Digikey Master updated.\n'
+          'New Root Customers updated.\n'
+          '+++')

@@ -1,10 +1,8 @@
 import sys
-import pandas as pd
 import os.path
 from PyQt5 import QtCore, QtGui
 from PyQt5.QtWidgets import QMainWindow, QPushButton, QApplication, \
-                            QFileDialog, QTextEdit, QTreeWidget, \
-                            QTreeWidgetItem, QInputDialog, QComboBox, QLabel
+                            QFileDialog, QTextEdit
 from PyQt5.QtCore import pyqtSlot
 import AppendInsights
 
