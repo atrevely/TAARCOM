@@ -243,10 +243,6 @@ def main(filepaths, runningCom, fieldMappings, principal):
                     for col in stringCols:
                         sheet[col] = sheet[col].fillna('').astype(str).map(
                                 lambda x: x.strip())
-                    # Convert all applicable entries to numeric.
-                    for col in list(sheet):
-                        sheet[col] = sheet[col].map(lambda x: pd.to_numeric(
-                                x, errors='ignore')).fillna('')
                     # Append matching columns of data.
                     finalData = finalData.append(sheet[matchingColumns],
                                                  ignore_index=True)
@@ -285,8 +281,9 @@ def main(filepaths, runningCom, fieldMappings, principal):
               '***')
         return
     # Remove entries with no commissions dollars.
+    # Coerce entries with bad data, meaning that non-numeric gets set to 0.
     finalData['Actual Comm Paid'] = pd.to_numeric(
-            finalData['Actual Comm Paid']).fillna(0)
+            finalData['Actual Comm Paid'], errors='coerce').fillna(0)
     finalData = finalData[finalData['Actual Comm Paid'] != 0]
     finalData.reset_index(inplace=True, drop=True)
     # Fill in principal.
@@ -367,6 +364,11 @@ def main(filepaths, runningCom, fieldMappings, principal):
                     finalData.loc[row, 'Corrected Distributor'] = corrDist['Corrected Dist']
                     distMatches += 1
 
+        # Go through each column and convert applicable entries to numeric.
+        for col in list(finalData):
+            finalData.loc[row, col] = pd.to_numeric(finalData.loc[row, col],
+                                                    errors='ignore')
+
         # If any data isn't found/parsed, copy entry to Fix Entries.
         if lookMatches != 1 or distMatches != 1 or dateError:
             fixList = fixList.append(finalData.loc[row, :])
@@ -384,6 +386,7 @@ def main(filepaths, runningCom, fieldMappings, principal):
             print('Done with row ' '{:,.0f}'.format(row))
 
     # Reorder columns to match the desired layout in columnNames.
+    finalData.fillna('', inplace=True)
     finalData = finalData.loc[:, columnNames]
     columnNames.extend(['Distributor Matches', 'Lookup Master Matches',
                         'Date Added', 'Running Com Index'])
