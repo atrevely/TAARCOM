@@ -72,11 +72,17 @@ class GenMast(QMainWindow):
         self.btnLookSales.clicked.connect(self.lookSalesClicked)
 
         # Button for appending the Insight to the Insight Master.
-        self.btnAddIns = QPushButton('Generate Report \n and Append \n to '
+        self.btnAddIns = QPushButton('Generate Reports \n and Append \n to '
                                      'Insight \n Master', self)
         self.btnAddIns.move(650, 400)
         self.btnAddIns.resize(150, 150)
         self.btnAddIns.clicked.connect(self.addInsClicked)
+
+        # Button for clearing selections.
+        self.btnClearAll = QPushButton('Clear \n File Selections', self)
+        self.btnClearAll.move(450, 30)
+        self.btnClearAll.resize(150, 100)
+        self.btnClearAll.clicked.connect(self.clearAllClicked)
 
         # Button for selecting new file to lookup salespeople.
         self.btnOpenInsight = QPushButton('Select New \n Digikey Insight \n'
@@ -118,6 +124,14 @@ class GenMast(QMainWindow):
         worker = Worker(self.lookSalesExecute)
         self.threadpool.start(worker)
 
+    def clearAllClicked(self):
+        """Clear the filename variables."""
+        self.filenames = []
+        self.filename = []
+        print('All file selections cleared.\n'
+              '---')
+        self.restoreButtons()
+
     def addInsExecute(self):
         """Runs function for processing new files to master."""
         # Check to make sure we've selected files.
@@ -130,7 +144,7 @@ class GenMast(QMainWindow):
             self.restoreButtons()
 
         elif not self.filename:
-            print('No Sales-lookuped Insight files selected!\n'
+            print('No finished Insight files selected!\n'
                   'Use the Select Commission Files button to select files.\n'
                   '---')
 
@@ -177,6 +191,9 @@ class GenMast(QMainWindow):
         # Print out the selected filenames.
         if self.filename:
             print('File selected:' + self.filename + '\n---')
+            # Turn off/on the correct buttons.
+            self.btnAddIns.setEnabled(False)
+            self.btnLookSales.setEnabled(True)
 
     def openFinishedClicked(self):
         """Provide filepath for new data to process using AppendInsights."""
@@ -203,16 +220,22 @@ class GenMast(QMainWindow):
             for file in self.filenames:
                 print(file)
             print('---')
+            # Turn off/on the correct buttons.
+            self.btnAddIns.setEnabled(True)
+            self.btnLookSales.setEnabled(False)
+
 
     def lockButtons(self):
         self.btnAddIns.setEnabled(False)
         self.btnOpenInsight.setEnabled(False)
         self.btnLookSales.setEnabled(False)
+        self.btnOpenFinished.setEnabled(False)
 
     def restoreButtons(self):
         self.btnAddIns.setEnabled(True)
         self.btnOpenInsight.setEnabled(True)
         self.btnLookSales.setEnabled(True)
+        self.btnOpenFinished.setEnabled(True)
 
 
 class Worker(QtCore.QRunnable):

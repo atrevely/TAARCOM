@@ -14,12 +14,19 @@ def tableFormat(sheetData, sheetName, wbook):
     # Set document formatting.
     docFormat = wbook.book.add_format({'font': 'Century Gothic',
                                        'font_size': 8})
+    commaFormat = wbook.book.add_format({'font': 'Century Gothic',
+                                         'font_size': 8,
+                                         'num_format': 3})
     # Format and fit each column.
     i = 0
     for col in sheetData.columns:
         # Set column width and formatting.
+        if col == 'Qty Shipped':
+            formatting = commaFormat
+        else:
+            formatting = docFormat
         maxWidth = max([len(str(val)) for val in sheetData[col].values])
-        sheet.set_column(i, i, maxWidth+0.8, docFormat)
+        sheet.set_column(i, i, maxWidth+0.8, formatting)
         i += 1
 
 
@@ -72,6 +79,10 @@ def main(filepath):
             insFile.loc[row, 'TAARCOM Comments'] = 'Individual'
         salesMatch = insFile.loc[row, 'Root Customer..'] == rootCustMap['Root Customer']
         match = rootCustMap[salesMatch]
+        # Convert applicable entries to numeric.
+        for col in list(insFile):
+            insFile.loc[row, col] = pd.to_numeric(insFile.loc[row, col],
+                                                  errors='ignore')
         if len(match) == 1:
             # Match to salesperson if exactly one match is found.
             insFile.loc[row, 'Sales'] = match['Salesperson'].iloc[0]

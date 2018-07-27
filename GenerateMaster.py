@@ -182,7 +182,7 @@ def main(filepaths, runningCom, fieldMappings, principal):
         for sheetName in list(newData):
             # Grab next sheet in file.
             # Rework the index just in case it got read in wrong.
-            sheet = newData[sheetName].reset_index(drop=True)
+            sheet = newData[sheetName].reset_index(drop=True).fillna('')
             # Clear out unnamed columns.
             sheet = sheet.loc[:, ~sheet.columns.str.contains('^Unnamed')]
             # Make sure index is an integer, not a string.

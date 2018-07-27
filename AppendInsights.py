@@ -97,7 +97,7 @@ def main(filepaths):
         for sheetName in list(newData):
             # Grab next sheet in file.
             # Rework the index just in case it got read in wrong.
-            sheet = newData[sheetName].reset_index(drop=True)
+            sheet = newData[sheetName].reset_index(drop=True).fillna('')
 
             # Check to see if column names match.
             noMatch = [val for val in list(insMast) if val not in list(sheet)]
@@ -116,6 +116,7 @@ def main(filepaths):
     salespeople = [val for val in salespeople if len(val) == 2]
     for sales in salespeople:
         repDat = newDatComb[newDatComb['Sales'] == sales]
+        repDat = repDat.loc[:, colNames]
 
         # Write report to file.
         writer = pd.ExcelWriter('Digikey Insights Report - ' + sales
