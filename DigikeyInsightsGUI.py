@@ -30,6 +30,7 @@ class GenMast(QMainWindow):
         # Initialize UI and supporting filenames.
         self.initUI()
         self.filename = []
+        self.filenames = []
 
         # Custom output stream.
         sys.stdout = Stream(newText=self.onUpdateText)

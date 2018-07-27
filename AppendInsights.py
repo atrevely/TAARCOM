@@ -1,5 +1,6 @@
 import pandas as pd
 import os
+import time
 
 
 def tableFormat(sheetData, sheetName, wbook):
@@ -52,8 +53,9 @@ def main(filepaths):
               'Please make sure Digikey Insight Master is in the directory.\n'
               '***')
         return
-    # Get column name layout.
+    # Get column name layout, prepare combined insight file.
     colNames = list(insMast)
+    newDatComb = pd.DataFrame(columns=colNames)
 
     # Strip the root off of the filepaths and leave just the filenames.
     filenames = [os.path.basename(val) for val in filepaths]
@@ -76,26 +78,63 @@ def main(filepaths):
                   '***')
             return
 
-    newFile = pd.DataFrame({'Filename': [filename]})
-    filesProcessed = filesProcessed.append(newFile, ignore_index=True)
+    newFiles = pd.DataFrame({'Filename': filenames})
+    filesProcessed = filesProcessed.append(newFiles, ignore_index=True)
     # Load the Insight file.
-    insFile = pd.read_excel(filepath, None)
-    insFile = insFile[list(insFile)[0]].fillna('')
+    inputData = [pd.read_excel(filepath, None) for filepath in filepaths]
 
-    # Check to see if column names match.
-    noMatch = [val for val in list(insMast) if val not in list(insFile)]
-    if noMatch:
-        print('The following Digikey Master columns were not found:')
-        for colName in noMatch:
-            print(colName)
-        print('***')
-        return
+    # Iterate through each file that we're appending to Digikey Master.
+    fileNum = 0
+    for filename in filenames:
+        # Grab the next file from the list.
+        newData = inputData[fileNum]
+        fileNum += 1
+        print('---\n'
+              'Working on file: ' + filename)
 
+        # Iterate over each dataframe in the ordered dictionary.
+        # Each sheet in the file is its own dataframe in the dictionary.
+        for sheetName in list(newData):
+            # Grab next sheet in file.
+            # Rework the index just in case it got read in wrong.
+            sheet = newData[sheetName].reset_index(drop=True)
 
+            # Check to see if column names match.
+            noMatch = [val for val in list(insMast) if val not in list(sheet)]
+            if noMatch:
+                print('The following Digikey Master columns were not found:')
+                for colName in noMatch:
+                    print(colName)
+                print('***')
+                return
 
+            # Append the sheet to the combined dataframe.
+            newDatComb = newDatComb.append(sheet, ignore_index=True)
+
+    # Go through the combined insights and prepare sales reports.
+    salespeople = newDatComb['Sales'].unique()
+    salespeople = [val for val in salespeople if len(val) == 2]
+    for sales in salespeople:
+        repDat = newDatComb[newDatComb['Sales'] == sales]
+
+        # Write report to file.
+        writer = pd.ExcelWriter('Digikey Insights Report - ' + sales
+                                + time.strftime(' %m-%d-%Y')
+                                + '.xlsx', engine='xlsxwriter')
+        repDat.to_excel(writer, sheet_name='Report Data', index=False)
+        # Format as table in Excel.
+        tableFormat(repDat, 'Report Data', writer)
+        # Try saving.
+        if saveError(writer):
+            print('---\n'
+                  'One of the report files is currently open in Excel!\n'
+                  'Please close the file and try again.\n'
+                  '***')
+            return
+        writer.save()
 
     # Append the new data to the Insight Master.
-    insMast = insMast.append(insFile, ignore_index=True)
+    insMast = insMast.append(newDatComb, ignore_index=True)
     insMast = insMast.loc[:, colNames]
 
     # Write the Insight Master file.
@@ -109,10 +148,10 @@ def main(filepaths):
     tableFormat(filesProcessed, 'Files Processed', writer1)
 
     # Try saving the files, exit with error if any file is currently open.
-    if saveError(writer1, writer2):
+    if saveError(writer1):
         print('---\n'
-              'One or more files are currently open in Excel!\n'
-              'Please close the files and try again.\n'
+              'Insight Master is currently open in Excel!\n'
+              'Please close the file and try again.\n'
               '***')
         return
 
