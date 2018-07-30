@@ -31,11 +31,13 @@ def tableFormat(sheetData, sheetName, wbook):
 
 
 def saveError(*excelFiles):
-    """Try saving Excel files and return True if any file is open."""
+    """Check Excel files and return True if any file is open."""
     for file in excelFiles:
         try:
-            file.save()
-        except IOError:
+            open(file, 'r+')
+        except FileNotFoundError:
+            pass
+        except PermissionError:
             return True
     return False
 
@@ -93,29 +95,29 @@ def main(filepath):
             newRootCusts = newRootCusts.append(insFile.loc[row, :],
                                                ignore_index=True)
 
-    # Write the Insight file, which now contains salespeople.
-    writer1 = pd.ExcelWriter(filename[:-5] + ' With Salespeople.xlsx',
-                             engine='xlsxwriter')
-    newInsFile.to_excel(writer1, sheet_name='Data', index=False)
-    # Format as table in Excel.
-    tableFormat(newInsFile, 'Data', writer1)
-
-    # Write the New Root Customers file.
-    writer2 = pd.ExcelWriter(filename[:-5] + ' New Root Customers.xlsx',
-                             engine='xlsxwriter')
-    newRootCusts.to_excel(writer2, sheet_name='Data', index=False)
-    # Format as table in Excel.
-    tableFormat(newRootCusts, 'Data', writer2)
-
     # Try saving the files, exit with error if any file is currently open.
-    if saveError(writer1, writer2):
+    fname1 = filename[:-5] + ' With Salespeople.xlsx'
+    fname2 = filename[:-5] + ' New Root Customers.xlsx'
+    if saveError(fname1, fname2):
         print('---\n'
               'One or more files are currently open in Excel!\n'
               'Please close the files and try again.\n'
               '***')
         return
 
-    # No errors, so save the files.
+    # Write the Insight file, which now contains salespeople.
+    writer1 = pd.ExcelWriter(fname1, engine='xlsxwriter')
+    newInsFile.to_excel(writer1, sheet_name='Data', index=False)
+    # Format as table in Excel.
+    tableFormat(newInsFile, 'Data', writer1)
+
+    # Write the New Root Customers file.
+    writer2 = pd.ExcelWriter(fname2, engine='xlsxwriter')
+    newRootCusts.to_excel(writer2, sheet_name='Data', index=False)
+    # Format as table in Excel.
+    tableFormat(newRootCusts, 'Data', writer2)
+
+    # Save the files.
     writer1.save()
     writer2.save()
 

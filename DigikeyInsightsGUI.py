@@ -224,7 +224,6 @@ class GenMast(QMainWindow):
             self.btnAddIns.setEnabled(True)
             self.btnLookSales.setEnabled(False)
 
-
     def lockButtons(self):
         self.btnAddIns.setEnabled(False)
         self.btnOpenInsight.setEnabled(False)

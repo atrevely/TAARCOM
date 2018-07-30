@@ -44,14 +44,15 @@ def tableFormat(sheetData, sheetName, wbook):
 
 
 def saveError(*excelFiles):
-    """Try saving Excel files and return True if any file is open."""
+    """Check Excel files and return True if any file is open."""
     for file in excelFiles:
         try:
-            file.save()
-        except IOError:
+            open(file, 'r+')
+        except FileNotFoundError:
+            pass
+        except PermissionError:
             return True
     return False
-
 
 # The main function.
 def main():
@@ -161,10 +162,20 @@ def main():
           + str(len(deprecatedEntries))
           + 'entries quarantined for being deprecated (old duplicates).')
 
+    # Check if the files we're going to save are open already.
+    fname1 = 'Running Commissions ' + time.strftime('%Y-%m-%d-%H%M') + '.xlsx'
+    fname2 = 'Entries Need Fixing.xlsx'
+    fname3 = 'Lookup Master - Current.xlsx'
+    fname4 = 'Quarantined Lookups.xlsx'
+    if saveError(fname1, fname2, fname3, fname4):
+        print('---\n'
+              'One or more files are currently open in Excel!\n'
+              'Please close the files and try again.\n'
+              '***')
+        return
+
     # Write the Running Commissions file.
-    writer1 = pd.ExcelWriter('Running Commissions '
-                             + time.strftime('%Y-%m-%d-%H%M')
-                             + '.xlsx', engine='xlsxwriter')
+    writer1 = pd.ExcelWriter(fname1, engine='xlsxwriter')
     runningCom.to_excel(writer1, sheet_name='Master', index=False)
     filesProcessed.to_excel(writer1, sheet_name='Files Processed',
                             index=False)
@@ -173,33 +184,24 @@ def main():
     tableFormat(filesProcessed, 'Files Processed', writer1)
 
     # Write the Needs Fixing file.
-    writer2 = pd.ExcelWriter('Entries Need Fixing.xlsx', engine='xlsxwriter')
+    writer2 = pd.ExcelWriter(fname2, engine='xlsxwriter')
     fixList.to_excel(writer2, sheet_name='Data', index=False)
     # Format as table in Excel.
     tableFormat(fixList, 'Data', writer2)
 
     # Write the Lookup Master file.
-    writer3 = pd.ExcelWriter('Lookup Master - Current.xlsx',
-                             engine='xlsxwriter')
+    writer3 = pd.ExcelWriter(fname3, engine='xlsxwriter')
     mastLook.to_excel(writer3, sheet_name='Lookup', index=False)
     # Format as table in Excel.
     tableFormat(mastLook, 'Lookup', writer3)
 
     # Write the Quarantined Lookups file.
-    writer4 = pd.ExcelWriter('Quarantined Lookups.xlsx', engine='xlsxwriter')
+    writer4 = pd.ExcelWriter(fname4, engine='xlsxwriter')
     quarantinedLookups.to_excel(writer4, sheet_name='Lookup', index=False)
     # Format as table in Excel.
     tableFormat(quarantinedLookups, 'Lookup', writer4)
 
-    # Try saving the files, exit with error if any file is currently open.
-    if saveError(writer1, writer2, writer3, writer4):
-        print('---\n'
-              'One or more files are currently open in Excel!\n'
-              'Please close the files and try again.\n'
-              '***')
-        return
-
-    # No errors, so save the files.
+    # Save the files.
     writer1.save()
     writer2.save()
     writer3.save()

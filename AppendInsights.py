@@ -25,11 +25,13 @@ def tableFormat(sheetData, sheetName, wbook):
 
 
 def saveError(*excelFiles):
-    """Try saving Excel files and return True if any file is open."""
+    """Check Excel files and return True if any file is open."""
     for file in excelFiles:
         try:
-            file.save()
-        except IOError:
+            open(file, 'r+')
+        except FileNotFoundError:
+            pass
+        except PermissionError:
             return True
     return False
 
@@ -118,6 +120,15 @@ def main(filepaths):
         repDat = newDatComb[newDatComb['Sales'] == sales]
         repDat = repDat.loc[:, colNames]
 
+        # Try saving.
+        fname = 'Digikey Insights Report - ' + sales + time.strftime(' %m-%d-%Y') + '.xlsx'
+        if saveError(fname):
+            print('---\n'
+                  'One of the report files is currently open in Excel!\n'
+                  'Please close the file and try again.\n'
+                  '***')
+            return
+
         # Write report to file.
         writer = pd.ExcelWriter('Digikey Insights Report - ' + sales
                                 + time.strftime(' %m-%d-%Y')
@@ -125,22 +136,23 @@ def main(filepaths):
         repDat.to_excel(writer, sheet_name='Report Data', index=False)
         # Format as table in Excel.
         tableFormat(repDat, 'Report Data', writer)
-        # Try saving.
-        if saveError(writer):
-            print('---\n'
-                  'One of the report files is currently open in Excel!\n'
-                  'Please close the file and try again.\n'
-                  '***')
-            return
         writer.save()
 
     # Append the new data to the Insight Master.
     insMast = insMast.append(newDatComb, ignore_index=True)
     insMast = insMast.loc[:, colNames]
 
+    # Try saving the files, exit with error if any file is currently open.
+    fname1 = 'Digikey Insight Master.xlsx'
+    if saveError(fname1):
+        print('---\n'
+              'Insight Master is currently open in Excel!\n'
+              'Please close the file and try again.\n'
+              '***')
+        return
+
     # Write the Insight Master file.
-    writer1 = pd.ExcelWriter('Digikey Insight Master.xlsx',
-                             engine='xlsxwriter')
+    writer1 = pd.ExcelWriter(fname1, engine='xlsxwriter')
     insMast.to_excel(writer1, sheet_name='Master', index=False)
     filesProcessed.to_excel(writer1, sheet_name='Files Processed',
                             index=False)
@@ -148,15 +160,7 @@ def main(filepaths):
     tableFormat(insMast, 'Master', writer1)
     tableFormat(filesProcessed, 'Files Processed', writer1)
 
-    # Try saving the files, exit with error if any file is currently open.
-    if saveError(writer1):
-        print('---\n'
-              'Insight Master is currently open in Excel!\n'
-              'Please close the file and try again.\n'
-              '***')
-        return
-
-    # No errors, so save the files.
+    # Save the file.
     writer1.save()
 
     print('---\n'
