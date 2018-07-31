@@ -1,6 +1,7 @@
 
 INFFinishPaidBillMar2017.xlsx
 *.xlsx
+*.xls
 __pycache__/GenerateMaster.cpython-36.pyc
 __pycache__/LinkedFunc.cpython-36.pyc
 GUItester.py
