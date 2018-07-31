@@ -121,7 +121,8 @@ def main(filepaths):
         repDat = repDat.loc[:, colNames]
 
         # Try saving.
-        fname = 'Digikey Insights Report - ' + sales + time.strftime(' %m-%d-%Y') + '.xlsx'
+        fname = ('Digikey Insights Report'
+                 + time.strftime(' %m-%d-%Y - ') + sales + '.xlsx')
         if saveError(fname):
             print('---\n'
                   'One of the report files is currently open in Excel!\n'
@@ -130,9 +131,7 @@ def main(filepaths):
             return
 
         # Write report to file.
-        writer = pd.ExcelWriter('Digikey Insights Report - ' + sales
-                                + time.strftime(' %m-%d-%Y')
-                                + '.xlsx', engine='xlsxwriter')
+        writer = pd.ExcelWriter(fname, engine='xlsxwriter')
         repDat.to_excel(writer, sheet_name='Report Data', index=False)
         # Format as table in Excel.
         tableFormat(repDat, 'Report Data', writer)

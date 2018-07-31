@@ -56,6 +56,22 @@ def saveError(*excelFiles):
     return False
 
 
+def indivCalc(princ, sheet):
+    """Do special processing based on the principal."""
+    # Abracon special processing.
+    if princ == 'ABR':
+        if 'Invoiced Dollars' and not 'Actual Comm Paid' in list(sheet):
+            sheet['Commission Rate'] = 3
+            sheet['Paid-On Revenue'] = sheet['Invoiced Dollars']*0.7
+            sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*.03
+        elif 'Paid-On Revenue' and not 'Commission Rate' in list(sheet):
+            comRate = round(sheet['Actual Comm Paid']/sheet['Paid-On Revenue'])
+            sheet['Commission Rate'] = comRate
+        
+    
+    
+    
+
 # The main function.
 def main(filepaths, runningCom, fieldMappings, principal):
     """Processes commission files and appends them to Running Commissions.
@@ -231,6 +247,17 @@ def main(filepaths, runningCom, fieldMappings, principal):
                       'Moving on.\n'
                       '-')
             else:
+                # Remove entries with no commissions dollars.
+                # Coerce entries with bad data (non-numeric gets 0)
+                sheet['Actual Comm Paid'] = pd.to_numeric(
+                        sheet['Actual Comm Paid'],
+                        errors='coerce').fillna(0)
+                sheet = sheet[sheet['Actual Comm Paid'] != 0]
+
+                # Do special processing for principal, if applicable.
+                indivCalc(princ, sheet)
+
+                # Find matching columns.
                 matchingColumns = [val for val in list(sheet)
                                    if val in list(fieldMappings)]
                 if len(matchingColumns) > 0:
@@ -272,11 +299,6 @@ def main(filepaths, runningCom, fieldMappings, principal):
     numRows = '{:,.0f}'.format(len(finalData) - runComLen)
     print('---\n'
           'Beginning processing on ' + numRows + ' rows of data.')
-    # Remove entries with no commissions dollars.
-    # Coerce entries with bad data, meaning that non-numeric gets set to 0.
-    finalData['Actual Comm Paid'] = pd.to_numeric(
-            finalData['Actual Comm Paid'], errors='coerce').fillna(0)
-    finalData = finalData[finalData['Actual Comm Paid'] != 0]
     finalData.reset_index(inplace=True, drop=True)
     # Fill in principal.
     finalData.loc[:, 'Principal'] = principal
