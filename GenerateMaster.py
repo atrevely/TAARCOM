@@ -61,16 +61,30 @@ def indivCalc(princ, sheet):
     # Abracon special processing.
     if princ == 'ABR':
         if 'Invoiced Dollars' and not 'Actual Comm Paid' in list(sheet):
+            # Input missing data. Commission Rate is always 3% here.
             sheet['Commission Rate'] = 3
-            sheet['Paid-On Revenue'] = sheet['Invoiced Dollars']*0.7
-            sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*.03
+            sheet['Paid-On Revenue'] = pd.to_numeric(sheet['Invoiced Dollars'],
+                                                     errors='coerce')*0.7
+            sheet['Actual Comm Paid'] = sheet['Paid-On Revenue']*.03
+            print('Columns added from Abracon special processing:\n'
+                  'Commission Rate, Paid-On Revenue, '
+                  'Actual Comm Paid\n'
+                  '---')
         elif 'Paid-On Revenue' and not 'Commission Rate' in list(sheet):
-            comRate = round(sheet['Actual Comm Paid']/sheet['Paid-On Revenue'])
+            # Fill down Distributor for their grouping scheme.
+            sheet['Distributor'].fillna(method='ffill', inplace=True)
+            # Calculate the Commission Rate.
+            comPaid = pd.to_numeric(sheet['Actual Comm Paid'], errors='coerce')
+            revenue = pd.to_numeric(sheet['Paid-On Revenue'], errors='coerce')
+            comRate = round(100*comPaid/revenue)
             sheet['Commission Rate'] = comRate
-        
-    
-    
-    
+            # Drop entries with emtpy part number.
+            # This takes care of Manual Adj't entry.
+            sheet.dropna(subset=['Part Number'], inplace=True)
+            print('Columns added from Abracon special processing:\n'
+                  'Commission Rate\n'
+                  '---')
+
 
 # The main function.
 def main(filepaths, runningCom, fieldMappings, principal):
@@ -97,7 +111,7 @@ def main(filepaths, runningCom, fieldMappings, principal):
     # Add in non-lookup'd data names.
     columnNames[0:0] = ['CM Sales', 'Design Sales', 'Quarter', 'Month',
                         'Year']
-    columnNames[8:8] = ['T-End Cust', 'T-Name', 'CM',
+    columnNames[7:7] = ['T-End Cust', 'T-Name', 'CM',
                         'Principal', 'Corrected Distributor']
     columnNames.extend(['CM Split', 'TEMP/FINAL', 'Paid Date', 'From File',
                         'Sales Report Date'])
@@ -200,7 +214,7 @@ def main(filepaths, runningCom, fieldMappings, principal):
         for sheetName in list(newData):
             # Grab next sheet in file.
             # Rework the index just in case it got read in wrong.
-            sheet = newData[sheetName].reset_index(drop=True).fillna('')
+            sheet = newData[sheetName].reset_index(drop=True)
             # Clear out unnamed columns.
             sheet = sheet.loc[:, ~sheet.columns.str.contains('^Unnamed')]
             # Make sure index is an integer, not a string.
@@ -233,6 +247,9 @@ def main(filepaths, runningCom, fieldMappings, principal):
                     sheet.rename(columns={columnName[0]: dataName},
                                  inplace=True)
 
+            # Do special processing for principal, if applicable.
+            indivCalc(principal, sheet)
+
             # Now that we've renamed all of the relevant columns,
             # append the new sheet to Running Commissions, where only the
             # properly named columns are appended.
@@ -253,9 +270,6 @@ def main(filepaths, runningCom, fieldMappings, principal):
                         sheet['Actual Comm Paid'],
                         errors='coerce').fillna(0)
                 sheet = sheet[sheet['Actual Comm Paid'] != 0]
-
-                # Do special processing for principal, if applicable.
-                indivCalc(princ, sheet)
 
                 # Find matching columns.
                 matchingColumns = [val for val in list(sheet)
