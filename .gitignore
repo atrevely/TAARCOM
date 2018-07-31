@@ -1,3 +1,4 @@
 *.xlsx
 *.xls
-
+TEMPworking.py
+__pycache__/GenerateMaster.cpython-36.pyc
