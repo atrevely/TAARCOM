@@ -78,12 +78,12 @@ def indivCalc(princ, sheet):
             revenue = pd.to_numeric(sheet['Paid-On Revenue'], errors='coerce')
             comRate = round(100*comPaid/revenue)
             sheet['Commission Rate'] = comRate
-            # Drop entries with emtpy part number.
-            # This takes care of Manual Adj't entry.
-            sheet.dropna(subset=['Part Number'], inplace=True)
             print('Columns added from Abracon special processing:\n'
                   'Commission Rate\n'
                   '---')
+        # Drop entries with emtpy part number.
+        # This takes care of 'totalling' entries.
+        sheet.dropna(subset=['Part Number'], inplace=True)
 
 
 # The main function.
@@ -188,8 +188,8 @@ def main(filepaths, runningCom, fieldMappings, principal):
         return
 
     # Read in the Master Lookup. Exit if not found.
-    if os.path.exists('Lookup Master 7-16-18.xlsx'):
-        masterLookup = pd.read_excel('Lookup Master 7-16-18.xlsx').fillna('')
+    if os.path.exists('Lookup Master 8-1-18.xlsx'):
+        masterLookup = pd.read_excel('Lookup Master 8-1-18.xlsx').fillna('')
     else:
         print('---\n'
               'No Lookup Master found!\n'

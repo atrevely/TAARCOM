@@ -229,12 +229,14 @@ class GenMast(QMainWindow):
         self.btnOpenInsight.setEnabled(False)
         self.btnLookSales.setEnabled(False)
         self.btnOpenFinished.setEnabled(False)
+        self.btnClearAll.setEnabled(False)
 
     def restoreButtons(self):
         self.btnAddIns.setEnabled(True)
         self.btnOpenInsight.setEnabled(True)
         self.btnLookSales.setEnabled(True)
         self.btnOpenFinished.setEnabled(True)
+        self.btnClearAll.setEnabled(True)
 
 
 class Worker(QtCore.QRunnable):

@@ -61,12 +61,33 @@ def main(filepath):
               '***')
         return
 
+    print('Looking up salespeople...')
+
     # Strip the root off of the filepath and leave just the filename.
     filename = os.path.basename(filepath)
 
     # Load the Insight file.
     insFile = pd.read_excel(filepath, None)
     insFile = insFile[list(insFile)[0]].fillna('')
+
+    # Switch the datetime objects over to strings.
+    # Attribute error means column not a datetime, so pass.
+    for col in list(insFile):
+        try:
+            insFile[col] = insFile[col].dt.strftime('%Y-%m-%d')
+        except AttributeError:
+            pass
+
+    # Get the column list and input new columns.
+    colNames = list(insFile)
+    colNames[4:4] = ['Sales']
+    colNames.extend(['TAARCOM Comments'])
+    # Remove the 'Send' column.
+    # Value error means no 'Send' column, so pass.
+    try:
+        colNames.remove('Send')
+    except ValueError:
+        pass
 
     # Get the output files ready.
     newInsFile = pd.DataFrame(columns=list(insFile))
@@ -94,6 +115,10 @@ def main(filepath):
             # Append to the New Root Customers file.
             newRootCusts = newRootCusts.append(insFile.loc[row, :],
                                                ignore_index=True)
+
+    # Reorder columns.
+    newInsFile = newInsFile.loc[:, colNames]
+    newRootCusts = newRootCusts.loc[:, colNames]
 
     # Try saving the files, exit with error if any file is currently open.
     fname1 = filename[:-5] + ' With Salespeople.xlsx'
