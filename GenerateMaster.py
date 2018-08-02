@@ -56,8 +56,8 @@ def saveError(*excelFiles):
     return False
 
 
-def indivCalc(princ, sheet):
-    """Do special processing based on the principal."""
+def tailoredCalc(princ, sheet):
+    """Do special processing tailored to the principal input."""
     # Abracon special processing.
     if princ == 'ABR':
         if 'Invoiced Dollars' and not 'Actual Comm Paid' in list(sheet):
@@ -84,6 +84,13 @@ def indivCalc(princ, sheet):
         # Drop entries with emtpy part number.
         # This takes care of 'totalling' entries.
         sheet.dropna(subset=['Part Number'], inplace=True)
+    if princ == 'ISS':
+        print('Erasing the Comments for OEM entries.\n'
+              '---')
+        for row in range(len(sheet)):
+            # For OEM entries, Comments are not Part Numbers, so erase them.
+            if 'OEM' in sheet.loc[row, 'Name']:
+                sheet.loc[row, 'Comments'] = ''
 
 
 # The main function.
@@ -248,7 +255,7 @@ def main(filepaths, runningCom, fieldMappings, principal):
                                  inplace=True)
 
             # Do special processing for principal, if applicable.
-            indivCalc(principal, sheet)
+            tailoredCalc(principal, sheet)
 
             # Now that we've renamed all of the relevant columns,
             # append the new sheet to Running Commissions, where only the

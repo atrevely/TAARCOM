@@ -41,7 +41,7 @@ def main(filepaths):
     """Appends new Digikey Insight file to the Digikey Insight Master.
 
     Arguments:
-    filepath -- The filepath to the new Digikey Insight file.
+    filepaths -- The filepaths to the files that will be appended.
     """
     # Load the Digikey Insights Master file.
     if os.path.exists('Digikey Insight Master.xlsx'):
@@ -55,6 +55,19 @@ def main(filepaths):
               'Please make sure Digikey Insight Master is in the directory.\n'
               '***')
         return
+
+    # Load the Root Customer Mappings file.
+    if os.path.exists('rootCustomerMappings.xlsx'):
+        rootCustMap = pd.read_excel('rootCustomerMappings.xlsx',
+                                    'Sales Lookup').fillna('')
+    else:
+        print('---\n'
+              'No Root Customer Mappings file found!\n'
+              'Please make sure rootCustomerMappings.xlsx'
+              'is in the directory.\n'
+              '***')
+        return
+
     # Get column name layout, prepare combined insight file.
     colNames = list(insMast)
     newDatComb = pd.DataFrame(columns=colNames)
@@ -75,14 +88,14 @@ def main(filepaths):
         # Exit if no new files are left.
         if not filenames:
             print('---\n'
-                  'No new commissions files selected.\n'
+                  'No new insight files selected.\n'
                   'Please try selecting files again.\n'
                   '***')
             return
 
     newFiles = pd.DataFrame({'Filename': filenames})
     filesProcessed = filesProcessed.append(newFiles, ignore_index=True)
-    # Load the Insight file.
+    # Load the Insight files.
     inputData = [pd.read_excel(filepath, None) for filepath in filepaths]
 
     # Iterate through each file that we're appending to Digikey Master.
@@ -109,6 +122,35 @@ def main(filepaths):
                     print(colName)
                 print('***')
                 return
+
+            # Append new salespeople mappings to rootCustMappings.
+            for row in range(len(sheet)):
+                # Get root customer and salesperson.
+                cust = sheet.loc[row, 'Root Customer..']
+                salesperson = sheet.loc[row, 'Sales']
+                if not salesperson:
+                    print('Not all entries in the Sales column are filled in!'
+                          '\nPlease check Sales column for each file.'
+                          '\n***')
+                if cust:
+                    # Find match in rootCustomerMappings.
+                    custMatch = rootCustMap['Root Customer'] == cust
+                    if sum(custMatch) == 1:
+                        matchID = rootCustMap[custMatch].index
+                        # Input (possibly new) salesperson.
+                        rootCustMap.loc[matchID, 'Salesperson'] = salesperson
+                    elif not custMatch.any():
+                        # New customer (no match), so append to mappings.
+                        newCust = pd.DataFrame({'Root Customer': [cust],
+                                                'Salesperson': [salesperson]})
+                        rootCustMap = rootCustMap.append(newCust,
+                                                         ignore_index=True)
+                    else:
+                        print('There appears to be a duplicate customer in'
+                              ' rootCustomerMappings:\n'
+                              + str(cust)
+                              + '\n***')
+                        return
 
             # Append the sheet to the combined dataframe.
             newDatComb = newDatComb.append(sheet, ignore_index=True)
@@ -143,6 +185,7 @@ def main(filepaths):
 
     # Try saving the files, exit with error if any file is currently open.
     fname1 = 'Digikey Insight Master.xlsx'
+    fname2 = 'rootCustomerMappings.xlsx'
     if saveError(fname1):
         print('---\n'
               'Insight Master is currently open in Excel!\n'
@@ -159,8 +202,15 @@ def main(filepaths):
     tableFormat(insMast, 'Master', writer1)
     tableFormat(filesProcessed, 'Files Processed', writer1)
 
+    # Write the rootCustomerMappings file.
+    writer2 = pd.ExcelWriter(fname2, engine='xlsxwriter')
+    rootCustMap.to_excel(writer2, sheet_name='Sales Lookup', index=False)
+    # Format as table in Excel.
+    tableFormat(rootCustMap, 'Sales Lookup', writer2)
+
     # Save the file.
     writer1.save()
+    writer2.save()
 
     print('---\n'
           'Updates completed successfully!\n'
