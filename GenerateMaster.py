@@ -84,6 +84,7 @@ def tailoredCalc(princ, sheet):
         # Drop entries with emtpy part number.
         # This takes care of 'totalling' entries.
         sheet.dropna(subset=['Part Number'], inplace=True)
+
     if princ == 'ISS':
         print('Erasing the Comments for OEM entries.\n'
               '---')
@@ -222,10 +223,10 @@ def main(filepaths, runningCom, fieldMappings, principal):
             # Grab next sheet in file.
             # Rework the index just in case it got read in wrong.
             sheet = newData[sheetName].reset_index(drop=True)
-            # Clear out unnamed columns.
-            sheet = sheet.loc[:, ~sheet.columns.str.contains('^Unnamed')]
             # Make sure index is an integer, not a string.
             sheet.index = sheet.index.map(int)
+            # Clear out unnamed columns.
+            sheet = sheet.loc[:, ~sheet.columns.str.contains('^Unnamed')]
             totalRows = sheet.shape[0]
             print('Found ' + str(totalRows) + ' entries in the tab: '
                   + sheetName)
@@ -261,22 +262,29 @@ def main(filepaths, runningCom, fieldMappings, principal):
             # append the new sheet to Running Commissions, where only the
             # properly named columns are appended.
             if sheet.columns.duplicated().any():
+                dupes = sheet.columns[sheet.columns.duplicated()].unique()
                 print('Two items are being mapped to the same column!\n'
-                      'Please check fieldMappings.xlsx and try again.\n'
-                      '***')
+                      'These columns contain duplicates: %s' %
+                      ', '.join(map(str, dupes))
+                      + '\n***')
                 return
             elif 'Actual Comm Paid' not in list(sheet):
                 # Tab has no commission data, so it is ignored.
-                print('No commission data found on this tab.\n'
-                      'Moving on.\n'
+                print('No commission dollars found on this tab.\n'
+                      'Skipping tab.\n'
                       '-')
             else:
                 # Remove entries with no commissions dollars.
-                # Coerce entries with bad data (non-numeric gets 0)
+                # Coerce entries with bad data (non-numeric gets 0).
                 sheet['Actual Comm Paid'] = pd.to_numeric(
                         sheet['Actual Comm Paid'],
                         errors='coerce').fillna(0)
                 sheet = sheet[sheet['Actual Comm Paid'] != 0]
+
+                # Add 'From File' column to track where data came from.
+                sheet['From File'] = filename
+                # Fill in principal.
+                sheet['Principal'] = principal
 
                 # Find matching columns.
                 matchingColumns = [val for val in list(sheet)
@@ -293,8 +301,10 @@ def main(filepaths, runningCom, fieldMappings, principal):
                     for col in stringCols:
                         sheet[col] = sheet[col].fillna('').astype(str).map(
                                 lambda x: x.strip())
+
                     # Append matching columns of data.
-                    finalData = finalData.append(sheet[matchingColumns],
+                    appCols = matchingColumns + ['From File'] + ['Principal']
+                    finalData = finalData.append(sheet[appCols],
                                                  ignore_index=True)
                 else:
                     print('Found no data on this tab. Moving on.\n'
@@ -309,8 +319,6 @@ def main(filepaths, runningCom, fieldMappings, principal):
                                 'Date Added': [time.strftime('%m/%d/%Y')],
                                 'Paid Date': ['']})
         filesProcessed = filesProcessed.append(newFile, ignore_index=True)
-        # Fill the NaNs in From File with the filename.
-        finalData['From File'].fillna(filename, inplace=True)
 
     # %%
     # Fill NaNs left over from appending.
@@ -321,17 +329,16 @@ def main(filepaths, runningCom, fieldMappings, principal):
     print('---\n'
           'Beginning processing on ' + numRows + ' rows of data.')
     finalData.reset_index(inplace=True, drop=True)
-    # Fill in principal.
-    finalData.loc[:, 'Principal'] = principal
 
     # Iterate over each row of the newly appended data.
     for row in range(runComLen, len(finalData)):
         # First match part number.
-        partMatch = finalData.loc[row, 'Part Number'] == masterLookup['PPN']
-        partNoMatches = masterLookup[partMatch]
+        partNum = str(finalData.loc[row, 'Part Number']).lower()
+        PPN = masterLookup['PPN'].map(lambda x: str(x).lower())
+        partNoMatches = masterLookup[partNum == PPN]
         # Next match reported customer.
-        repCust = finalData.loc[row, 'Reported Customer'].lower()
-        POSCust = partNoMatches['POSCustomer'].str.lower()
+        repCust = str(finalData.loc[row, 'Reported Customer']).lower()
+        POSCust = partNoMatches['POSCustomer'].map(lambda x: str(x).lower())
         custMatches = partNoMatches[repCust == POSCust].reset_index()
         # Record number of Lookup Master matches.
         lookMatches = len(custMatches)
@@ -354,12 +361,12 @@ def main(filepaths, runningCom, fieldMappings, principal):
                                  'City'] = finalData.loc[row, 'City']
 
         # Try parsing the date.
-        dateError = 0
+        dateError = False
         try:
             parse(finalData.loc[row, 'Invoice Date'])
         except ValueError:
             # The date isn't recognized by the parser.
-            dateError = 1
+            dateError = True
         except TypeError:
             # Check if Pandas read it in as a Timestamp object.
             # If so, turn it back into a string (a bit roundabout, oh well).
@@ -367,7 +374,13 @@ def main(filepaths, runningCom, fieldMappings, principal):
                 finalData.loc[row, 'Invoice Date'] = str(
                         finalData.loc[row, 'Invoice Date'])
             else:
-                dateError = 1
+                dateError = True
+        except KeyError:
+            print('There is no Invoice Date column in Running Commissions!\n'
+                  'Please check to make sure an Invoice Date column exists.\n'
+                  'Note: Spelling, whitespace, and capitalization matter.\n'
+                  '---')
+            dateError = True
         # If no error found in date, fill in the month/year/quarter
         if not dateError:
             date = parse(finalData.loc[row, 'Invoice Date'])
@@ -383,21 +396,16 @@ def main(filepaths, runningCom, fieldMappings, principal):
         # Find a corrected distributor match.
         # Strip extraneous characters and all spaces, and make lowercase.
         distName = re.sub('[^a-zA-Z0-9]', '',
-                          finalData.loc[row, 'Distributor']).lower()
-        # Reset match count.
-        distMatches = 0
-        # Find match from distMap.
-        for dist in distMap['Search Abbreviation']:
-            if dist in distName:
-                # Check if it's already been matched.
-                if distMatches > 0:
-                    # Too many matches, so clear them and check by hand.
-                    finalData.loc[row, 'Corrected Distributor'] = ''
-                else:
-                    # Input corrected distributor name.
-                    corrDist = distMap[distMap['Search Abbreviation'] == dist].iloc[0]
-                    finalData.loc[row, 'Corrected Distributor'] = corrDist['Corrected Dist']
-                    distMatches += 1
+                          str(finalData.loc[row, 'Distributor'])).lower()
+
+        # Find matches for the distName in the Distributor Abbreviations.
+        distMatches = [i for i in distMap['Search Abbreviation']
+                       if i in distName]
+        if len(distMatches) == 1:
+            # Find and input corrected distributor name.
+            mloc = distMap['Search Abbreviation'] == distMatches[0]
+            corrDist = distMap[mloc].iloc[0]['Corrected Dist']
+            finalData.loc[row, 'Corrected Distributor'] = corrDist
 
         # Go through each column and convert applicable entries to numeric.
         for col in list(finalData):
@@ -405,10 +413,10 @@ def main(filepaths, runningCom, fieldMappings, principal):
                                                     errors='ignore')
 
         # If any data isn't found/parsed, copy entry to Fix Entries.
-        if lookMatches != 1 or distMatches != 1 or dateError:
+        if lookMatches != 1 or len(distMatches) != 1 or dateError:
             fixList = fixList.append(finalData.loc[row, :])
             fixList.loc[row, 'Running Com Index'] = row
-            fixList.loc[row, 'Distributor Matches'] = distMatches
+            fixList.loc[row, 'Distributor Matches'] = len(distMatches)
             fixList.loc[row, 'Lookup Master Matches'] = lookMatches
             fixList.loc[row, 'Date Added'] = time.strftime('%m/%d/%Y')
             finalData.loc[row, 'TEMP/FINAL'] = 'TEMP'

@@ -89,6 +89,13 @@ def main(filepath):
     except ValueError:
         pass
 
+    if 'Root Customer..' not in colNames:
+        print('Did not find a column named "Root Customer.."\n'
+              'Please make sure this column exists and try again.\n'
+              'Note: also check that row 1 of the file is the column headers.'
+              '\n***')
+        return
+
     # Get the output files ready.
     newInsFile = pd.DataFrame(columns=list(insFile))
     newRootCusts = pd.DataFrame(columns=list(insFile))
