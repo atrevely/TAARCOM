@@ -54,6 +54,7 @@ def saveError(*excelFiles):
             return True
     return False
 
+
 # The main function.
 def main():
     """Replaces bad entries in Running Commissions with their fixed versions.

@@ -228,7 +228,7 @@ def main(filepaths, runningCom, fieldMappings, principal):
             # Clear out unnamed columns.
             sheet = sheet.loc[:, ~sheet.columns.str.contains('^Unnamed')]
             totalRows = sheet.shape[0]
-            print('Found ' + str(totalRows) + ' entries in the tab: '
+            print('Found ' + str(totalRows) + ' entries in the tab '
                   + sheetName)
 
             # Iterate over each column of data that we want to append.
@@ -243,9 +243,9 @@ def main(filepaths, runningCom, fieldMappings, principal):
                 # or if we found too many columns that match,
                 # then rename the column in the sheet to the master name.
                 if not columnName:
-                    print('No column found for: ' + dataName)
+                    print('No column found for ' + dataName)
                 elif len(columnName) > 1:
-                    print('Found multiple matches for: ' + dataName
+                    print('Found multiple matches for ' + dataName
                           + '\nMatching columns: %s' %
                           ', '.join(map(str, columnName))
                           + '\nPlease fix column names and try again.\n'

@@ -117,4 +117,3 @@ def main(filepaths):
           '---\n'
           'Digikey Master updated.\n'
           '+++')
-

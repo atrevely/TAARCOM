@@ -186,6 +186,8 @@ def main(filepaths):
     # Try saving the files, exit with error if any file is currently open.
     fname1 = 'Digikey Insight Master.xlsx'
     fname2 = 'rootCustomerMappings.xlsx'
+    fname3 = ('Digikey Insights Report ' + time.strftime('%m-%d-%Y') +
+              ' - Full Report.xlsx')
     if saveError(fname1):
         print('---\n'
               'Insight Master is currently open in Excel!\n'
@@ -208,9 +210,16 @@ def main(filepaths):
     # Format as table in Excel.
     tableFormat(rootCustMap, 'Sales Lookup', writer2)
 
+    # Write the full salespeople file.
+    writer3 = pd.ExcelWriter(fname3, engine='xlsxwriter')
+    newDatComb.to_excel(writer3, sheet_name='Data', index=False)
+    # Format as table in Excel.
+    tableFormat(newDatComb, 'Data', writer3)
+
     # Save the file.
     writer1.save()
     writer2.save()
+    writer3.save()
 
     print('---\n'
           'Updates completed successfully!\n'
