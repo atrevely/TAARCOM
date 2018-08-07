@@ -39,7 +39,7 @@ def tableFormat(sheetData, sheetName, wbook):
         else:
             formatting = docFormat
         # Set column width and formatting.
-        maxWidth = max([len(str(val)) for val in sheetData[col].values])
+        maxWidth = max(len(str(val)) for val in sheetData[col].values)
         sheet.set_column(i, i, maxWidth+0.8, formatting)
         i += 1
 
@@ -56,7 +56,7 @@ def saveError(*excelFiles):
     return False
 
 
-def tailoredCalc(princ, sheet):
+def tailoredCalc(princ, sheet, sheetName):
     """Do special processing tailored to the principal input."""
     # Abracon special processing.
     if princ == 'ABR':
@@ -81,10 +81,7 @@ def tailoredCalc(princ, sheet):
             print('Columns added from Abracon special processing:\n'
                   'Commission Rate\n'
                   '---')
-        # Drop entries with emtpy part number.
-        # This takes care of 'totalling' entries.
-        sheet.dropna(subset=['Part Number'], inplace=True)
-
+    # ISSI special processing.
     if princ == 'ISS':
         print('Erasing the Comments for OEM entries.\n'
               '---')
@@ -92,6 +89,19 @@ def tailoredCalc(princ, sheet):
             # For OEM entries, Comments are not Part Numbers, so erase them.
             if 'OEM' in sheet.loc[row, 'Name']:
                 sheet.loc[row, 'Comments'] = ''
+    # ATS Special Processing
+    if princ == 'ATS':
+        if 'Commission Rate' not in list(sheet):
+            # Fill in commission rates and commission paid.
+            if 'Arrow' in sheetName:
+                sheet['Commission Rate'] = 3.5
+                sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*0.035
+                print('Commission rate filled in for this tab: 3.5%')
+            elif 'Direct' not in sheetName:
+                sheet['Commission Rate'] = 2
+                sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*0.02
+                print('Commission rate filled in for this tab: 2%')
+        
 
 
 # The main function.
@@ -256,7 +266,9 @@ def main(filepaths, runningCom, fieldMappings, principal):
                                  inplace=True)
 
             # Do special processing for principal, if applicable.
-            tailoredCalc(principal, sheet)
+            tailoredCalc(principal, sheet, sheetName)
+            # Drop entries with emtpy part number.
+            sheet.dropna(subset=['Part Number'], inplace=True)
 
             # Now that we've renamed all of the relevant columns,
             # append the new sheet to Running Commissions, where only the
@@ -303,22 +315,26 @@ def main(filepaths, runningCom, fieldMappings, principal):
                                 lambda x: x.strip())
 
                     # Append matching columns of data.
-                    appCols = matchingColumns + ['From File'] + ['Principal']
+                    appCols = matchingColumns + ['From File', 'Principal']
                     finalData = finalData.append(sheet[appCols],
                                                  ignore_index=True)
                 else:
                     print('Found no data on this tab. Moving on.\n'
                           '-')
 
-        # Show total commissions.
-        print('Total commissions for this file: '
-              '${:,.2f}'.format(totalComm))
-        # Append filename and total commissions to Files Processed sheet.
-        newFile = pd.DataFrame({'Filename': [filename],
-                                'Total Commissions': [totalComm],
-                                'Date Added': [time.strftime('%m/%d/%Y')],
-                                'Paid Date': ['']})
-        filesProcessed = filesProcessed.append(newFile, ignore_index=True)
+        if totalComm > 0:
+            # Show total commissions.
+            print('Total commissions for this file: '
+                  '${:,.2f}'.format(totalComm))
+            # Append filename and total commissions to Files Processed sheet.
+            newFile = pd.DataFrame({'Filename': [filename],
+                                    'Total Commissions': [totalComm],
+                                    'Date Added': [time.strftime('%m/%d/%Y')],
+                                    'Paid Date': ['']})
+            filesProcessed = filesProcessed.append(newFile, ignore_index=True)
+        else:
+            print('No commissions dollars found in this file.\n'
+                  'Moving on without adding file.')
 
     # %%
     # Fill NaNs left over from appending.
@@ -326,6 +342,13 @@ def main(filepaths, runningCom, fieldMappings, principal):
     # Find matches in Lookup Master and extract data from them.
     # Let us know how many rows are being processed.
     numRows = '{:,.0f}'.format(len(finalData) - runComLen)
+    if numRows == '0':
+        print('---\n'
+              'No new valid data provided.\n'
+              'Please check the new files for missing'
+              'data or column matches.\n'
+              '***')
+        return
     print('---\n'
           'Beginning processing on ' + numRows + ' rows of data.')
     finalData.reset_index(inplace=True, drop=True)
@@ -362,6 +385,9 @@ def main(filepaths, runningCom, fieldMappings, principal):
 
         # Try parsing the date.
         dateError = False
+        # Check if the date is read in as a float, and convert to int.
+        if isinstance(finalData.loc[row, 'Invoice Date'], float):
+            finalData.loc[row, 'Invoice Date'] = int(finalData.loc[row, 'Invoice Date'])
         try:
             parse(finalData.loc[row, 'Invoice Date'])
         except ValueError:
@@ -376,7 +402,8 @@ def main(filepaths, runningCom, fieldMappings, principal):
             else:
                 dateError = True
         except KeyError:
-            print('There is no Invoice Date column in Running Commissions!\n'
+            print('---'
+                  'There is no Invoice Date column in Running Commissions!\n'
                   'Please check to make sure an Invoice Date column exists.\n'
                   'Note: Spelling, whitespace, and capitalization matter.\n'
                   '---')

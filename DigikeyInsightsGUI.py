@@ -140,6 +140,8 @@ class GenMast(QMainWindow):
             self.lockButtons()
             # Run the GenerateMaster.py file.
             AppendInsights.main(self.filenames)
+            # Clear files.
+            self.filenames = []
             # Turn buttons back on.
             self.restoreButtons()
 
@@ -157,6 +159,8 @@ class GenMast(QMainWindow):
             self.lockButtons()
             # Run the GenerateMaster.py file.
             LookupSales.main(self.filename)
+            # Clear file.
+            self.filename = []
             # Turn buttons back on.
             self.restoreButtons()
 

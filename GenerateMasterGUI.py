@@ -187,6 +187,8 @@ class GenMast(QMainWindow):
             # Run the GenerateMaster.py file.
             GenerateMaster.main(self.filenames, self.master,
                                 fieldMappings, princ)
+            # Clear the filename selections.
+            self.filenames = []
             # Turn buttons back on.
             self.restoreButtons()
 
