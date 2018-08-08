@@ -89,19 +89,42 @@ def tailoredCalc(princ, sheet, sheetName):
             # For OEM entries, Comments are not Part Numbers, so erase them.
             if 'OEM' in sheet.loc[row, 'Name']:
                 sheet.loc[row, 'Comments'] = ''
-    # ATS Special Processing
+    # ATS special Processing.
     if princ == 'ATS':
         if 'Commission Rate' not in list(sheet):
             # Fill in commission rates and commission paid.
             if 'Arrow' in sheetName:
                 sheet['Commission Rate'] = 3.5
                 sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*0.035
+                sheet['Distributor'] = 'Arrow'
                 print('Commission rate filled in for this tab: 3.5%')
-            elif 'Direct' not in sheetName:
+            elif 'Digi' in sheetName:
                 sheet['Commission Rate'] = 2
                 sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*0.02
+                sheet['Distributor'] = 'Digikey'
                 print('Commission rate filled in for this tab: 2%')
-        
+            elif 'Mouser' in sheetName:
+                sheet['Commission Rate'] = 2
+                sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*0.02
+                sheet['Distributor'] = 'Mouser'
+                print('Commission rate filled in for this tab: 2%')
+    # ATP special Processing.
+    if princ == 'ATP':
+        if 'US' in sheetName:
+            sheet['Commission Rate'] = 5
+            sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*0.05
+            print('Commission rate filled in for this tab: 5%')
+        if 'TW' in sheetName:
+            sheet['Commission Rate'] = 4
+            sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*0.04
+            print('Commission rate filled in for this tab: 4%')
+        if 'POS' in sheetName:
+            sheet['Commission Rate'] = 3
+            sheet['Actual Comm Paid'] = sheet['Ext. Cost']*0.03
+            sheet['Invoiced Dollars'] = sheet['Ext. Cost']*1.15
+            print('Commission rate filled in for this tab: 3%\n'
+                  'Invoiced dollars estimated as 15% over Ext. Cost'
+                  'for this tab.')
 
 
 # The main function.
@@ -355,6 +378,14 @@ def main(filepaths, runningCom, fieldMappings, principal):
 
     # Iterate over each row of the newly appended data.
     for row in range(runComLen, len(finalData)):
+        # Fix commission rate if it got read in as a decimal.
+        try:
+            comRate = finalData.loc[row, 'Commission Rate']
+            if comRate < 0.1:
+                finalData.loc[row, 'Commission Rate'] = comRate*100
+        except KeyError:
+            pass
+
         # First match part number.
         partNum = str(finalData.loc[row, 'Part Number']).lower()
         PPN = masterLookup['PPN'].map(lambda x: str(x).lower())
@@ -385,22 +416,19 @@ def main(filepaths, runningCom, fieldMappings, principal):
 
         # Try parsing the date.
         dateError = False
-        # Check if the date is read in as a float, and convert to int.
-        if isinstance(finalData.loc[row, 'Invoice Date'], float):
-            finalData.loc[row, 'Invoice Date'] = int(finalData.loc[row, 'Invoice Date'])
+        dateGiven = finalData.loc[row, 'Invoice Date']
+        # Check if the date is read in as a float/int, and convert to string.
+        if isinstance(finalData.loc[row, 'Invoice Date'], (float, int)):
+            dateGiven = str(int(dateGiven))
+        # Check if Pandas read it in as a Timestamp object.
+        # If so, turn it back into a string (a bit roundabout, oh well).
+        elif isinstance(dateGiven, pd.Timestamp):
+            dateGiven = str(dateGiven)
         try:
-            parse(finalData.loc[row, 'Invoice Date'])
-        except ValueError:
+            parse(dateGiven)
+        except (ValueError, TypeError):
             # The date isn't recognized by the parser.
             dateError = True
-        except TypeError:
-            # Check if Pandas read it in as a Timestamp object.
-            # If so, turn it back into a string (a bit roundabout, oh well).
-            if isinstance(finalData.loc[row, 'Invoice Date'], pd.Timestamp):
-                finalData.loc[row, 'Invoice Date'] = str(
-                        finalData.loc[row, 'Invoice Date'])
-            else:
-                dateError = True
         except KeyError:
             print('---'
                   'There is no Invoice Date column in Running Commissions!\n'
@@ -410,7 +438,7 @@ def main(filepaths, runningCom, fieldMappings, principal):
             dateError = True
         # If no error found in date, fill in the month/year/quarter
         if not dateError:
-            date = parse(finalData.loc[row, 'Invoice Date'])
+            date = parse(dateGiven)
             # Cast date format into mm/dd/yyyy.
             finalData.loc[row, 'Invoice Date'] = date.strftime('%m/%d/%Y')
             # Fill in quarter/year/month data.
