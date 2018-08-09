@@ -25,21 +25,37 @@ def tableFormat(sheetData, sheetName, wbook):
     commaFormat = wbook.book.add_format({'font': 'Century Gothic',
                                          'font_size': 8,
                                          'num_format': 3})
+    estFormat = wbook.book.add_format({'font': 'Century Gothic',
+                                       'font_size': 8,
+                                       'num_format': 44,
+                                       'bg_color': 'yellow'})
     # Format and fit each column.
     i = 0
     for col in sheetData.columns:
         # Match the correct formatting to each column.
         acctCols = ['Unit Price', 'Invoiced Dollars', 'Paid-On Revenue',
                     'Actual Comm Paid', 'Total NDS', 'Post-Split NDS',
-                    'Customer Revenue YTD']
+                    'Customer Revenue YTD', 'Ext. Cost']
         if col in acctCols:
             formatting = acctFormat
         elif col == 'Quantity':
             formatting = commaFormat
         else:
             formatting = docFormat
-        # Set column width and formatting.
-        maxWidth = max(len(str(val)) for val in sheetData[col].values)
+
+        # Highlight any estimates in Invoiced Dollars.
+        if col == 'Invoiced Dollars':
+            for row in range(len(sheetData[col])):
+                if sheetData.loc[row, 'Ext. Cost']:
+                    sheet.write(row+1, i, sheetData.loc[row, 'Invoiced Dollars'],
+                                estFormat)
+                else:
+                    sheet.write(row+1, i, sheetData.loc[row, 'Invoiced Dollars'],
+                                acctFormat)
+            formatting = []
+        else:
+            # Set column width and formatting.
+            maxWidth = max(len(str(val)) for val in sheetData[col].values)
         sheet.set_column(i, i, maxWidth+0.8, formatting)
         i += 1
 
@@ -110,6 +126,7 @@ def tailoredCalc(princ, sheet, sheetName):
                 print('Commission rate filled in for this tab: 2%')
     # ATP special Processing.
     if princ == 'ATP':
+        # Fill in commission rates and commission paid.
         if 'US' in sheetName:
             sheet['Commission Rate'] = 5
             sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*0.05
@@ -121,10 +138,20 @@ def tailoredCalc(princ, sheet, sheetName):
         if 'POS' in sheetName:
             sheet['Commission Rate'] = 3
             sheet['Actual Comm Paid'] = sheet['Ext. Cost']*0.03
+            # Estimate invoiced dollars as 15% markup on cost.
             sheet['Invoiced Dollars'] = sheet['Ext. Cost']*1.15
             print('Commission rate filled in for this tab: 3%\n'
                   'Invoiced dollars estimated as 15% over Ext. Cost'
                   'for this tab.')
+    # Mill-Max special Processing.
+    if princ == 'MIL':
+        if 'Ext. Cost' in list(sheet):
+            # Estimate invoiced dollars as 15% markup on cost.
+            sheet['Invoiced Dollars'] = sheet['Ext. Cost']*1.15
+            print('Invoiced dollars estimated as 15% over Ext. Cost'
+                  'for this tab.')
+        elif 'Part Number' not in list(sheet):
+            
 
 
 # The main function.
