@@ -180,11 +180,11 @@ def tailoredCalc(princ, sheet, sheetName):
                 MMaxLog = pd.read_excel('Mill-Max Invoice Log.xlsx',
                                         'Logs').fillna('')
             else:
-                print('---\n'
-                      'No Mill-Max Invoice Log found!\n'
+                print('No Mill-Max Invoice Log found!\n'
                       'Please make sure the Invoice Log is in the directory.\n'
-                      '***')
-            return
+                      'Skipping tab.\n'
+                      '---')
+                return
             # Input part number from Mill-Max Invoice Log.
             for row in range(len(sheet)):
                 match = MMaxLog['Inv#'] == sheet.loc[row, 'Invoice Number']
@@ -435,7 +435,7 @@ def main(filepaths, runningCom, fieldMappings, principal):
                                     'Paid Date': ['']})
             filesProcessed = filesProcessed.append(newFile, ignore_index=True)
         else:
-            print('No commissions dollars found in this file.\n'
+            print('No new data found in this file.\n'
                   'Moving on without adding file.')
 
     # %%
@@ -447,7 +447,7 @@ def main(filepaths, runningCom, fieldMappings, principal):
     if numRows == '0':
         print('---\n'
               'No new valid data provided.\n'
-              'Please check the new files for missing'
+              'Please check the new files for missing '
               'data or column matches.\n'
               '***')
         return
