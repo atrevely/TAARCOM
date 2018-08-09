@@ -33,29 +33,30 @@ def tableFormat(sheetData, sheetName, wbook):
     i = 0
     for col in sheetData.columns:
         # Match the correct formatting to each column.
-        acctCols = ['Unit Price', 'Invoiced Dollars', 'Paid-On Revenue',
-                    'Actual Comm Paid', 'Total NDS', 'Post-Split NDS',
-                    'Customer Revenue YTD', 'Ext. Cost']
+        acctCols = ['Unit Price', 'Paid-On Revenue', 'Actual Comm Paid',
+                    'Total NDS', 'Post-Split NDS', 'Customer Revenue YTD',
+                    'Ext. Cost']
         if col in acctCols:
             formatting = acctFormat
         elif col == 'Quantity':
             formatting = commaFormat
-        else:
-            formatting = docFormat
-
-        # Highlight any estimates in Invoiced Dollars.
-        if col == 'Invoiced Dollars':
+        elif col == 'Invoiced Dollars':
+            # Highlight any estimates in Invoiced Dollars.
             for row in range(len(sheetData[col])):
                 if sheetData.loc[row, 'Ext. Cost']:
-                    sheet.write(row+1, i, sheetData.loc[row, 'Invoiced Dollars'],
+                    sheet.write(row+1, i,
+                                sheetData.loc[row, 'Invoiced Dollars'],
                                 estFormat)
                 else:
-                    sheet.write(row+1, i, sheetData.loc[row, 'Invoiced Dollars'],
+                    sheet.write(row+1, i,
+                                sheetData.loc[row, 'Invoiced Dollars'],
                                 acctFormat)
+            # Formatting already done, so leave blank.
             formatting = []
         else:
-            # Set column width and formatting.
-            maxWidth = max(len(str(val)) for val in sheetData[col].values)
+            formatting = docFormat
+        # Set column width and formatting.
+        maxWidth = max(len(str(val)) for val in sheetData[col].values)
         sheet.set_column(i, i, maxWidth+0.8, formatting)
         i += 1
 
@@ -74,6 +75,20 @@ def saveError(*excelFiles):
 
 def tailoredCalc(princ, sheet, sheetName):
     """Do special processing tailored to the principal input."""
+    # Make sure applicable entries exist and are numeric.
+    invDol = True
+    extCost = True
+    try:
+        sheet['Invoiced Dollars'] = pd.to_numeric(sheet['Invoiced Dollars'],
+                                                  errors='coerce').fillna(0)
+    except KeyError:
+        invDol = False
+    try:
+        sheet['Ext. Cost'] = pd.to_numeric(sheet['Ext. Cost'],
+                                           errors='coerce').fillna(0)
+    except KeyError:
+        extCost = False
+
     # Abracon special processing.
     if princ == 'ABR':
         if 'Invoiced Dollars' and not 'Actual Comm Paid' in list(sheet):
@@ -109,49 +124,78 @@ def tailoredCalc(princ, sheet, sheetName):
     if princ == 'ATS':
         if 'Commission Rate' not in list(sheet):
             # Fill in commission rates and commission paid.
-            if 'Arrow' in sheetName:
+            if 'Arrow' in sheetName and invDol:
                 sheet['Commission Rate'] = 3.5
                 sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*0.035
                 sheet['Distributor'] = 'Arrow'
-                print('Commission rate filled in for this tab: 3.5%')
-            elif 'Digi' in sheetName:
+                print('Commission rate filled in for this tab: 3.5%\n'
+                      '---')
+            elif 'Digi' in sheetName and invDol:
                 sheet['Commission Rate'] = 2
                 sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*0.02
                 sheet['Distributor'] = 'Digikey'
-                print('Commission rate filled in for this tab: 2%')
-            elif 'Mouser' in sheetName:
+                print('Commission rate filled in for this tab: 2%\n'
+                      '---')
+            elif 'Mouser' in sheetName and invDol:
                 sheet['Commission Rate'] = 2
                 sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*0.02
                 sheet['Distributor'] = 'Mouser'
-                print('Commission rate filled in for this tab: 2%')
+                print('Commission rate filled in for this tab: 2%\n'
+                      '---')
     # ATP special Processing.
     if princ == 'ATP':
         # Fill in commission rates and commission paid.
-        if 'US' in sheetName:
+        if 'US' in sheetName and invDol:
             sheet['Commission Rate'] = 5
             sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*0.05
-            print('Commission rate filled in for this tab: 5%')
-        if 'TW' in sheetName:
+            print('Commission rate filled in for this tab: 5%\n'
+                  '---')
+        if 'TW' in sheetName and invDol:
             sheet['Commission Rate'] = 4
             sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*0.04
-            print('Commission rate filled in for this tab: 4%')
-        if 'POS' in sheetName:
+            print('Commission rate filled in for this tab: 4%\n'
+                  '---')
+        if 'POS' in sheetName and extCost:
             sheet['Commission Rate'] = 3
             sheet['Actual Comm Paid'] = sheet['Ext. Cost']*0.03
             # Estimate invoiced dollars as 15% markup on cost.
             sheet['Invoiced Dollars'] = sheet['Ext. Cost']*1.15
             print('Commission rate filled in for this tab: 3%\n'
-                  'Invoiced dollars estimated as 15% over Ext. Cost'
-                  'for this tab.')
+                  'Invoiced dollars estimated as 15% over Ext. Cost '
+                  'for this tab.\n'
+                  'ESTIMATED ENTRIES HIGHLIGHTED YELLOW.\n'
+                  '---')
     # Mill-Max special Processing.
     if princ == 'MIL':
         if 'Ext. Cost' in list(sheet):
             # Estimate invoiced dollars as 15% markup on cost.
             sheet['Invoiced Dollars'] = sheet['Ext. Cost']*1.15
-            print('Invoiced dollars estimated as 15% over Ext. Cost'
-                  'for this tab.')
+            print('Invoiced dollars estimated as 15% over Ext. Cost '
+                  'for this tab.\n'
+                  'ESTIMATED ENTRIES HIGHLIGHTED YELLOW.\n'
+                  '---')
         elif 'Part Number' not in list(sheet):
-            
+            # We need to load in the part number log.
+            if os.path.exists('Mill-Max Invoice Log.xlsx'):
+                MMaxLog = pd.read_excel('Mill-Max Invoice Log.xlsx',
+                                        'Logs').fillna('')
+            else:
+                print('---\n'
+                      'No Mill-Max Invoice Log found!\n'
+                      'Please make sure the Invoice Log is in the directory.\n'
+                      '***')
+            return
+            # Input part number from Mill-Max Invoice Log.
+            for row in range(len(sheet)):
+                match = MMaxLog['Inv#'] == sheet.loc[row, 'Invoice Number']
+                if sum(match) == 1:
+                    partNum = MMaxLog[match].iloc[0]['Part Number']
+                    sheet.loc[row, 'Part Number'] = partNum
+                else:
+                    print('Part number match is missing!\n'
+                          'Please make sure Mill-Max Invoice Log is'
+                          'up to date.\n'
+                          '***')
 
 
 # The main function.
@@ -318,7 +362,10 @@ def main(filepaths, runningCom, fieldMappings, principal):
             # Do special processing for principal, if applicable.
             tailoredCalc(principal, sheet, sheetName)
             # Drop entries with emtpy part number.
-            sheet.dropna(subset=['Part Number'], inplace=True)
+            try:
+                sheet.dropna(subset=['Part Number'], inplace=True)
+            except KeyError:
+                pass
 
             # Now that we've renamed all of the relevant columns,
             # append the new sheet to Running Commissions, where only the
@@ -333,6 +380,11 @@ def main(filepaths, runningCom, fieldMappings, principal):
             elif 'Actual Comm Paid' not in list(sheet):
                 # Tab has no commission data, so it is ignored.
                 print('No commission dollars found on this tab.\n'
+                      'Skipping tab.\n'
+                      '-')
+            elif 'Part Number' not in list(sheet):
+                # Tab has no paart number data, so it is ignored.
+                print('No part numbers found on this tab.\n'
                       'Skipping tab.\n'
                       '-')
             else:
@@ -410,7 +462,7 @@ def main(filepaths, runningCom, fieldMappings, principal):
             comRate = finalData.loc[row, 'Commission Rate']
             if comRate < 0.1:
                 finalData.loc[row, 'Commission Rate'] = comRate*100
-        except KeyError:
+        except (KeyError, TypeError):
             pass
 
         # First match part number.
@@ -515,7 +567,10 @@ def main(filepaths, runningCom, fieldMappings, principal):
     finalData = finalData.loc[:, columnNames]
     columnNames.extend(['Distributor Matches', 'Lookup Master Matches',
                         'Date Added', 'Running Com Index'])
+    # Fix up the Entries Need Fixing file.
     fixList = fixList.loc[:, columnNames]
+    fixList.index.name = 'Master Index'
+    fixList.reset_index(inplace=True)
 
     # %%
     # Check if the files we're going to save are open already.
