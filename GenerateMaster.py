@@ -35,7 +35,7 @@ def tableFormat(sheetData, sheetName, wbook):
         # Match the correct formatting to each column.
         acctCols = ['Unit Price', 'Paid-On Revenue', 'Actual Comm Paid',
                     'Total NDS', 'Post-Split NDS', 'Customer Revenue YTD',
-                    'Ext. Cost']
+                    'Ext. Cost', 'Total Commissions']
         if col in acctCols:
             formatting = acctFormat
         elif col == 'Quantity':
@@ -144,18 +144,22 @@ def tailoredCalc(princ, sheet, sheetName):
                       '---')
     # ATP special Processing.
     if princ == 'ATP':
+        # Load up the customer lookup file.
+
         # Fill in commission rates and commission paid.
         if 'US' in sheetName and invDol:
             sheet['Commission Rate'] = 5
             sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*0.05
             print('Commission rate filled in for this tab: 5%\n'
                   '---')
-        if 'TW' in sheetName and invDol:
+            sheet['Reported Customer'].fillna(method='ffill', inplace=True)
+        elif 'TW' in sheetName and invDol:
             sheet['Commission Rate'] = 4
             sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*0.04
             print('Commission rate filled in for this tab: 4%\n'
                   '---')
-        if 'POS' in sheetName and extCost:
+            sheet['Reported Customer'].fillna(method='ffill', inplace=True)
+        elif 'POS' in sheetName and extCost:
             sheet['Commission Rate'] = 3
             sheet['Actual Comm Paid'] = sheet['Ext. Cost']*0.03
             # Estimate invoiced dollars as 15% markup on cost.
@@ -165,20 +169,37 @@ def tailoredCalc(princ, sheet, sheetName):
                   'for this tab.\n'
                   'ESTIMATED ENTRIES HIGHLIGHTED YELLOW.\n'
                   '---')
+        else:
+            print('Tab not labeled as US/TW/POS.\n'
+                  'Or, Ext. Cost/Invoiced Dollars not found on this tab.\n'
+                  'Please check tab names/data to ensure '
+                  'processing is correct.\n'
+                  '---')
     # Mill-Max special Processing.
     if princ == 'MIL':
-        if 'Ext. Cost' in list(sheet):
+        invNum = True
+        try:
+            sheet['Invoice Number']
+        except KeyError:
+            print('Found no Invoice Numbers on this sheet.\n'
+                  'Make sure Invoice Numbers are properly mapped, '
+                  'then try again.\n'
+                  '---')
+            invNum = False
+        if 'Ext. Cost' in list(sheet) and not invDol:
             # Estimate invoiced dollars as 15% markup on cost.
             sheet['Invoiced Dollars'] = sheet['Ext. Cost']*1.15
             print('Invoiced dollars estimated as 15% over Ext. Cost '
                   'for this tab.\n'
                   'ESTIMATED ENTRIES HIGHLIGHTED YELLOW.\n'
                   '---')
-        elif 'Part Number' not in list(sheet):
+        elif 'Part Number' not in list(sheet) and invNum:
             # We need to load in the part number log.
             if os.path.exists('Mill-Max Invoice Log.xlsx'):
                 MMaxLog = pd.read_excel('Mill-Max Invoice Log.xlsx',
                                         'Logs').fillna('')
+                print('Looking up part numbers from invoice log.\n'
+                      '---')
             else:
                 print('No Mill-Max Invoice Log found!\n'
                       'Please make sure the Invoice Log is in the directory.\n'
@@ -192,10 +213,9 @@ def tailoredCalc(princ, sheet, sheetName):
                     partNum = MMaxLog[match].iloc[0]['Part Number']
                     sheet.loc[row, 'Part Number'] = partNum
                 else:
-                    print('Part number match is missing!\n'
-                          'Please make sure Mill-Max Invoice Log is'
-                          'up to date.\n'
-                          '***')
+                    print('Part number match error (invoice number either '
+                          'not found or duplicated)!\n'
+                          '---')
 
 
 # The main function.
@@ -329,8 +349,12 @@ def main(filepaths, runningCom, fieldMappings, principal):
             sheet = newData[sheetName].reset_index(drop=True)
             # Make sure index is an integer, not a string.
             sheet.index = sheet.index.map(int)
-            # Clear out unnamed columns.
-            sheet = sheet.loc[:, ~sheet.columns.str.contains('^Unnamed')]
+            # Clear out unnamed columns. Attribute error means it's an empty
+            # sheet, so simply pass it along (it'll get dealt with).
+            try:
+                sheet = sheet.loc[:, ~sheet.columns.str.contains('^Unnamed')]
+            except AttributeError:
+                pass
             totalRows = sheet.shape[0]
             print('Found ' + str(totalRows) + ' entries in the tab '
                   + sheetName)
@@ -571,6 +595,7 @@ def main(filepaths, runningCom, fieldMappings, principal):
     fixList = fixList.loc[:, columnNames]
     fixList.index.name = 'Master Index'
     fixList.reset_index(inplace=True)
+    fixList.fillna('', inplace=True)
 
     # %%
     # Check if the files we're going to save are open already.
