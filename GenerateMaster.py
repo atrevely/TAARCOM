@@ -91,7 +91,11 @@ def tailoredCalc(princ, sheet, sheetName):
 
     # Abracon special processing.
     if princ == 'ABR':
-        if 'Invoiced Dollars' and not 'Actual Comm Paid' in list(sheet):
+        invIn = 'Invoiced Dollars' in list(sheet)
+        commNotIn = 'Actual Comm Paid' not in list(sheet)
+        revIn = 'Paid-On Revenue' in list(sheet)
+        commRateNotIn = 'Commission Rate' not in list(sheet)
+        if invIn and commNotIn:
             # Input missing data. Commission Rate is always 3% here.
             sheet['Commission Rate'] = 3
             sheet['Paid-On Revenue'] = pd.to_numeric(sheet['Invoiced Dollars'],
@@ -101,7 +105,7 @@ def tailoredCalc(princ, sheet, sheetName):
                   'Commission Rate, Paid-On Revenue, '
                   'Actual Comm Paid\n'
                   '---')
-        elif 'Paid-On Revenue' and not 'Commission Rate' in list(sheet):
+        elif revIn and commRateNotIn:
             # Fill down Distributor for their grouping scheme.
             sheet['Distributor'].fillna(method='ffill', inplace=True)
             # Calculate the Commission Rate.
@@ -145,7 +149,17 @@ def tailoredCalc(princ, sheet, sheetName):
     # ATP special Processing.
     if princ == 'ATP':
         # Load up the customer lookup file.
-
+        if os.path.exists('ATPCustomerLookup.xlsx'):
+            ATPCustLook = pd.read_excel('ATPCustomerLookup.xlsx',
+                                        'Lookup').fillna('')
+            print('Correcting customer names.\n'
+                  '---')
+        else:
+            print('No ATP Customer Lookup found!\n'
+                  'Please make sure the Customer Lookup is in the directory.\n'
+                  'Skipping tab.\n'
+                  '---')
+            return
         # Fill in commission rates and commission paid.
         if 'US' in sheetName and invDol:
             sheet['Commission Rate'] = 5
@@ -175,6 +189,16 @@ def tailoredCalc(princ, sheet, sheetName):
                   'Please check tab names/data to ensure '
                   'processing is correct.\n'
                   '---')
+        # Correct the customer names.
+        for row in range(len(sheet)):
+            custName = sheet.loc[row, 'Reported Customer']
+            # Find matches for the distName in the Distributor Abbreviations.
+            custMatches = [i for i in ATPCustLook['Name'] if i in custName]
+            if len(custMatches) == 1:
+                # Find and input corrected distributor name.
+                mloc = ATPCustLook['Name'] == custMatches[0]
+                corrCust = ATPCustLook[mloc].iloc[0]['Corrected']
+                sheet.loc[row, 'Reported Customer'] = corrCust
     # Mill-Max special Processing.
     if princ == 'MIL':
         invNum = True
