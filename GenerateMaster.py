@@ -108,6 +108,7 @@ def tailoredCalc(princ, sheet, sheetName):
         elif revIn and commRateNotIn:
             # Fill down Distributor for their grouping scheme.
             sheet['Distributor'].fillna(method='ffill', inplace=True)
+            sheet['Distributor'].fillna('', inplace=True)
             # Calculate the Commission Rate.
             comPaid = pd.to_numeric(sheet['Actual Comm Paid'], errors='coerce')
             revenue = pd.to_numeric(sheet['Paid-On Revenue'], errors='coerce')
@@ -152,8 +153,6 @@ def tailoredCalc(princ, sheet, sheetName):
         if os.path.exists('ATPCustomerLookup.xlsx'):
             ATPCustLook = pd.read_excel('ATPCustomerLookup.xlsx',
                                         'Lookup').fillna('')
-            print('Correcting customer names.\n'
-                  '---')
         else:
             print('No ATP Customer Lookup found!\n'
                   'Please make sure the Customer Lookup is in the directory.\n'
@@ -167,14 +166,22 @@ def tailoredCalc(princ, sheet, sheetName):
             print('Commission rate filled in for this tab: 5%\n'
                   '---')
             sheet['Reported Customer'].fillna(method='ffill', inplace=True)
+            sheet['Reported Customer'].fillna('', inplace=True)
+            print('Correcting customer names.\n'
+                  '---')
         elif 'TW' in sheetName and invDol:
             sheet['Commission Rate'] = 4
             sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*0.04
             print('Commission rate filled in for this tab: 4%\n'
                   '---')
             sheet['Reported Customer'].fillna(method='ffill', inplace=True)
+            sheet['Reported Customer'].fillna('', inplace=True)
+            print('Correcting customer names.\n'
+                  '---')
         elif 'POS' in sheetName and extCost:
             sheet['Commission Rate'] = 3
+            sheet.rename(columns={'Reported End Customer':
+                                  'Reported Customer'}, inplace=True)
             sheet['Actual Comm Paid'] = sheet['Ext. Cost']*0.03
             # Estimate invoiced dollars as 15% markup on cost.
             sheet['Invoiced Dollars'] = sheet['Ext. Cost']*1.15
@@ -184,14 +191,20 @@ def tailoredCalc(princ, sheet, sheetName):
                   'ESTIMATED ENTRIES HIGHLIGHTED YELLOW.\n'
                   '---')
         else:
-            print('Tab not labeled as US/TW/POS.\n'
+            print('-'
+                  'Tab not labeled as US/TW/POS.\n'
                   'Or, Ext. Cost/Invoiced Dollars not found on this tab.\n'
                   'Please check tab names/data to ensure '
                   'processing is correct.\n'
                   '---')
         # Correct the customer names.
         for row in range(len(sheet)):
-            custName = sheet.loc[row, 'Reported Customer']
+            try:
+                custName = sheet.loc[row, 'Reported Customer']
+            except KeyError:
+                print('No Reported Customer column found!\n'
+                      '---')
+                return
             # Find matches for the distName in the Distributor Abbreviations.
             custMatches = [i for i in ATPCustLook['Name'] if i in custName]
             if len(custMatches) == 1:
@@ -217,6 +230,9 @@ def tailoredCalc(princ, sheet, sheetName):
                   'for this tab.\n'
                   'ESTIMATED ENTRIES HIGHLIGHTED YELLOW.\n'
                   '---')
+            # Sometimes the Totals are written in the Part Number column.
+            sheet = sheet[sheet['Part Number'] != 'Totals']
+            sheet.reset_index(drop=True, inplace=True)
         elif 'Part Number' not in list(sheet) and invNum:
             # We need to load in the part number log.
             if os.path.exists('Mill-Max Invoice Log.xlsx'):
@@ -240,6 +256,29 @@ def tailoredCalc(princ, sheet, sheetName):
                     print('Part number match error (invoice number either '
                           'not found or duplicated)!\n'
                           '---')
+    # OSR special Processing.
+    if princ == 'OSR':
+        # For World Star POS tab, enter World Star as the distributor.
+        if 'World' in sheetName:
+            sheet['Distributor'] = 'World Star'
+
+    # Test the Commissions Dollars to make sure they're correct.
+    if not invDol and extCost:
+        paidDol = sheet['Ext. Cost']
+    else:
+        paidDol = sheet['Invoiced Dollars']
+    try:
+        # Find percent error in Commission Dollars.
+        realCom = paidDol*sheet['Commission Rate']/100
+        pctError = abs(1-realCom/sheet['Actual Comm Paid'])
+        if any(pctError > 0.05):
+            print('Greater than 5% error in Commission Dollars detected '
+                  'in the following rows:\n')
+            errLocs = pctError[pctError > 0.05].index.tolist()
+            errLocs = [i+2 for i in errLocs]
+            print(', '.join(map(str, errLocs)))
+    except KeyError:
+        pass
 
 
 # The main function.
@@ -360,7 +399,7 @@ def main(filepaths, runningCom, fieldMappings, principal):
         # Grab the next file from the list.
         newData = inputData[fileNum]
         fileNum += 1
-        print('---\n'
+        print('------\n'
               'Working on file: ' + filename)
         # Set total commissions for file back to zero.
         totalComm = 0
@@ -407,6 +446,16 @@ def main(filepaths, runningCom, fieldMappings, principal):
                     sheet.rename(columns={columnName[0]: dataName},
                                  inplace=True)
 
+            # Fix commission rate if it got read in as a decimal.
+            try:
+                numCom = pd.to_numeric(sheet['Commission Rate'],
+                                       errors='coerce').fillna(0)
+                sheet['Commission Rate'] = numCom
+                decCom = sheet['Commission Rate'] < 0.1
+                newCom = sheet.loc[decCom, 'Commission Rate']*100
+                sheet.loc[decCom, 'Commission Rate'] = newCom
+            except (KeyError, TypeError):
+                pass
             # Do special processing for principal, if applicable.
             tailoredCalc(principal, sheet, sheetName)
             # Drop entries with emtpy part number.
@@ -505,14 +554,6 @@ def main(filepaths, runningCom, fieldMappings, principal):
 
     # Iterate over each row of the newly appended data.
     for row in range(runComLen, len(finalData)):
-        # Fix commission rate if it got read in as a decimal.
-        try:
-            comRate = finalData.loc[row, 'Commission Rate']
-            if comRate < 0.1:
-                finalData.loc[row, 'Commission Rate'] = comRate*100
-        except (KeyError, TypeError):
-            pass
-
         # First match part number.
         partNum = str(finalData.loc[row, 'Part Number']).lower()
         PPN = masterLookup['PPN'].map(lambda x: str(x).lower())
