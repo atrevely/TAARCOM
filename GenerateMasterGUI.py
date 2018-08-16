@@ -38,8 +38,7 @@ class GenMast(QMainWindow):
         # Show welcome message.
         print('Welcome to the TAARCOM Commissions Manager.\n'
               'Messages and updates will display below.\n'
-              '----------------------------------'
-              '----------------------------------')
+              '______________________________________________________')
 
         # Initialize global variables.
         global fieldMappings

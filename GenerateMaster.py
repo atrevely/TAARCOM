@@ -35,7 +35,7 @@ def tableFormat(sheetData, sheetName, wbook):
         # Match the correct formatting to each column.
         acctCols = ['Unit Price', 'Paid-On Revenue', 'Actual Comm Paid',
                     'Total NDS', 'Post-Split NDS', 'Customer Revenue YTD',
-                    'Ext. Cost', 'Total Commissions']
+                    'Ext. Cost', 'Unit Cost', 'Total Commissions']
         if col in acctCols:
             formatting = acctFormat
         elif col == 'Quantity':
@@ -147,6 +147,9 @@ def tailoredCalc(princ, sheet, sheetName):
                 sheet['Distributor'] = 'Mouser'
                 print('Commission rate filled in for this tab: 2%\n'
                       '---')
+            else:
+                print('Invoice Dollars not found on this tab!\n'
+                      '---')
     # ATP special Processing.
     if princ == 'ATP':
         # Load up the customer lookup file.
@@ -166,7 +169,6 @@ def tailoredCalc(princ, sheet, sheetName):
             print('Commission rate filled in for this tab: 5%\n'
                   '---')
             sheet['Reported Customer'].fillna(method='ffill', inplace=True)
-            sheet['Reported Customer'].fillna('', inplace=True)
             print('Correcting customer names.\n'
                   '---')
         elif 'TW' in sheetName and invDol:
@@ -175,7 +177,6 @@ def tailoredCalc(princ, sheet, sheetName):
             print('Commission rate filled in for this tab: 4%\n'
                   '---')
             sheet['Reported Customer'].fillna(method='ffill', inplace=True)
-            sheet['Reported Customer'].fillna('', inplace=True)
             print('Correcting customer names.\n'
                   '---')
         elif 'POS' in sheetName and extCost:
@@ -191,20 +192,19 @@ def tailoredCalc(princ, sheet, sheetName):
                   'ESTIMATED ENTRIES HIGHLIGHTED YELLOW.\n'
                   '---')
         else:
-            print('-'
-                  'Tab not labeled as US/TW/POS.\n'
-                  'Or, Ext. Cost/Invoiced Dollars not found on this tab.\n'
-                  'Please check tab names/data to ensure '
-                  'processing is correct.\n'
+            print('-\n'
+                  'Tab not labeled as US/TW/POS, '
+                  'or Ext. Cost/Invoiced Dollars not found on this tab.\n'
                   '---')
         # Correct the customer names.
+        try:
+            sheet['Reported Customer'].fillna('', inplace=True)
+        except KeyError:
+            print('No Reported Customer column found!\n'
+                  '---')
+            return
         for row in range(len(sheet)):
-            try:
-                custName = sheet.loc[row, 'Reported Customer']
-            except KeyError:
-                print('No Reported Customer column found!\n'
-                      '---')
-                return
+            custName = sheet.loc[row, 'Reported Customer']
             # Find matches for the distName in the Distributor Abbreviations.
             custMatches = [i for i in ATPCustLook['Name'] if i in custName]
             if len(custMatches) == 1:
@@ -219,8 +219,6 @@ def tailoredCalc(princ, sheet, sheetName):
             sheet['Invoice Number']
         except KeyError:
             print('Found no Invoice Numbers on this sheet.\n'
-                  'Make sure Invoice Numbers are properly mapped, '
-                  'then try again.\n'
                   '---')
             invNum = False
         if 'Ext. Cost' in list(sheet) and not invDol:
@@ -262,22 +260,26 @@ def tailoredCalc(princ, sheet, sheetName):
         if 'World' in sheetName:
             sheet['Distributor'] = 'World Star'
 
-    # Test the Commissions Dollars to make sure they're correct.
-    if not invDol and extCost:
+    # Test the Commission Dollars to make sure they're correct.
+    if 'Paid-On Revenue' in list(sheet):
+        paidDol = sheet['Paid-On Revenue']
+    elif not invDol and extCost:
         paidDol = sheet['Ext. Cost']
-    else:
+    elif invDol:
         paidDol = sheet['Invoiced Dollars']
     try:
         # Find percent error in Commission Dollars.
         realCom = paidDol*sheet['Commission Rate']/100
+        realCom = realCom[realCom > 1]
         pctError = abs(1-realCom/sheet['Actual Comm Paid'])
         if any(pctError > 0.05):
             print('Greater than 5% error in Commission Dollars detected '
-                  'in the following rows:\n')
+                  'in the following rows:')
             errLocs = pctError[pctError > 0.05].index.tolist()
             errLocs = [i+2 for i in errLocs]
-            print(', '.join(map(str, errLocs)))
-    except KeyError:
+            print(', '.join(map(str, errLocs))
+                  + '\n---')
+    except (KeyError, NameError):
         pass
 
 
@@ -399,8 +401,11 @@ def main(filepaths, runningCom, fieldMappings, principal):
         # Grab the next file from the list.
         newData = inputData[fileNum]
         fileNum += 1
-        print('------\n'
-              'Working on file: ' + filename)
+        print('----------------------------------'
+              '----------------------------------\n'
+              'Working on file: ' + filename
+              + '\n----------------------------------'
+              '----------------------------------\n')
         # Set total commissions for file back to zero.
         totalComm = 0
 
@@ -420,7 +425,7 @@ def main(filepaths, runningCom, fieldMappings, principal):
                 pass
             totalRows = sheet.shape[0]
             print('Found ' + str(totalRows) + ' entries in the tab '
-                  + sheetName)
+                  + sheetName + '\n----------------------------------')
 
             # Iterate over each column of data that we want to append.
             for dataName in list(fieldMappings):
