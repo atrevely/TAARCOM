@@ -29,15 +29,22 @@ def tableFormat(sheetData, sheetName, wbook):
                                        'font_size': 8,
                                        'num_format': 44,
                                        'bg_color': 'yellow'})
+    pctFormat = wbook.book.add_format({'font': 'Century Gothic',
+                                       'font_size': 8,
+                                       'num_format': 9})
     # Format and fit each column.
     i = 0
     for col in sheetData.columns:
         # Match the correct formatting to each column.
         acctCols = ['Unit Price', 'Paid-On Revenue', 'Actual Comm Paid',
-                    'Total NDS', 'Post-Split NDS', 'Customer Revenue YTD',
+                    'Total NDS', 'Post-Split NDS', 'Cust Revenue YTD',
                     'Ext. Cost', 'Unit Cost', 'Total Commissions']
+        pctCols = ['Split Percentage', 'Commission Rate',
+                   'Gross Rev Reduction', 'Customer Revenue Tier Rate']
         if col in acctCols:
             formatting = acctFormat
+        elif col in pctCols:
+            formatting = pctFormat
         elif col == 'Quantity':
             formatting = commaFormat
         elif col == 'Invoiced Dollars':
@@ -263,6 +270,8 @@ def tailoredCalc(princ, sheet, sheetName):
     # Test the Commission Dollars to make sure they're correct.
     if 'Paid-On Revenue' in list(sheet):
         paidDol = sheet['Paid-On Revenue']
+        if 'Customer Revenue Tier Rate' in list(sheet):
+            paidDol = paidDol*sheet['Customer Revenue Tier Rate']/100
     elif not invDol and extCost:
         paidDol = sheet['Ext. Cost']
     elif invDol:
@@ -271,11 +280,11 @@ def tailoredCalc(princ, sheet, sheetName):
         # Find percent error in Commission Dollars.
         realCom = paidDol*sheet['Commission Rate']/100
         realCom = realCom[realCom > 1]
-        pctError = abs(1-realCom/sheet['Actual Comm Paid'])
-        if any(pctError > 0.05):
-            print('Greater than 5% error in Commission Dollars detected '
+        absError = abs(realCom - sheet['Actual Comm Paid'])
+        if any(absError > 1):
+            print('Greater than $1 error in Commission Dollars detected '
                   'in the following rows:')
-            errLocs = pctError[pctError > 0.05].index.tolist()
+            errLocs = absError[absError > 1].index.tolist()
             errLocs = [i+2 for i in errLocs]
             print(', '.join(map(str, errLocs))
                   + '\n---')
@@ -401,11 +410,9 @@ def main(filepaths, runningCom, fieldMappings, principal):
         # Grab the next file from the list.
         newData = inputData[fileNum]
         fileNum += 1
-        print('----------------------------------'
-              '----------------------------------\n'
+        print('______________________________________________________\n'
               'Working on file: ' + filename
-              + '\n----------------------------------'
-              '----------------------------------\n')
+              + '\n______________________________________________________')
         # Set total commissions for file back to zero.
         totalComm = 0
 
@@ -451,14 +458,44 @@ def main(filepaths, runningCom, fieldMappings, principal):
                     sheet.rename(columns={columnName[0]: dataName},
                                  inplace=True)
 
-            # Fix commission rate if it got read in as a decimal.
+            # Fix Commission Rate if it got read in as a decimal.
             try:
                 numCom = pd.to_numeric(sheet['Commission Rate'],
                                        errors='coerce').fillna(0)
                 sheet['Commission Rate'] = numCom
-                decCom = sheet['Commission Rate'] < 0.1
+                decCom = sheet['Commission Rate'] < 0.9
                 newCom = sheet.loc[decCom, 'Commission Rate']*100
                 sheet.loc[decCom, 'Commission Rate'] = newCom
+            except (KeyError, TypeError):
+                pass
+            # Fix Split Percentage if it got read in as a decimal.
+            try:
+                numSplit = pd.to_numeric(sheet['Split Percentage'],
+                                         errors='coerce').fillna(0)
+                sheet['Split Percentage'] = numSplit
+                decSplit = sheet['Split Percentage'] <= 1
+                newSplit = sheet.loc[decSplit, 'Split Percentage']*100
+                sheet.loc[decSplit, 'Split Percentage'] = newSplit
+            except (KeyError, TypeError):
+                pass
+            # Fix Gross Rev Reduction if it got read in as a decimal.
+            try:
+                numRev = pd.to_numeric(sheet['Gross Rev Reduction'],
+                                       errors='coerce').fillna(0)
+                sheet['Gross Rev Reduction'] = numRev
+                decRev = sheet['Gross Rev Reduction'] <= 1
+                newRev = sheet.loc[decRev, 'Gross Rev Reduction']*100
+                sheet.loc[decRev, 'Gross Rev Reduction'] = newRev
+            except (KeyError, TypeError):
+                pass
+            # Fix Shared Rev Tier Rate if it got read in as a decimal.
+            try:
+                numTier = pd.to_numeric(sheet['Shared Rev Tier Rate'],
+                                        errors='coerce').fillna(0)
+                sheet['Shared Rev Tier Rate'] = numTier
+                decTier = sheet['Shared Rev Tier Rate'] <= 1
+                newTier = sheet.loc[decTier, 'Shared Rev Tier Rate']*100
+                sheet.loc[decTier, 'Shared Rev Tier Rate'] = newTier
             except (KeyError, TypeError):
                 pass
             # Do special processing for principal, if applicable.
