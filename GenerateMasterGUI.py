@@ -252,6 +252,7 @@ class GenMast(QMainWindow):
         self.btnUploadMast.setEnabled(False)
         self.btnEditColumns.setEnabled(False)
         self.btnClearAll.setEnabled(False)
+        self.princMenu.setEnabled(False)
 
     def restoreButtons(self):
         self.btnGenMast.setEnabled(True)
@@ -259,6 +260,7 @@ class GenMast(QMainWindow):
         self.btnUploadMast.setEnabled(True)
         self.btnEditColumns.setEnabled(True)
         self.btnClearAll.setEnabled(True)
+        self.princMenu.setEnabled(True)
 
 
 class Worker(QtCore.QRunnable):

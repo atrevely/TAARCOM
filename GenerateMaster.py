@@ -40,7 +40,7 @@ def tableFormat(sheetData, sheetName, wbook):
                     'Total NDS', 'Post-Split NDS', 'Cust Revenue YTD',
                     'Ext. Cost', 'Unit Cost', 'Total Commissions']
         pctCols = ['Split Percentage', 'Commission Rate',
-                   'Gross Rev Reduction', 'Customer Revenue Tier Rate']
+                   'Gross Rev Reduction', 'Shared Rev Tier Rate']
         if col in acctCols:
             formatting = acctFormat
         elif col in pctCols:
@@ -80,6 +80,17 @@ def saveError(*excelFiles):
     return False
 
 
+def tailoredPreCalc(princ, sheet, sheetName):
+    """Do special pre-processing tailored to the principal input."""
+    # Osram special processing.
+    if princ == 'OSR':
+        # Get rid of the Item column.
+        try:
+            sheet.rename(columns={'Item': 'OSR Item'}, inplace=True)
+        except KeyError:
+            pass
+
+
 def tailoredCalc(princ, sheet, sheetName):
     """Do special processing tailored to the principal input."""
     # Make sure applicable entries exist and are numeric.
@@ -104,7 +115,7 @@ def tailoredCalc(princ, sheet, sheetName):
         commRateNotIn = 'Commission Rate' not in list(sheet)
         if invIn and commNotIn:
             # Input missing data. Commission Rate is always 3% here.
-            sheet['Commission Rate'] = 3
+            sheet['Commission Rate'] = .03
             sheet['Paid-On Revenue'] = pd.to_numeric(sheet['Invoiced Dollars'],
                                                      errors='coerce')*0.7
             sheet['Actual Comm Paid'] = sheet['Paid-On Revenue']*.03
@@ -119,7 +130,7 @@ def tailoredCalc(princ, sheet, sheetName):
             # Calculate the Commission Rate.
             comPaid = pd.to_numeric(sheet['Actual Comm Paid'], errors='coerce')
             revenue = pd.to_numeric(sheet['Paid-On Revenue'], errors='coerce')
-            comRate = round(100*comPaid/revenue)
+            comRate = round(comPaid/revenue)
             sheet['Commission Rate'] = comRate
             print('Columns added from Abracon special processing:\n'
                   'Commission Rate\n'
@@ -128,28 +139,29 @@ def tailoredCalc(princ, sheet, sheetName):
     if princ == 'ISS':
         print('Erasing the Comments for OEM entries.\n'
               '---')
-        for row in range(len(sheet)):
-            # For OEM entries, Comments are not Part Numbers, so erase them.
-            if 'OEM' in sheet.loc[row, 'Name']:
-                sheet.loc[row, 'Comments'] = ''
+        if 'Name' in list(sheet):
+            for row in range(len(sheet)):
+                # For OEM entries, erase comments.
+                if 'OEM' in sheet.loc[row, 'Name']:
+                    sheet.loc[row, 'Comments'] = ''
     # ATS special Processing.
     if princ == 'ATS':
         if 'Commission Rate' not in list(sheet):
             # Fill in commission rates and commission paid.
             if 'Arrow' in sheetName and invDol:
-                sheet['Commission Rate'] = 3.5
+                sheet['Commission Rate'] = .035
                 sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*0.035
                 sheet['Distributor'] = 'Arrow'
                 print('Commission rate filled in for this tab: 3.5%\n'
                       '---')
             elif 'Digi' in sheetName and invDol:
-                sheet['Commission Rate'] = 2
+                sheet['Commission Rate'] = .02
                 sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*0.02
                 sheet['Distributor'] = 'Digikey'
                 print('Commission rate filled in for this tab: 2%\n'
                       '---')
             elif 'Mouser' in sheetName and invDol:
-                sheet['Commission Rate'] = 2
+                sheet['Commission Rate'] = .02
                 sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*0.02
                 sheet['Distributor'] = 'Mouser'
                 print('Commission rate filled in for this tab: 2%\n'
@@ -171,7 +183,7 @@ def tailoredCalc(princ, sheet, sheetName):
             return
         # Fill in commission rates and commission paid.
         if 'US' in sheetName and invDol:
-            sheet['Commission Rate'] = 5
+            sheet['Commission Rate'] = .05
             sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*0.05
             print('Commission rate filled in for this tab: 5%\n'
                   '---')
@@ -179,7 +191,7 @@ def tailoredCalc(princ, sheet, sheetName):
             print('Correcting customer names.\n'
                   '---')
         elif 'TW' in sheetName and invDol:
-            sheet['Commission Rate'] = 4
+            sheet['Commission Rate'] = .04
             sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*0.04
             print('Commission rate filled in for this tab: 4%\n'
                   '---')
@@ -187,7 +199,7 @@ def tailoredCalc(princ, sheet, sheetName):
             print('Correcting customer names.\n'
                   '---')
         elif 'POS' in sheetName and extCost:
-            sheet['Commission Rate'] = 3
+            sheet['Commission Rate'] = .03
             sheet.rename(columns={'Reported End Customer':
                                   'Reported Customer'}, inplace=True)
             sheet['Actual Comm Paid'] = sheet['Ext. Cost']*0.03
@@ -261,7 +273,7 @@ def tailoredCalc(princ, sheet, sheetName):
                     print('Part number match error (invoice number either '
                           'not found or duplicated)!\n'
                           '---')
-    # OSR special Processing.
+    # Osram special Processing.
     if princ == 'OSR':
         # For World Star POS tab, enter World Star as the distributor.
         if 'World' in sheetName:
@@ -270,15 +282,15 @@ def tailoredCalc(princ, sheet, sheetName):
     # Test the Commission Dollars to make sure they're correct.
     if 'Paid-On Revenue' in list(sheet):
         paidDol = sheet['Paid-On Revenue']
-        if 'Customer Revenue Tier Rate' in list(sheet):
-            paidDol = paidDol*sheet['Customer Revenue Tier Rate']/100
+        if 'Shared Rev Tier Rate' in list(sheet):
+            paidDol = paidDol*sheet['Shared Rev Tier Rate']
     elif not invDol and extCost:
         paidDol = sheet['Ext. Cost']
     elif invDol:
         paidDol = sheet['Invoiced Dollars']
     try:
         # Find percent error in Commission Dollars.
-        realCom = paidDol*sheet['Commission Rate']/100
+        realCom = paidDol*sheet['Commission Rate']
         realCom = realCom[realCom > 1]
         absError = abs(realCom - sheet['Actual Comm Paid'])
         if any(absError > 1):
@@ -424,6 +436,8 @@ def main(filepaths, runningCom, fieldMappings, principal):
             sheet = newData[sheetName].reset_index(drop=True)
             # Make sure index is an integer, not a string.
             sheet.index = sheet.index.map(int)
+            # Strip whitespace from column names.
+            sheet.rename(columns=lambda x: str(x).strip(), inplace=True)
             # Clear out unnamed columns. Attribute error means it's an empty
             # sheet, so simply pass it along (it'll get dealt with).
             try:
@@ -433,6 +447,8 @@ def main(filepaths, runningCom, fieldMappings, principal):
             totalRows = sheet.shape[0]
             print('Found ' + str(totalRows) + ' entries in the tab '
                   + sheetName + '\n----------------------------------')
+            # Do specialized pre-processing tailored to principlal.
+            tailoredPreCalc(principal, sheet, sheetName)
 
             # Iterate over each column of data that we want to append.
             for dataName in list(fieldMappings):
@@ -463,8 +479,8 @@ def main(filepaths, runningCom, fieldMappings, principal):
                 numCom = pd.to_numeric(sheet['Commission Rate'],
                                        errors='coerce').fillna(0)
                 sheet['Commission Rate'] = numCom
-                decCom = sheet['Commission Rate'] < 0.9
-                newCom = sheet.loc[decCom, 'Commission Rate']*100
+                decCom = sheet['Commission Rate'] > 0.9
+                newCom = sheet.loc[decCom, 'Commission Rate']/100
                 sheet.loc[decCom, 'Commission Rate'] = newCom
             except (KeyError, TypeError):
                 pass
@@ -473,8 +489,8 @@ def main(filepaths, runningCom, fieldMappings, principal):
                 numSplit = pd.to_numeric(sheet['Split Percentage'],
                                          errors='coerce').fillna(0)
                 sheet['Split Percentage'] = numSplit
-                decSplit = sheet['Split Percentage'] <= 1
-                newSplit = sheet.loc[decSplit, 'Split Percentage']*100
+                decSplit = sheet['Split Percentage'] > 1
+                newSplit = sheet.loc[decSplit, 'Split Percentage']/100
                 sheet.loc[decSplit, 'Split Percentage'] = newSplit
             except (KeyError, TypeError):
                 pass
@@ -483,8 +499,8 @@ def main(filepaths, runningCom, fieldMappings, principal):
                 numRev = pd.to_numeric(sheet['Gross Rev Reduction'],
                                        errors='coerce').fillna(0)
                 sheet['Gross Rev Reduction'] = numRev
-                decRev = sheet['Gross Rev Reduction'] <= 1
-                newRev = sheet.loc[decRev, 'Gross Rev Reduction']*100
+                decRev = sheet['Gross Rev Reduction'] > 1
+                newRev = sheet.loc[decRev, 'Gross Rev Reduction']/100
                 sheet.loc[decRev, 'Gross Rev Reduction'] = newRev
             except (KeyError, TypeError):
                 pass
@@ -493,8 +509,8 @@ def main(filepaths, runningCom, fieldMappings, principal):
                 numTier = pd.to_numeric(sheet['Shared Rev Tier Rate'],
                                         errors='coerce').fillna(0)
                 sheet['Shared Rev Tier Rate'] = numTier
-                decTier = sheet['Shared Rev Tier Rate'] <= 1
-                newTier = sheet.loc[decTier, 'Shared Rev Tier Rate']*100
+                decTier = sheet['Shared Rev Tier Rate'] > 1
+                newTier = sheet.loc[decTier, 'Shared Rev Tier Rate']/100
                 sheet.loc[decTier, 'Shared Rev Tier Rate'] = newTier
             except (KeyError, TypeError):
                 pass
