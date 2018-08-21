@@ -31,7 +31,7 @@ def tableFormat(sheetData, sheetName, wbook):
                                        'bg_color': 'yellow'})
     pctFormat = wbook.book.add_format({'font': 'Century Gothic',
                                        'font_size': 8,
-                                       'num_format': 9})
+                                       'num_format': '0.0%'})
     # Format and fit each column.
     i = 0
     for col in sheetData.columns:
@@ -130,7 +130,7 @@ def tailoredCalc(princ, sheet, sheetName):
             # Calculate the Commission Rate.
             comPaid = pd.to_numeric(sheet['Actual Comm Paid'], errors='coerce')
             revenue = pd.to_numeric(sheet['Paid-On Revenue'], errors='coerce')
-            comRate = round(comPaid/revenue)
+            comRate = round(comPaid/revenue, 3)
             sheet['Commission Rate'] = comRate
             print('Columns added from Abracon special processing:\n'
                   'Commission Rate\n'
@@ -406,8 +406,8 @@ def main(filepaths, runningCom, fieldMappings, principal):
         return
 
     # Read in the Master Lookup. Exit if not found.
-    if os.path.exists('Lookup Master 8-1-18.xlsx'):
-        masterLookup = pd.read_excel('Lookup Master 8-1-18.xlsx').fillna('')
+    if os.path.exists('Lookup Master 8-21-18.xlsx'):
+        masterLookup = pd.read_excel('Lookup Master 8-21-18.xlsx').fillna('')
     else:
         print('---\n'
               'No Lookup Master found!\n'
@@ -477,41 +477,41 @@ def main(filepaths, runningCom, fieldMappings, principal):
             # Fix Commission Rate if it got read in as a decimal.
             try:
                 numCom = pd.to_numeric(sheet['Commission Rate'],
-                                       errors='coerce').fillna(0)
+                                       errors='coerce')
                 sheet['Commission Rate'] = numCom
                 decCom = sheet['Commission Rate'] > 0.9
                 newCom = sheet.loc[decCom, 'Commission Rate']/100
-                sheet.loc[decCom, 'Commission Rate'] = newCom
+                sheet.loc[decCom, 'Commission Rate'] = newCom.fillna('')
             except (KeyError, TypeError):
                 pass
             # Fix Split Percentage if it got read in as a decimal.
             try:
                 numSplit = pd.to_numeric(sheet['Split Percentage'],
-                                         errors='coerce').fillna(0)
+                                         errors='coerce')
                 sheet['Split Percentage'] = numSplit
                 decSplit = sheet['Split Percentage'] > 1
                 newSplit = sheet.loc[decSplit, 'Split Percentage']/100
-                sheet.loc[decSplit, 'Split Percentage'] = newSplit
+                sheet.loc[decSplit, 'Split Percentage'] = newSplit.fillna('')
             except (KeyError, TypeError):
                 pass
             # Fix Gross Rev Reduction if it got read in as a decimal.
             try:
                 numRev = pd.to_numeric(sheet['Gross Rev Reduction'],
-                                       errors='coerce').fillna(0)
+                                       errors='coerce')
                 sheet['Gross Rev Reduction'] = numRev
                 decRev = sheet['Gross Rev Reduction'] > 1
                 newRev = sheet.loc[decRev, 'Gross Rev Reduction']/100
-                sheet.loc[decRev, 'Gross Rev Reduction'] = newRev
+                sheet.loc[decRev, 'Gross Rev Reduction'] = newRev.fillna('')
             except (KeyError, TypeError):
                 pass
             # Fix Shared Rev Tier Rate if it got read in as a decimal.
             try:
                 numTier = pd.to_numeric(sheet['Shared Rev Tier Rate'],
-                                        errors='coerce').fillna(0)
+                                        errors='coerce')
                 sheet['Shared Rev Tier Rate'] = numTier
                 decTier = sheet['Shared Rev Tier Rate'] > 1
                 newTier = sheet.loc[decTier, 'Shared Rev Tier Rate']/100
-                sheet.loc[decTier, 'Shared Rev Tier Rate'] = newTier
+                sheet.loc[decTier, 'Shared Rev Tier Rate'] = newTier.fillna('')
             except (KeyError, TypeError):
                 pass
             # Do special processing for principal, if applicable.
@@ -689,7 +689,9 @@ def main(filepaths, runningCom, fieldMappings, principal):
             finalData.loc[row, 'Corrected Distributor'] = corrDist
 
         # Go through each column and convert applicable entries to numeric.
-        for col in list(finalData):
+        cols = list(finalData)
+        cols.remove('Principal')
+        for col in cols:
             finalData.loc[row, col] = pd.to_numeric(finalData.loc[row, col],
                                                     errors='ignore')
 
