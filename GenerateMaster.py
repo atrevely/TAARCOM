@@ -38,7 +38,8 @@ def tableFormat(sheetData, sheetName, wbook):
         # Match the correct formatting to each column.
         acctCols = ['Unit Price', 'Paid-On Revenue', 'Actual Comm Paid',
                     'Total NDS', 'Post-Split NDS', 'Cust Revenue YTD',
-                    'Ext. Cost', 'Unit Cost', 'Total Commissions']
+                    'Ext. Cost', 'Unit Cost', 'Total Commissions',
+                    'Sales Commission']
         pctCols = ['Split Percentage', 'Commission Rate',
                    'Gross Rev Reduction', 'Shared Rev Tier Rate']
         if col in acctCols:
@@ -331,6 +332,7 @@ def main(filepaths, runningCom, fieldMappings, principal):
                         'Year']
     columnNames[7:7] = ['T-End Cust', 'T-Name', 'CM',
                         'Principal', 'Corrected Distributor']
+    columnNames[25:25] = ['Sales Commission']
     columnNames.extend(['CM Split', 'TEMP/FINAL', 'Paid Date', 'From File',
                         'Sales Report Date'])
 
@@ -406,8 +408,8 @@ def main(filepaths, runningCom, fieldMappings, principal):
         return
 
     # Read in the Master Lookup. Exit if not found.
-    if os.path.exists('Lookup Master 8-21-18.xlsx'):
-        masterLookup = pd.read_excel('Lookup Master 8-21-18.xlsx').fillna('')
+    if os.path.exists('MLookTest.xlsx'):
+        masterLookup = pd.read_excel('MLookTest.xlsx').fillna('')
     else:
         print('---\n'
               'No Lookup Master found!\n'
@@ -612,6 +614,9 @@ def main(filepaths, runningCom, fieldMappings, principal):
 
     # Iterate over each row of the newly appended data.
     for row in range(runComLen, len(finalData)):
+        # Fill in the Sales Commission.
+        salesComm = finalData.loc[row, 'Actual Comm Paid']*0.45
+        finalData.loc[row, 'Sales Commission'] = salesComm
         # First match part number.
         partNum = str(finalData.loc[row, 'Part Number']).lower()
         PPN = masterLookup['PPN'].map(lambda x: str(x).lower())
