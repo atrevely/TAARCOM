@@ -15,13 +15,19 @@ def tableFormat(sheetData, sheetName, wbook):
     # Set document formatting.
     docFormat = wbook.book.add_format({'font': 'Century Gothic',
                                        'font_size': 8})
+    newFormat = wbook.book.add_format({'font': 'Century Gothic',
+                                       'font_size': 8,
+                                       'bg_color': 'yellow'})
     # Format and fit each column.
     i = 0
     for col in sheetData.columns:
-        # Set column width and formatting.
         maxWidth = max(len(str(val)) for val in sheetData[col].values)
         sheet.set_column(i, i, maxWidth+0.8, docFormat)
         i += 1
+    # Highlight new root customer rows.
+    for row in range(len(sheetData)):
+        if sheetData.loc[row, 'New Customer?'] == 'Y':
+            sheet.set_row(row+1, None, newFormat)
 
 
 def saveError(*excelFiles):
@@ -145,6 +151,8 @@ def main(filepaths):
                                                 'Salesperson': [salesperson]})
                         rootCustMap = rootCustMap.append(newCust,
                                                          ignore_index=True)
+                        # Mark as a new customer.
+                        sheet.loc[row, 'New Customer?'] == 'Y'
                     else:
                         print('There appears to be a duplicate customer in'
                               ' rootCustomerMappings:\n'
