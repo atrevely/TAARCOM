@@ -25,9 +25,12 @@ def tableFormat(sheetData, sheetName, wbook):
         sheet.set_column(i, i, maxWidth+0.8, docFormat)
         i += 1
     # Highlight new root customer rows.
-    for row in range(len(sheetData)):
-        if sheetData.loc[row, 'New Customer?'] == 'Y':
-            sheet.set_row(row+1, None, newFormat)
+    try:
+        for row in range(len(sheetData)):
+            if sheetData.loc[row, 'New Customer?'] == 'Y':
+                sheet.set_row(row+1, None, newFormat)
+    except KeyError:
+        pass
 
 
 def saveError(*excelFiles):
@@ -120,6 +123,9 @@ def main(filepaths):
             # Rework the index just in case it got read in wrong.
             sheet = newData[sheetName].reset_index(drop=True).fillna('')
 
+            # Add a 'New Customer?' column.
+            sheet['New Customer?'] = ''
+
             # Check to see if column names match.
             noMatch = [val for val in list(insMast) if val not in list(sheet)]
             if noMatch:
@@ -152,7 +158,7 @@ def main(filepaths):
                         rootCustMap = rootCustMap.append(newCust,
                                                          ignore_index=True)
                         # Mark as a new customer.
-                        sheet.loc[row, 'New Customer?'] == 'Y'
+                        sheet.loc[row, 'New Customer?'] = 'Y'
                     else:
                         print('There appears to be a duplicate customer in'
                               ' rootCustomerMappings:\n'
@@ -162,13 +168,14 @@ def main(filepaths):
 
             # Append the sheet to the combined dataframe.
             newDatComb = newDatComb.append(sheet, ignore_index=True)
+            newDatComb = newDatComb.loc[:, colNames]
 
     # Go through the combined insights and prepare sales reports.
     salespeople = newDatComb['Sales'].unique()
     salespeople = [val for val in salespeople if len(val) == 2]
     for sales in salespeople:
         repDat = newDatComb[newDatComb['Sales'] == sales]
-        repDat = repDat.loc[:, colNames]
+        repDat = repDat.loc[:, colNames].reset_index(drop=True)
 
         # Try saving.
         fname = ('Digikey Insights Report'
@@ -196,7 +203,7 @@ def main(filepaths):
     fname2 = 'rootCustomerMappings.xlsx'
     fname3 = ('Digikey Insights Report ' + time.strftime('%m-%d-%Y') +
               ' - Full Report.xlsx')
-    if saveError(fname1):
+    if saveError(fname1, fname2, fname3):
         print('---\n'
               'Insight Master is currently open in Excel!\n'
               'Please close the file and try again.\n'
