@@ -141,10 +141,10 @@ def main(filepaths):
                 cust = sheet.loc[row, 'Root Customer..']
                 salesperson = sheet.loc[row, 'Sales']
                 if not salesperson:
-                    print('Not all entries in the Sales column are filled in!'
+                    print('Missing salesperson entry detected!'
                           '\nPlease check Sales column for each file.'
                           '\n***')
-                if cust:
+                if cust and salesperson:
                     # Find match in rootCustomerMappings.
                     custMatch = rootCustMap['Root Customer'] == cust
                     if sum(custMatch) == 1:
