@@ -15,14 +15,27 @@ def tableFormat(sheetData, sheetName, wbook):
     # Set document formatting.
     docFormat = wbook.book.add_format({'font': 'Century Gothic',
                                        'font_size': 8})
+    acctFormat = wbook.book.add_format({'font': 'Century Gothic',
+                                        'font_size': 8,
+                                        'num_format': 44})
+    commaFormat = wbook.book.add_format({'font': 'Century Gothic',
+                                         'font_size': 8,
+                                         'num_format': 3})
     newFormat = wbook.book.add_format({'font': 'Century Gothic',
                                        'font_size': 8,
                                        'bg_color': 'yellow'})
     # Format and fit each column.
     i = 0
     for col in sheetData.columns:
+        acctCols = ['Unit Price', 'Invoiced Dollars']
+        if col in acctCols:
+            formatting = acctFormat
+        elif col == 'Quantity':
+            formatting = commaFormat
+        else:
+            formatting = docFormat
         maxWidth = max(len(str(val)) for val in sheetData[col].values)
-        sheet.set_column(i, i, maxWidth+0.8, docFormat)
+        sheet.set_column(i, i, maxWidth+0.8, formatting)
         i += 1
     # Highlight new root customer rows.
     try:
@@ -126,6 +139,15 @@ def main(filepaths):
             # Add a 'New Customer?' column.
             sheet['New Customer?'] = ''
 
+            # Calculate the Invoiced Dollars.
+            try:
+                sheet['Invoiced Dollars'] = sheet['Qty']*sheet['Unit Price']
+            except (KeyError, TypeError):
+                print('Error calculating Invoiced Dollars.\n'
+                      'Please make sure Qty and Unit Price are correct.\n'
+                      '***')
+                return
+
             # Check to see if column names match.
             noMatch = [val for val in list(insMast) if val not in list(sheet)]
             if noMatch:
@@ -205,8 +227,9 @@ def main(filepaths):
               ' - Full Report.xlsx')
     if saveError(fname1, fname2, fname3):
         print('---\n'
-              'Insight Master is currently open in Excel!\n'
-              'Please close the file and try again.\n'
+              'Insight Master and/or rootCustomerMappings'
+              'are currently open in Excel!\n'
+              'Please close the file(s) and try again.\n'
               '***')
         return
 
