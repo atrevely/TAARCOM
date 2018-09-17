@@ -141,10 +141,14 @@ def main(filepaths):
 
             # Calculate the Invoiced Dollars.
             try:
-                sheet['Invoiced Dollars'] = sheet['Qty']*sheet['Unit Price']
-            except (KeyError, TypeError):
+                qty = pd.to_numeric(sheet['Qty Shipped'], errors='coerce')
+                price = pd.to_numeric(sheet['Unit Price'], errors='coerce')
+                sheet['Invoiced Dollars'] = qty*price
+                sheet['Invoiced Dollars'].fillna('', inplace=True)
+            except KeyError:
                 print('Error calculating Invoiced Dollars.\n'
-                      'Please make sure Qty and Unit Price are correct.\n'
+                      'Please make sure Qty and Unit Price'
+                      'are in the report.\n'
                       '***')
                 return
 

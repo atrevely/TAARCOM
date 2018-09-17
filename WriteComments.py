@@ -84,7 +84,8 @@ def main(filepaths):
                 matchMatrix.drop(labels='TAARCOM Comments', axis=1,
                                  inplace=True)
                 # Find matching index and copy comments.
-                match = [i for i in range(len(matchMatrix)) if matchMatrix.iloc[i, :].all()]
+                match = [i for i in range(len(matchMatrix))
+                         if matchMatrix.iloc[i, :].all()]
                 if match:
                     insMast.loc[max(match), 'TAARCOM Comments'] = sheet.loc[row, 'TAARCOM Comments']
                 else:

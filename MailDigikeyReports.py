@@ -6,7 +6,8 @@ from email.mime.text import MIMEText
 from email.utils import formatdate
 
 
-def send_mail(send_from, send_to, subject, text, files=None):
+def send_mail(send_from, send_to, subject, files=None,
+              server="127.0.0.1"):
 
     msg = MIMEMultipart()
     msg['From'] = send_from

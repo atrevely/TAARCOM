@@ -378,7 +378,8 @@ class ColumnEdit(QMainWindow):
             newCol = pd.DataFrame(columns=[root.child(colNum).text(0)])
             for childNum in range(root.child(colNum).childCount()):
                 newCol = newCol.append(
-                        {root.child(colNum).text(0): root.child(colNum).child(childNum).text(0)},
+                        {root.child(colNum).text(0):
+                         root.child(colNum).child(childNum).text(0)},
                         ignore_index=True)
             fieldMappings = pd.concat([fieldMappings, newCol], axis=1)
 

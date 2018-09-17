@@ -80,9 +80,15 @@ class GenMast(QMainWindow):
 
         # Button for clearing selections.
         self.btnClearAll = QPushButton('Clear \n File Selections', self)
-        self.btnClearAll.move(450, 30)
+        self.btnClearAll.move(650, 30)
         self.btnClearAll.resize(150, 100)
         self.btnClearAll.clicked.connect(self.clearAllClicked)
+        
+        # Button for copying over comments.
+        self.btnAddComments = QPushButton('Copy Comments', self)
+        self.btnAddComments.move(450, 30)
+        self.btnAddComments.resize(150, 100)
+        self.btnAddComments.clicked.connect(self.addCommentsClicked)
 
         # Button for selecting new file to lookup salespeople.
         self.btnOpenInsight = QPushButton('Select New \n Digikey Insight \n'
@@ -131,6 +137,11 @@ class GenMast(QMainWindow):
         print('All file selections cleared.\n'
               '---')
         self.restoreButtons()
+
+    def addCommentsClicked(self):
+        """Copy over comments."""
+        print('All file selections cleared.\n'
+              '---')
 
     def addInsExecute(self):
         """Runs function for processing new files to master."""
