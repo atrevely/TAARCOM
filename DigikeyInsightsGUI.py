@@ -265,6 +265,7 @@ class GenMast(QMainWindow):
         self.btnLookSales.setEnabled(False)
         self.btnOpenFinished.setEnabled(False)
         self.btnClearAll.setEnabled(False)
+        self.btnAddComments.setEnabled(False)
 
     def restoreButtons(self):
         self.btnAddIns.setEnabled(True)
@@ -272,6 +273,7 @@ class GenMast(QMainWindow):
         self.btnLookSales.setEnabled(True)
         self.btnOpenFinished.setEnabled(True)
         self.btnClearAll.setEnabled(True)
+        self.btnAddComments.setEnabled(True)
 
 
 class Worker(QtCore.QRunnable):

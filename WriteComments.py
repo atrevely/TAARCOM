@@ -79,15 +79,16 @@ def main(filepaths):
 
             # Go through and fill in comments for matching entries.
             for row in range(len(sheet)):
-                matchMatrix = insMast == sheet[row, :]
+                matchMatrix = insMast == sheet.loc[row, :]
                 # Remove comments from matching criteria.
-                matchMatrix.drop(labels='TAARCOM Comments', axis=1,
-                                 inplace=True)
+                matchMatrix.drop(labels=['TAARCOM Comments', 'New Customer?'],
+                                 axis=1, inplace=True)
                 # Find matching index and copy comments.
                 match = [i for i in range(len(matchMatrix))
-                         if matchMatrix.iloc[i, :].all()]
+                         if matchMatrix.loc[i, :].all()]
                 if match:
-                    insMast.loc[max(match), 'TAARCOM Comments'] = sheet.loc[row, 'TAARCOM Comments']
+                    comments = sheet.loc[row, 'TAARCOM Comments']
+                    insMast.loc[max(match), 'TAARCOM Comments'] = comments
                 else:
                     print('Match to Digikey Master not found for row '
                           + str(row))
