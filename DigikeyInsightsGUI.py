@@ -6,6 +6,7 @@ from PyQt5.QtWidgets import QMainWindow, QPushButton, QApplication, \
 from PyQt5.QtCore import pyqtSlot
 import LookupSales
 import AppendInsights
+import WriteComments
 
 
 class Stream(QtCore.QObject):
@@ -67,28 +68,29 @@ class GenMast(QMainWindow):
         # Button for looking up salespeople in Insight Report.
         self.btnLookSales = QPushButton('Lookup \n Salespeople \n'
                                         'for \n Insight File', self)
-        self.btnLookSales.move(650, 200)
+        self.btnLookSales.move(650, 430)
         self.btnLookSales.resize(150, 150)
         self.btnLookSales.clicked.connect(self.lookSalesClicked)
 
         # Button for appending the Insight to the Insight Master.
         self.btnAddIns = QPushButton('Generate Reports \n and Append \n to '
                                      'Insight \n Master', self)
-        self.btnAddIns.move(650, 400)
+        self.btnAddIns.move(650, 230)
         self.btnAddIns.resize(150, 150)
         self.btnAddIns.clicked.connect(self.addInsClicked)
 
+        # Button for copying over comments.
+        self.btnAddComments = QPushButton('Copy Feedback \n to Insight '
+                                          'Master', self)
+        self.btnAddComments.move(650, 30)
+        self.btnAddComments.resize(150, 150)
+        self.btnAddComments.clicked.connect(self.addCommentsClicked)
+
         # Button for clearing selections.
         self.btnClearAll = QPushButton('Clear \n File Selections', self)
-        self.btnClearAll.move(650, 30)
+        self.btnClearAll.move(450, 30)
         self.btnClearAll.resize(150, 100)
         self.btnClearAll.clicked.connect(self.clearAllClicked)
-        
-        # Button for copying over comments.
-        self.btnAddComments = QPushButton('Copy Comments', self)
-        self.btnAddComments.move(450, 30)
-        self.btnAddComments.resize(150, 100)
-        self.btnAddComments.clicked.connect(self.addCommentsClicked)
 
         # Button for selecting new file to lookup salespeople.
         self.btnOpenInsight = QPushButton('Select New \n Digikey Insight \n'
@@ -126,8 +128,13 @@ class GenMast(QMainWindow):
         self.threadpool.start(worker)
 
     def lookSalesClicked(self):
-        """Send the AppendInsights execution to a worker thread."""
+        """Send the LookupSales execution to a worker thread."""
         worker = Worker(self.lookSalesExecute)
+        self.threadpool.start(worker)
+
+    def addCommentsClicked(self):
+        """Send the WriteComments execution to a worker thread."""
+        worker = Worker(self.addCommentsExecute)
         self.threadpool.start(worker)
 
     def clearAllClicked(self):
@@ -138,11 +145,6 @@ class GenMast(QMainWindow):
               '---')
         self.restoreButtons()
 
-    def addCommentsClicked(self):
-        """Copy over comments."""
-        print('All file selections cleared.\n'
-              '---')
-
     def addInsExecute(self):
         """Runs function for processing new files to master."""
         # Check to make sure we've selected files.
@@ -151,6 +153,24 @@ class GenMast(QMainWindow):
             self.lockButtons()
             # Run the GenerateMaster.py file.
             AppendInsights.main(self.filenames)
+            # Clear files.
+            self.filenames = []
+            # Turn buttons back on.
+            self.restoreButtons()
+
+        elif not self.filename:
+            print('No finished Insight files selected!\n'
+                  'Use the Select Commission Files button to select files.\n'
+                  '---')
+
+    def addCommentsExecute(self):
+        """Runs function for copying over comments to Master."""
+        # Check to make sure we've selected files.
+        if self.filenames:
+            # Turn buttons off.
+            self.lockButtons()
+            # Run the GenerateMaster.py file.
+            WriteComments.main(self.filenames)
             # Clear files.
             self.filenames = []
             # Turn buttons back on.
