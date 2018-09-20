@@ -86,9 +86,12 @@ def main(filepaths):
                 # Find matching index and copy comments.
                 match = [i for i in range(len(matchMatrix))
                          if matchMatrix.loc[i, :].all()]
-                if match:
+                if len(match) == 1:
                     comments = sheet.loc[row, 'TAARCOM Comments']
                     insMast.loc[max(match), 'TAARCOM Comments'] = comments
+                elif len(match) > 1:
+                    print('Multiple matches to Digikey Master found for row '
+                          + str(row))
                 else:
                     print('Match to Digikey Master not found for row '
                           + str(row))

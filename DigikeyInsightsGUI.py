@@ -291,7 +291,7 @@ class Worker(QtCore.QRunnable):
 
     @pyqtSlot()
     def run(self):
-        """Initialise the runner function with passed args, kwargs."""
+        """Initialize the runner function with passed args, kwargs."""
         self.fn(*self.args, **self.kwargs)
 
 

@@ -35,13 +35,16 @@ def tableFormat(sheetData, sheetName, wbook):
         else:
             formatting = docFormat
         maxWidth = max(len(str(val)) for val in sheetData[col].values)
+        # Set maximum column width at 120.
+        maxWidth = min(maxWidth, 120)
         sheet.set_column(i, i, maxWidth+0.8, formatting)
         i += 1
-    # Highlight new root customer rows.
+    # Highlight new root customer rows in the full report.
     try:
-        for row in range(len(sheetData)):
-            if sheetData.loc[row, 'New Customer?'] == 'Y':
-                sheet.set_row(row+1, None, newFormat)
+        if sheetName == 'Full Data':
+            for row in range(len(sheetData)):
+                if sheetData.loc[row, 'Not In Map'] == 'Y':
+                    sheet.set_row(row+1, None, newFormat)
     except KeyError:
         pass
 
@@ -86,6 +89,18 @@ def main(filepaths):
         print('---\n'
               'No Root Customer Mappings file found!\n'
               'Please make sure rootCustomerMappings.xlsx'
+              'is in the directory.\n'
+              '***')
+        return
+
+    # Load the Master Account List file.
+    if os.path.exists('Master Account List.xlsx'):
+        mastAcct = pd.read_excel('Master Account List.xlsx',
+                                 'Allacct').fillna('')
+    else:
+        print('---\n'
+              'No Master Account List file found!\n'
+              'Please make sure the Master Account List'
               'is in the directory.\n'
               '***')
         return
@@ -136,8 +151,8 @@ def main(filepaths):
             # Rework the index just in case it got read in wrong.
             sheet = newData[sheetName].reset_index(drop=True).fillna('')
 
-            # Add a 'New Customer?' column.
-            sheet['New Customer?'] = ''
+            # Add a 'Not In Map' column.
+            sheet['Not In Map'] = ''
 
             # Calculate the Invoiced Dollars.
             try:
@@ -183,8 +198,9 @@ def main(filepaths):
                                                 'Salesperson': [salesperson]})
                         rootCustMap = rootCustMap.append(newCust,
                                                          ignore_index=True)
-                        # Mark as a new customer.
-                        sheet.loc[row, 'New Customer?'] = 'Y'
+                        if cust not in list(mastAcct['PROPERNAME']):
+                            # Mark as a new customer.
+                            sheet.loc[row, 'Not In Map'] = 'Y'
                     else:
                         print('There appears to be a duplicate customer in'
                               ' rootCustomerMappings:\n'
@@ -254,9 +270,9 @@ def main(filepaths):
 
     # Write the full salespeople file.
     writer3 = pd.ExcelWriter(fname3, engine='xlsxwriter')
-    newDatComb.to_excel(writer3, sheet_name='Data', index=False)
+    newDatComb.to_excel(writer3, sheet_name='Full Data', index=False)
     # Format as table in Excel.
-    tableFormat(newDatComb, 'Data', writer3)
+    tableFormat(newDatComb, 'Full Data', writer3)
 
     # Save the file.
     writer1.save()
