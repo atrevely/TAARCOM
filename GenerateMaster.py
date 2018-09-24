@@ -619,11 +619,11 @@ def main(filepaths, runningCom, fieldMappings, principal):
         finalData.loc[row, 'Sales Commission'] = salesComm
         # First match part number.
         partNum = str(finalData.loc[row, 'Part Number']).lower()
-        PPN = masterLookup['PPN'].map(lambda x: str(x).lower())
+        PPN = masterLookup['Part Number'].map(lambda x: str(x).lower())
         partNoMatches = masterLookup[partNum == PPN]
         # Next match reported customer.
         repCust = str(finalData.loc[row, 'Reported Customer']).lower()
-        POSCust = partNoMatches['POSCustomer'].map(lambda x: str(x).lower())
+        POSCust = partNoMatches['Reported Customer'].map(lambda x: str(x).lower())
         custMatches = partNoMatches[repCust == POSCust].reset_index()
         # Record number of Lookup Master matches.
         lookMatches = len(custMatches)
@@ -633,15 +633,15 @@ def main(filepaths, runningCom, fieldMappings, principal):
             # Grab primary and secondary sales people from Lookup Master.
             finalData.loc[row, 'CM Sales'] = custMatches['CM Sales']
             finalData.loc[row, 'Design Sales'] = custMatches['Design Sales']
-            finalData.loc[row, 'T-Name'] = custMatches['Tname']
+            finalData.loc[row, 'T-Name'] = custMatches['T-Name']
             finalData.loc[row, 'CM'] = custMatches['CM']
-            finalData.loc[row, 'T-End Cust'] = custMatches['EndCustomer']
+            finalData.loc[row, 'T-End Cust'] = custMatches['T-End Cust']
             finalData.loc[row, 'CM Split'] = custMatches['CM Split']
             # Update usage in lookup Master.
             masterLookup.loc[custMatches['index'],
                              'Last Used'] = time.strftime('%m/%d/%Y')
             # Update OOT city if not already filled in.
-            if custMatches['Tname'][0:3] == 'OOT' and not custMatches['City']:
+            if custMatches['T-Name'][0:3] == 'OOT' and not custMatches['City']:
                 masterLookup.loc[custMatches['index'],
                                  'City'] = finalData.loc[row, 'City']
 
