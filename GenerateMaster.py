@@ -90,9 +90,18 @@ def tailoredPreCalc(princ, sheet, sheetName):
             sheet.rename(columns={'Item': 'OSR Item'}, inplace=True)
         except KeyError:
             pass
+    # Osram special processing.
+    if princ == 'ISS':
+        try:
+            # Rename the 'Commissions Due' column.
+            sheet.rename(columns={'Commission Due': 'Ignore',
+                                  'Name': 'OEM/POS'}, inplace=True)
+            print('Ignoring the Commissions Due and Name columns.')
+        except KeyError:
+            pass
 
 
-def tailoredCalc(princ, sheet, sheetName):
+def tailoredCalc(princ, sheet, sheetName, distMap):
     """Do special processing tailored to the principal input."""
     # Make sure applicable entries exist and are numeric.
     invDol = True
@@ -138,13 +147,24 @@ def tailoredCalc(princ, sheet, sheetName):
                   '---')
     # ISSI special processing.
     if princ == 'ISS':
-        print('Erasing the Comments for OEM entries.\n'
-              '---')
-        if 'Name' in list(sheet):
+        if 'OEM/POS' in list(sheet):
             for row in range(len(sheet)):
-                # For OEM entries, erase comments.
-                if 'OEM' in sheet.loc[row, 'Name']:
-                    sheet.loc[row, 'Comments'] = ''
+                # Deal with OEM idiosyncrasies.
+                if 'OEM' in sheet.loc[row, 'OEM/POS']:
+                    # Put Sales Region into City.
+                    sheet.loc[row, 'City'] = sheet.loc[row, 'Sales Region']
+                    # Check for distributor in Customer
+                    cust = sheet.loc[row, 'Reported Customer']
+                    distName = re.sub('[^a-zA-Z0-9]', '', str(cust).lower())
+                    # Find matches in the Distributor Abbreviations.
+                    distMatches = [i for i in distMap['Search Abbreviation']
+                                   if i in distName]
+                    if len(distMatches) == 1:
+                        # Copy to distributor column.
+                        try:
+                            sheet.loc[row, 'Distributor'] = cust
+                        except KeyError:
+                            pass
     # ATS special Processing.
     if princ == 'ATS':
         if 'Commission Rate' not in list(sheet):
@@ -328,7 +348,7 @@ def main(filepaths, runningCom, fieldMappings, principal):
     # Grab lookup table data names.
     columnNames = list(fieldMappings)
     # Add in non-lookup'd data names.
-    columnNames[0:0] = ['CM Sales', 'Design Sales', 'Quarter', 'Month',
+    columnNames[0:0] = ['CM Sales', 'Design Sales', 'Quarter Shipped', 'Month',
                         'Year']
     columnNames[7:7] = ['T-End Cust', 'T-Name', 'CM',
                         'Principal', 'Corrected Distributor']
@@ -408,8 +428,8 @@ def main(filepaths, runningCom, fieldMappings, principal):
         return
 
     # Read in the Master Lookup. Exit if not found.
-    if os.path.exists('MLookTest.xlsx'):
-        masterLookup = pd.read_excel('MLookTest.xlsx').fillna('')
+    if os.path.exists('Lookup Master 8-21-18.xlsx'):
+        masterLookup = pd.read_excel('Lookup Master 8-21-18.xlsx').fillna('')
     else:
         print('---\n'
               'No Lookup Master found!\n'
@@ -517,7 +537,7 @@ def main(filepaths, runningCom, fieldMappings, principal):
             except (KeyError, TypeError):
                 pass
             # Do special processing for principal, if applicable.
-            tailoredCalc(principal, sheet, sheetName)
+            tailoredCalc(principal, sheet, sheetName, distMap)
             # Drop entries with emtpy part number.
             try:
                 sheet.dropna(subset=['Part Number'], inplace=True)
@@ -675,9 +695,8 @@ def main(filepaths, runningCom, fieldMappings, principal):
             # Fill in quarter/year/month data.
             finalData.loc[row, 'Year'] = date.year
             finalData.loc[row, 'Month'] = calendar.month_name[date.month][0:3]
-            finalData.loc[row, 'Quarter'] = (str(date.year)
-                                             + 'Q'
-                                             + str(math.ceil(date.month/3)))
+            finalData.loc[row, 'Quarter Shipped'] = (str(date.year) + 'Q'
+                                                     + str(math.ceil(date.month/3)))
 
         # Find a corrected distributor match.
         # Strip extraneous characters and all spaces, and make lowercase.
