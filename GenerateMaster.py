@@ -313,7 +313,13 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
         # Find percent error in Commission Dollars.
         realCom = paidDol*sheet['Commission Rate']
         realCom = realCom[realCom > 1]
-        absError = abs(realCom - sheet['Actual Comm Paid'])
+        # Find commissions paid.
+        if princ == 'ISS':
+            # ISSI holds back 10% in Actual Comm Due.
+            paidCom = sheet['Commission Due']
+        else:
+            paidCom = sheet['Actual Comm Paid']
+        absError = abs(realCom - paidCom)
         if any(absError > 1):
             print('Greater than $1 error in Commission Dollars detected '
                   'in the following rows:')
@@ -473,6 +479,7 @@ def main(filepaths, runningCom, fieldMappings, principal):
             tailoredPreCalc(principal, sheet, sheetName)
 
             # Iterate over each column of data that we want to append.
+            missingCols = []
             for dataName in list(fieldMappings):
                 # Grab list of names that the data could potentially be under.
                 nameList = fieldMappings[dataName].dropna().tolist()
@@ -484,7 +491,7 @@ def main(filepaths, runningCom, fieldMappings, principal):
                 # or if we found too many columns that match,
                 # then rename the column in the sheet to the master name.
                 if not columnName:
-                    print('No column found for ' + dataName)
+                    missingCols.append(dataName)
                 elif len(columnName) > 1:
                     print('Found multiple matches for ' + dataName
                           + '\nMatching columns: %s' %
@@ -597,6 +604,10 @@ def main(filepaths, runningCom, fieldMappings, principal):
                     appCols = matchingColumns + ['From File', 'Principal']
                     finalData = finalData.append(sheet[appCols],
                                                  ignore_index=True)
+                    # Let us know which columns are missing.
+                    if missingCols:
+                        print('The following columns were not found: %s' %
+                              ', '.join(map(str, missingCols)))
                 else:
                     print('Found no data on this tab. Moving on.\n'
                           '-')

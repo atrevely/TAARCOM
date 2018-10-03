@@ -94,13 +94,13 @@ def main(filepaths):
         return
 
     # Load the Master Account List file.
-    if os.path.exists('Master Account List.xlsx'):
-        mastAcct = pd.read_excel('Master Account List.xlsx',
+    if os.path.exists('Master Account List 9-2018.xlsx'):
+        mastAcct = pd.read_excel('Master Account List 9-2018.xlsx',
                                  'Allacct').fillna('')
     else:
         print('---\n'
               'No Master Account List file found!\n'
-              'Please make sure the Master Account List'
+              'Please make sure the Master Account List '
               'is in the directory.\n'
               '***')
         return
