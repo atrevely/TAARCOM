@@ -515,8 +515,11 @@ def main(filepaths, runningCom, fieldMappings, principal):
                 pass
             # Fix Split Percentage if it got read in as a decimal.
             try:
-                numSplit = pd.to_numeric(sheet['Split Percentage'],
-                                         errors='coerce')
+                # Remove '%' sign if present.
+                numSplit = sheet['Split Percentage'].astype(str).map(
+                                lambda x: x.strip('%'))
+                # Conver to numeric.
+                numSplit = pd.to_numeric(numSplit, errors='coerce')
                 sheet['Split Percentage'] = numSplit
                 decSplit = sheet['Split Percentage'] > 1
                 newSplit = sheet.loc[decSplit, 'Split Percentage']/100
@@ -607,7 +610,8 @@ def main(filepaths, runningCom, fieldMappings, principal):
                     # Let us know which columns are missing.
                     if missingCols:
                         print('The following columns were not found: %s' %
-                              ', '.join(map(str, missingCols)))
+                              ', '.join(map(str, missingCols))
+                              + '\n-')
                 else:
                     print('Found no data on this tab. Moving on.\n'
                           '-')
