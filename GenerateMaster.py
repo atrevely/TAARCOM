@@ -1,5 +1,6 @@
 import pandas as pd
 from dateutil.parser import parse
+from xlrd import XLRDError
 import time
 import calendar
 import math
@@ -90,13 +91,13 @@ def tailoredPreCalc(princ, sheet, sheetName):
             sheet.rename(columns={'Item': 'OSR Item'}, inplace=True)
         except KeyError:
             pass
-    # Osram special processing.
+    # ISSI special processing.
     if princ == 'ISS':
         try:
             # Rename the 'Commissions Due' column.
             sheet.rename(columns={'Commission Due': 'Ignore',
                                   'Name': 'OEM/POS'}, inplace=True)
-            print('Ignoring the Commissions Due and Name columns.')
+            print('Ignoring the Commissions Due column.')
         except KeyError:
             pass
 
@@ -412,9 +413,25 @@ def main(filepaths, runningCom, fieldMappings, principal):
     # Each dictionary has a dataframe for each sheet in the file.
     inputData = [pd.read_excel(filepath, None) for filepath in filepaths]
 
-    # Read in distMap. Exit if not found.
+    # Read in distMap. Exit if not found or if errors in file.
     if os.path.exists('distributorLookup.xlsx'):
-        distMap = pd.read_excel('distributorLookup.xlsx', 'Distributors')
+        try:
+            distMap = pd.read_excel('distributorLookup.xlsx', 'Distributors')
+        except XLRDError:
+            print('---\n'
+                  'Error reading sheet name for distributorLookup.xlsx!\n'
+                  'Please make sure the main tab is named Distributors.\n'
+                  '***')
+            return
+        # Check the columns in distMap.
+        distMapCols = ['Corrected Dist', 'Search Abbreviation']
+        missCols = [i for i in distMapCols if i not in list(distMap)]
+        if missCols:
+            print('The following columns were not detected in '
+                  'distributorLookup.xlsx:\n%s' %
+                  ', '.join(map(str, missCols))
+                  + '\n***')
+            return
     else:
         print('---\n'
               'No distributor lookup file found!\n'
@@ -434,8 +451,8 @@ def main(filepaths, runningCom, fieldMappings, principal):
         return
 
     # Read in the Master Lookup. Exit if not found.
-    if os.path.exists('Lookup Master 8-21-18.xlsx'):
-        masterLookup = pd.read_excel('Lookup Master 8-21-18.xlsx').fillna('')
+    if os.path.exists('Master Lookup Rebuild v1.xlsx'):
+        masterLookup = pd.read_excel('Master Lookup Rebuild v1.xlsx').fillna('')
     else:
         print('---\n'
               'No Lookup Master found!\n'
