@@ -423,7 +423,7 @@ def main(filepaths, runningCom, fieldMappings, principal):
                   'Please make sure the main tab is named Distributors.\n'
                   '***')
             return
-        # Check the columns in distMap.
+        # Check the column names.
         distMapCols = ['Corrected Dist', 'Search Abbreviation']
         missCols = [i for i in distMapCols if i not in list(distMap)]
         if missCols:
@@ -441,7 +441,15 @@ def main(filepaths, runningCom, fieldMappings, principal):
 
     # Read in file of entries that need fixing. Exit if not found.
     if os.path.exists('Entries Need Fixing.xlsx'):
-        fixList = pd.read_excel('Entries Need Fixing.xlsx', 'Data').fillna('')
+        try:
+            fixList = pd.read_excel('Entries Need Fixing.xlsx',
+                                    'Data').fillna('')
+        except XLRDError:
+            print('---\n'
+                  'Error reading sheet name for Entries Need Fixing.xlsx!\n'
+                  'Please make sure the main tab is named Data.\n'
+                  '***')
+            return
     else:
         print('---\n'
               'No Entries Need Fixing file found!\n'
@@ -453,6 +461,17 @@ def main(filepaths, runningCom, fieldMappings, principal):
     # Read in the Master Lookup. Exit if not found.
     if os.path.exists('Master Lookup Rebuild v1.xlsx'):
         masterLookup = pd.read_excel('Master Lookup Rebuild v1.xlsx').fillna('')
+        # Check the column names.
+        lookupCols = ['CM Sales', 'Design Sales', 'CM Split',
+                      'Reported Customer', 'CM', 'Part Number', 'T-Name',
+                      'T-End Cust', 'Last Used', 'Principal', 'City']
+        missCols = [i for i in lookupCols if i not in list(masterLookup)]
+        if missCols:
+            print('The following columns were not detected in '
+                  'Lookup Master.xlsx:\n%s' %
+                  ', '.join(map(str, missCols))
+                  + '\n***')
+            return
     else:
         print('---\n'
               'No Lookup Master found!\n'

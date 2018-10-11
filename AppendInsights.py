@@ -1,6 +1,7 @@
 import pandas as pd
 import os
 import time
+from xlrd import XLRDError
 
 
 def tableFormat(sheetData, sheetName, wbook):
@@ -83,8 +84,24 @@ def main(filepaths):
 
     # Load the Root Customer Mappings file.
     if os.path.exists('rootCustomerMappings.xlsx'):
-        rootCustMap = pd.read_excel('rootCustomerMappings.xlsx',
-                                    'Sales Lookup').fillna('')
+        try:
+            rootCustMap = pd.read_excel('rootCustomerMappings.xlsx',
+                                        'Sales Lookup').fillna('')
+        except XLRDError:
+            print('---\n'
+                  'Error reading sheet name for rootCustomerMappings.xlsx!\n'
+                  'Please make sure the main tab is named Sales Lookup.\n'
+                  '***')
+            return
+        # Check the column names.
+        rootMapCols = ['Root Customer', 'Salesperson']
+        missCols = [i for i in rootMapCols if i not in list(rootCustMap)]
+        if missCols:
+            print('The following columns were not detected in '
+                  'rootCustomerMappings.xlsx:\n%s' %
+                  ', '.join(map(str, missCols))
+                  + '\n***')
+            return
     else:
         print('---\n'
               'No Root Customer Mappings file found!\n'
@@ -95,8 +112,24 @@ def main(filepaths):
 
     # Load the Master Account List file.
     if os.path.exists('Master Account List 10-5-2018.xlsx'):
-        mastAcct = pd.read_excel('Master Account List 10-5-2018.xlsx',
-                                 'Allacct').fillna('')
+        try:
+            mastAcct = pd.read_excel('Master Account List 10-5-2018.xlsx',
+                                     'Allacct').fillna('')
+        except XLRDError:
+            print('---\n'
+                  'Error reading sheet name for Master Account List.xlsx!\n'
+                  'Please make sure the main tab is named Allacct.\n'
+                  '***')
+            return
+        # Check the column names.
+        mastCols = ['PROPERNAME', 'SLS']
+        missCols = [i for i in mastCols if i not in list(mastAcct)]
+        if missCols:
+            print('The following columns were not detected in '
+                  'Master Account List.xlsx:\n%s' %
+                  ', '.join(map(str, missCols))
+                  + '\n***')
+            return
     else:
         print('---\n'
               'No Master Account List file found!\n'
