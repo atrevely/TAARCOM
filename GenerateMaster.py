@@ -100,6 +100,21 @@ def tailoredPreCalc(princ, sheet, sheetName):
             print('Ignoring the Commissions Due column.')
         except KeyError:
             pass
+    # QRF special processing.
+    if princ == 'QRF':
+        if sheetName == 'OEM':
+            # The column Name 11 needs to be deleted.
+            try:
+                sheet.rename(columns={'Name 11': 'Unmapped'}, inplace=True)
+            except KeyError:
+                pass
+        elif sheetName == 'POS':
+            # The column Customer is actually the Distributor.
+            try:
+                sheet.rename(columns={'Customer': 'Distributor',
+                                      'BillDocNo': 'Unmapped'}, inplace=True)
+            except KeyError:
+                pass
 
 
 def tailoredCalc(princ, sheet, sheetName, distMap):
@@ -303,17 +318,23 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
     # Cosel special Processing.
     if princ == 'COS':
         # Only work with the Details tab.
-        if sheetName == 'Details' and 'Ext. Cost' in list(sheet):
+        if sheetName == 'Details' and extCost:
             print('Calculating commissions as 5% of Cost Ext.\n'
                   'Subtracting 2% off of commissions for Allied shipments.\n'
                   '---')
             for row in sheet.index:
                 sheet.loc[row, 'Commission Rate'] = 0.05
-                extCost = sheet.loc[row, 'Ext. Cost']
+                extenCost = sheet.loc[row, 'Ext. Cost']
                 if sheet.loc[row, 'Distributor'] == 'ALLIED':
-                    sheet.loc[row, 'Actual Comm Paid'] = 0.05*0.98*extCost
+                    sheet.loc[row, 'Actual Comm Paid'] = 0.05*0.98*extenCost
                 else:
-                    sheet.loc[row, 'Actual Comm Paid'] = 0.05*extCost
+                    sheet.loc[row, 'Actual Comm Paid'] = 0.05*extenCost
+    # Globtek special Processing.
+    if princ == 'GLO':
+        # Make sure we have Invoiced Dollars.
+        if invDol:
+            sheet['Commission Rate'] = 0.05
+            sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*0.05
 
     # Test the Commission Dollars to make sure they're correct.
     if 'Paid-On Revenue' in list(sheet):
