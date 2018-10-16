@@ -126,7 +126,7 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
         commRateNotIn = 'Commission Rate' not in list(sheet)
         if invIn and commNotIn:
             # Input missing data. Commission Rate is always 3% here.
-            sheet['Commission Rate'] = .03
+            sheet['Commission Rate'] = 0.03
             sheet['Paid-On Revenue'] = pd.to_numeric(sheet['Invoiced Dollars'],
                                                      errors='coerce')*0.7
             sheet['Actual Comm Paid'] = sheet['Paid-On Revenue']*.03
@@ -171,19 +171,19 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
         if 'Commission Rate' not in list(sheet):
             # Fill in commission rates and commission paid.
             if 'Arrow' in sheetName and invDol:
-                sheet['Commission Rate'] = .035
+                sheet['Commission Rate'] = 0.035
                 sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*0.035
                 sheet['Distributor'] = 'Arrow'
                 print('Commission rate filled in for this tab: 3.5%\n'
                       '---')
             elif 'Digi' in sheetName and invDol:
-                sheet['Commission Rate'] = .02
+                sheet['Commission Rate'] = 0.02
                 sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*0.02
                 sheet['Distributor'] = 'Digikey'
                 print('Commission rate filled in for this tab: 2%\n'
                       '---')
             elif 'Mouser' in sheetName and invDol:
-                sheet['Commission Rate'] = .02
+                sheet['Commission Rate'] = 0.02
                 sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*0.02
                 sheet['Distributor'] = 'Mouser'
                 print('Commission rate filled in for this tab: 2%\n'
@@ -205,7 +205,7 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
             return
         # Fill in commission rates and commission paid.
         if 'US' in sheetName and invDol:
-            sheet['Commission Rate'] = .05
+            sheet['Commission Rate'] = 0.05
             sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*0.05
             print('Commission rate filled in for this tab: 5%\n'
                   '---')
@@ -213,7 +213,7 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
             print('Correcting customer names.\n'
                   '---')
         elif 'TW' in sheetName and invDol:
-            sheet['Commission Rate'] = .04
+            sheet['Commission Rate'] = 0.04
             sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*0.04
             print('Commission rate filled in for this tab: 4%\n'
                   '---')
@@ -221,7 +221,7 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
             print('Correcting customer names.\n'
                   '---')
         elif 'POS' in sheetName and extCost:
-            sheet['Commission Rate'] = .03
+            sheet['Commission Rate'] = 0.03
             sheet.rename(columns={'Reported End Customer':
                                   'Reported Customer'}, inplace=True)
             sheet['Actual Comm Paid'] = sheet['Ext. Cost']*0.03
@@ -300,6 +300,20 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
         # For World Star POS tab, enter World Star as the distributor.
         if 'World' in sheetName:
             sheet['Distributor'] = 'World Star'
+    # Cosel special Processing.
+    if princ == 'COS':
+        # Only work with the Details tab.
+        if sheetName == 'Details' and 'Ext. Cost' in list(sheet):
+            print('Calculating commissions as 5% of Cost Ext.\n'
+                  'Subtracting 2% off of commissions for Allied shipments.\n'
+                  '---')
+            for row in sheet.index:
+                sheet.loc[row, 'Commission Rate'] = 0.05
+                extCost = sheet.loc[row, 'Ext. Cost']
+                if sheet.loc[row, 'Distributor'] == 'ALLIED':
+                    sheet.loc[row, 'Actual Comm Paid'] = 0.05*0.98*extCost
+                else:
+                    sheet.loc[row, 'Actual Comm Paid'] = 0.05*extCost
 
     # Test the Commission Dollars to make sure they're correct.
     if 'Paid-On Revenue' in list(sheet):

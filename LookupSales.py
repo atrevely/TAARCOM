@@ -1,5 +1,6 @@
 import pandas as pd
 import os
+from xlrd import XLRDError
 
 
 def tableFormat(sheetData, sheetName, wbook):
@@ -51,8 +52,24 @@ def main(filepath):
     """
     # Load the Root Customer Mappings file.
     if os.path.exists('rootCustomerMappings.xlsx'):
-        rootCustMap = pd.read_excel('rootCustomerMappings.xlsx',
-                                    'Sales Lookup').fillna('')
+        try:
+            rootCustMap = pd.read_excel('rootCustomerMappings.xlsx',
+                                        'Sales Lookup').fillna('')
+        except XLRDError:
+            print('---\n'
+                  'Error reading sheet name for rootCustomerMappings.xlsx!\n'
+                  'Please make sure the main tab is named Sales Lookup.\n'
+                  '***')
+            return
+        # Check the column names.
+        rootMapCols = ['Root Customer', 'Salesperson']
+        missCols = [i for i in rootMapCols if i not in list(rootCustMap)]
+        if missCols:
+            print('The following columns were not detected in '
+                  'rootCustomerMappings.xlsx:\n%s' %
+                  ', '.join(map(str, missCols))
+                  + '\n***')
+            return
     else:
         print('---\n'
               'No Root Customer Mappings file found!\n'
