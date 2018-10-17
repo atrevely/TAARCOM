@@ -518,6 +518,12 @@ def main(filepaths, runningCom, fieldMappings, principal):
     # Iterate through each file that we're appending to Running Commissions.
     fileNum = 0
     for filename in filenames:
+        # If principal is auto-detected, find it from filename.
+        if principal == 'AUTO-DECTECT':
+            principal = filename[0:3]
+            print('---\n'
+                  'Principal detected as: ' + principal)
+
         # Grab the next file from the list.
         newData = inputData[fileNum]
         fileNum += 1

@@ -214,9 +214,9 @@ class GenMast(QMainWindow):
             print('Current master list provided:\n'
                   + self.master
                   + '\n---')
-            if 'Running Master' not in self.master:
+            if 'Running Commissions' not in self.master:
                 print('Caution!\n'
-                      'The file uploaded as a Running Commissions'
+                      'The file uploaded as a Running Commissions '
                       'does not appear to be correct.\n'
                       '---')
 
