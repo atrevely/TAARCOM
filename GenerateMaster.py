@@ -368,7 +368,7 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
 
 
 # The main function.
-def main(filepaths, runningCom, fieldMappings, principal):
+def main(filepaths, runningCom, fieldMappings, inPrinc):
     """Processes commission files and appends them to Running Commissions.
 
     Columns in individual commission files are identified and appended to the
@@ -518,12 +518,6 @@ def main(filepaths, runningCom, fieldMappings, principal):
     # Iterate through each file that we're appending to Running Commissions.
     fileNum = 0
     for filename in filenames:
-        # If principal is auto-detected, find it from filename.
-        if principal == 'AUTO-DECTECT':
-            principal = filename[0:3]
-            print('---\n'
-                  'Principal detected as: ' + principal)
-
         # Grab the next file from the list.
         newData = inputData[fileNum]
         fileNum += 1
@@ -532,6 +526,13 @@ def main(filepaths, runningCom, fieldMappings, principal):
               + '\n______________________________________________________')
         # Set total commissions for file back to zero.
         totalComm = 0
+
+        # If principal is auto-detected, find it from filename.
+        if inPrinc == 'AUTO-DETECT':
+            principal = filename[0:3]
+            print('Principal detected as: ' + principal)
+        else:
+            principal = inPrinc
 
         # Iterate over each dataframe in the ordered dictionary.
         # Each sheet in the file is its own dataframe in the dictionary.
@@ -651,6 +652,12 @@ def main(filepaths, runningCom, fieldMappings, principal):
                 print('No part numbers found on this tab.\n'
                       'Skipping tab.\n'
                       '-')
+            elif 'Invoice Date' not in list(sheet):
+                # Tab has no date column, so report and exit.
+                print('No Invoice Date column found for this tab.\n'
+                      'Please make sure the Invoice Date is mapped.\n'
+                      '***')
+                return
             else:
                 # Remove entries with no commissions dollars.
                 # Coerce entries with bad data (non-numeric gets 0).
@@ -782,13 +789,18 @@ def main(filepaths, runningCom, fieldMappings, principal):
         # If no error found in date, fill in the month/year/quarter
         if not dateError:
             date = parse(dateGiven)
-            # Cast date format into mm/dd/yyyy.
-            finalData.loc[row, 'Invoice Date'] = date.strftime('%m/%d/%Y')
-            # Fill in quarter/year/month data.
-            finalData.loc[row, 'Year'] = date.year
-            finalData.loc[row, 'Month'] = calendar.month_name[date.month][0:3]
-            finalData.loc[row, 'Quarter Shipped'] = (str(date.year) + 'Q'
-                                                     + str(math.ceil(date.month/3)))
+            # Make sure the date actually makes sense.
+            currentYear = int(time.strftime('%Y'))
+            if currentYear - date.year not in [0, 1]:
+                dateError = True
+            else:
+                # Cast date format into mm/dd/yyyy.
+                finalData.loc[row, 'Invoice Date'] = date.strftime('%m/%d/%Y')
+                # Fill in quarter/year/month data.
+                finalData.loc[row, 'Year'] = date.year
+                finalData.loc[row, 'Month'] = calendar.month_name[date.month][0:3]
+                finalData.loc[row, 'Quarter Shipped'] = (str(date.year) + 'Q'
+                                                         + str(math.ceil(date.month/3)))
 
         # Find a corrected distributor match.
         # Strip extraneous characters and all spaces, and make lowercase.
@@ -803,6 +815,9 @@ def main(filepaths, runningCom, fieldMappings, principal):
             mloc = distMap['Search Abbreviation'] == distMatches[0]
             corrDist = distMap[mloc].iloc[0]['Corrected Dist']
             finalData.loc[row, 'Corrected Distributor'] = corrDist
+        elif not distName:
+            finalData.loc[row, 'Corrected Distributor'] = ''
+            distMatches = ['Empty']
 
         # Go through each column and convert applicable entries to numeric.
         cols = list(finalData)
