@@ -367,6 +367,7 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
         pass
 
 
+# %%
 # The main function.
 def main(filepaths, runningCom, fieldMappings, inPrinc):
     """Processes commission files and appends them to Running Commissions.

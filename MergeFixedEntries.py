@@ -14,7 +14,7 @@ def tableFormat(sheetData, sheetName, wbook):
     sheet = wbook.sheets[sheetName]
     header = [{'header': val} for val in sheetData.columns.tolist()]
     setStyle = {'header_row': True, 'style': 'TableStyleMedium5',
-                'columns': header, 'font': 'Century Gothic'}
+                'columns': header}
     sheet.add_table(0, 0, len(sheetData.index),
                     len(sheetData.columns)-1, setStyle)
     # Set document formatting.
@@ -26,17 +26,42 @@ def tableFormat(sheetData, sheetName, wbook):
     commaFormat = wbook.book.add_format({'font': 'Century Gothic',
                                          'font_size': 8,
                                          'num_format': 3})
+    estFormat = wbook.book.add_format({'font': 'Century Gothic',
+                                       'font_size': 8,
+                                       'num_format': 44,
+                                       'bg_color': 'yellow'})
+    pctFormat = wbook.book.add_format({'font': 'Century Gothic',
+                                       'font_size': 8,
+                                       'num_format': '0.0%'})
     # Format and fit each column.
     i = 0
     for col in sheetData.columns:
         # Match the correct formatting to each column.
-        acctCols = ['Unit Price', 'Invoiced Dollars', 'Paid-On Revenue',
-                    'Actual Comm Paid', 'Total NDS', 'Post-Split NDS',
-                    'Customer Revenue YTD']
+        acctCols = ['Unit Price', 'Paid-On Revenue', 'Actual Comm Paid',
+                    'Total NDS', 'Post-Split NDS', 'Cust Revenue YTD',
+                    'Ext. Cost', 'Unit Cost', 'Total Commissions',
+                    'Sales Commission']
+        pctCols = ['Split Percentage', 'Commission Rate',
+                   'Gross Rev Reduction', 'Shared Rev Tier Rate']
         if col in acctCols:
             formatting = acctFormat
+        elif col in pctCols:
+            formatting = pctFormat
         elif col == 'Quantity':
             formatting = commaFormat
+        elif col == 'Invoiced Dollars':
+            # Highlight any estimates in Invoiced Dollars.
+            for row in range(len(sheetData[col])):
+                if sheetData.loc[row, 'Ext. Cost']:
+                    sheet.write(row+1, i,
+                                sheetData.loc[row, 'Invoiced Dollars'],
+                                estFormat)
+                else:
+                    sheet.write(row+1, i,
+                                sheetData.loc[row, 'Invoiced Dollars'],
+                                acctFormat)
+            # Formatting already done, so leave blank.
+            formatting = []
         else:
             formatting = docFormat
         # Set column width and formatting.
@@ -141,7 +166,6 @@ def main():
               '***')
         return
 
-
     # Grab the lines that have been fixed.
     endCustFixed = fixList[fixList['T-End Cust'] != '']
     fixed = endCustFixed[endCustFixed['Invoice Date'] != '']
@@ -153,16 +177,14 @@ def main():
         dateError = False
         try:
             date = fixed.loc[row, 'Invoice Date']
-            if isinstance(date, pd.Timestamp):
-                fixed.loc[row, 'Invoice Date'] = str(date)
-            parse(date)
+            date = parse(str(date))
             # Make sure the date actually makes sense.
             currentYear = int(time.strftime('%Y'))
             if currentYear - date.year not in [0, 1]:
                 dateError = True
         except ValueError:
             dateError = True
-            print('Error parsing date for Master Index ' + str(row))
+            print('Error parsing date for Master Index row ' + str(row))
         # If no error found in date, finish filling out the fixed entry.
         if not dateError:
             # Cast date format into mm/dd/yyyy.
@@ -177,9 +199,6 @@ def main():
             # Replace the Running Commissions entry with the fixed one.
             RCIndex = fixed.loc[row, 'Running Com Index']
             runningCom.loc[RCIndex, :] = fixed.loc[row, :]
-            # Delete the fixed entry from the Needs Fixing file.
-            fixIndex = fixList['Running Com Index']
-            fixList.drop(fixList[fixIndex == RCIndex].index, inplace=True)
 
             # Append entry to Lookup Master, if applicable.
             # Check if entry is individual, misc, or unknown.
@@ -203,36 +222,38 @@ def main():
                                                     'CM', 'Principal',
                                                     'Part Number', 'City']]
                     lookupEntry['Date Added'] = time.strftime('%m/%d/%Y')
-                    lookupEntry['Last Used'] = fixList.loc[row, 'Invoice Date']
+                    invDate = pd.Timestamp(fixList.loc[row, 'Invoice Date'])
+                    lookupEntry['Last Used'] = invDate
+                    # Merge to the Lookup Master.
                     mastLook = mastLook.append(lookupEntry, ignore_index=True)
 
-
+            # Delete the fixed entry from the Needs Fixing file.
+            fixList.drop(row, inplace=True)
 
     # %%
-    # Check if any entries are duplicates, then quarantine old versions.
-    duplicates = mastLook.duplicated(subset=['Reported Customer',
-                                             'Part Number'],
-                                     keep='last')
-    deprecatedEntries = mastLook[duplicates].reset_index(drop=True)
-    mastLook = mastLook[~duplicates].reset_index(drop=True)
+    # Re-index the fix list and drop nans in Lookup Master
+    fixList.reset_index(drop=True, inplace=True)
+    mastLook.fillna('', inplace=True)
     # Check for entries that are too old and quarantine them.
     twoYearsAgo = datetime.datetime.today() - datetime.timedelta(days=720)
-    dateCutoff = mastLook['Last Used'] < twoYearsAgo.strftime('%m/%d/%Y')
+    try:
+        lastUsed = mastLook['Last Used'].map(lambda x: x.strftime('%Y%m%d'))
+    except AttributeError:
+        print('Error reading one or more dates in the Lookup Master!\n'
+              'Make sure the Last Used column is all MM/DD/YYYY format.\n'
+              '***')
+        return
+    dateCutoff = lastUsed < twoYearsAgo.strftime('%Y%m%d')
     oldEntries = mastLook[dateCutoff].reset_index(drop=True)
     mastLook = mastLook[~dateCutoff].reset_index(drop=True)
     # Record the date we quarantined the entries.
-    deprecatedEntries.loc[:, 'Date Quarantined'] = time.strftime('%m/%d/%Y')
     oldEntries.loc[:, 'Date Quarantined'] = time.strftime('%m/%d/%Y')
     # Add deprecated entries to the quarantine.
     quarantined = quarantined.append(oldEntries,
                                      ignore_index=True)
-    quarantined = quarantined.append(deprecatedEntries,
-                                      ignore_index=True)
     # Notify us of changes.
     print(str(len(oldEntries))
-          + 'entries quarantied for being more than 2 years old.\n'
-          + str(len(deprecatedEntries))
-          + 'entries quarantined for being deprecated (old duplicates).')
+          + ' entries quarantied for being more than 2 years old.\n')
 
     # Check if the files we're going to save are open already.
     fname1 = 'Running Commissions ' + time.strftime('%Y-%m-%d-%H%M') + '.xlsx'
@@ -269,12 +290,16 @@ def main():
 
     # Write the Quarantined Lookups file.
     writer4 = pd.ExcelWriter(fname4, engine='xlsxwriter')
-    quarantinedLookups.to_excel(writer4, sheet_name='Lookup', index=False)
+    quarantined.to_excel(writer4, sheet_name='Lookup', index=False)
     # Format as table in Excel.
-    tableFormat(quarantinedLookups, 'Lookup', writer4)
+    tableFormat(quarantined, 'Lookup', writer4)
 
     # Save the files.
     writer1.save()
     writer2.save()
     writer3.save()
     writer4.save()
+
+    print('---\n'
+          'Fixed entries copied over successfully!\n'
+          '+++')

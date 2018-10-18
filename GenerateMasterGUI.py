@@ -117,9 +117,9 @@ class GenMast(QMainWindow):
         self.btnEditColumns.clicked.connect(self.editColumnsClicked)
 
         # Button for writing fixed entries.
-        self.btnFixEntries = QPushButton('Copy Fixed Entries', self)
-        self.btnFixEntries.move(550, 30)
-        self.btnFixEntries.resize(150, 100)
+        self.btnFixEntries = QPushButton('Copy \n Fixed Entries', self)
+        self.btnFixEntries.move(850, 200)
+        self.btnFixEntries.resize(150, 150)
         self.btnFixEntries.clicked.connect(self.fixEntriesClicked)
 
         # Button for clearing filename and master choices.
@@ -151,7 +151,7 @@ class GenMast(QMainWindow):
         self.textBox.move(50, 150)
 
         # Set window size and title, then show the window.
-        self.setGeometry(300, 300, 900, 600)
+        self.setGeometry(300, 300, 1100, 600)
         self.setWindowTitle('Commissions Manager 2.0')
         self.show()
 
@@ -274,7 +274,7 @@ class GenMast(QMainWindow):
         self.btnEditColumns.setEnabled(False)
         self.btnClearAll.setEnabled(False)
         self.princMenu.setEnabled(False)
-        self.btnFixedEntries.setEnabled(False)
+        self.btnFixEntries.setEnabled(False)
 
     def restoreButtons(self):
         self.btnGenMast.setEnabled(True)
@@ -283,7 +283,7 @@ class GenMast(QMainWindow):
         self.btnEditColumns.setEnabled(True)
         self.btnClearAll.setEnabled(True)
         self.princMenu.setEnabled(True)
-        self.btnFixedEntries.setEnabled(True)
+        self.btnFixEntries.setEnabled(True)
 
 
 class Worker(QtCore.QRunnable):
