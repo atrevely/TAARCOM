@@ -79,63 +79,76 @@ def main():
                                    'Files Processed').fillna('')
 
     # Load up the Master Lookup.
-    mastLook = pd.read_excel('Lookup Master 6-27-18.xlsx').fillna('')
+    mastLook = pd.read_excel('Lookup Master Rebuild v1.xlsx').fillna('')
 
     # Load the Quarantined Lookups.
     #quarantinedLookups = pd.read_excel('Quarantined Lookups.xlsx').fillna('')
 
     # Grab the lines that have been fixed.
     endCustFixed = fixList[fixList['T-End Cust'] != '']
-    dateFixed = endCustFixed[endCustFixed['Invoice Date'] != '']
-
+    fixed = endCustFixed[endCustFixed['Invoice Date'] != '']
 
     # %%
     # Go through each entry that's fixed and replace it in Running Commissions.
-    for entry in range(len(fixdDat)):
-        # Replace the Running Commissions entry with the fixed one.
-        RCIndex = fixdDat.loc[entry, 'Running Com Index']
-        runningCom.loc[RCIndex, :] = fixdDat.loc[entry, :]
-
+    for row in fixed.index:
         # Try parsing the date.
-        dateError = 0
+        dateError = False
         try:
-            parse(fixdDat.loc[entry, 'Invoice Date'])
+            date = fixed.loc[row, 'Invoice Date']
+            if isinstance(date, pd.Timestamp):
+                fixed.loc[row, 'Invoice Date'] = str(date)
+            parse(date)
+            # Make sure the date actually makes sense.
+            currentYear = int(time.strftime('%Y'))
+            if currentYear - date.year not in [0, 1]:
+                dateError = True
         except ValueError:
-            dateError = 1
-        except TypeError:
-            # Check if Pandas read it in as a Timestamp object.
-            # If so, turn it back into a string.
-            invDate = fixdDat.loc[entry, 'Invoice Date']
-            if isinstance(invDate, pd.Timestamp):
-                fixdDat.loc[entry, 'Invoice Date'] = str(invDate)
-            else:
-                dateError = 1
+            dateError = True
+            print('Error parsing date for Master Index ' + str(row))
         # If no error found in date, finish filling out the fixed entry.
         if not dateError:
-            date = parse(fixdDat.loc[entry, 'Invoice Date'])
             # Cast date format into mm/dd/yyyy.
-            fixdDat.loc[entry, 'Invoice Date'] = date.strftime('%m/%d/%Y')
+            fixed.loc[row, 'Invoice Date'] = date.strftime('%m/%d/%Y')
             # Fill in quarter/year/month data.
-            fixdDat.loc[entry, 'Year'] = date.year
-            fixdDat.loc[entry, 'Month'] = calendar.month_name[date.month][0:3]
-            fixdDat.loc[entry, 'Quarter'] = (str(date.year)
+            fixed.loc[row, 'Year'] = date.year
+            fixed.loc[row, 'Month'] = calendar.month_name[date.month][0:3]
+            fixed.loc[row, 'Quarter'] = (str(date.year)
                                              + 'Q'
                                              + str(math.ceil(date.month/3)))
+   
+            # Replace the Running Commissions entry with the fixed one.
+            RCIndex = fixed.loc[row, 'Running Com Index']
+            runningCom.loc[RCIndex, :] = fixed.loc[row, :]
             # Delete the fixed entry from the Needs Fixing file.
             fixIndex = fixList['Running Com Index']
             fixList.drop(fixList[fixIndex == RCIndex].index, inplace=True)
 
             # Append entry to Lookup Master, if applicable.
-            if not fixdDat.loc[entry, 'Lookup Master Matches']:
-                mastLook = mastLook.append(fixdDat.loc[entry, list(mastLook)],
-                                           ignore_index=True).fillna('')
+            # Check if entry is individual, misc, or unknown.
+            skips = ['UNKNOWN', 'MISC', 'INDIVIDUAL']
+            tName = fixed.loc[row, 'T-Name'].upper()
+            if not any(i for i in skips if i in tName):
+                # Match the part number.
+                ppn = fixed.loc[row, 'Part Number']
+                ppnMatch = mastLook['Part Number'] == ppn
+                
+                # Match the reported customer.
+                repCust = fixed.loc[row, 'Reported Customer']
+                custMatch = ppnMatch[ppnMatch['Reported Customer'] == repCust]
+                
+                if len(custMatch) == 0:
+                    
+
                 # Record date that the new entry was added to Lookup Master.
                 mastLook.loc[len(mastLook)-1, 'Date Added'] = time.strftime(
                         '%m/%d/%Y')
 
+
+
     # %%
     # Check if any entries are duplicates, then quarantine old versions.
-    duplicates = mastLook.duplicated(subset=['POSCustomer', 'PPN'],
+    duplicates = mastLook.duplicated(subset=['Reported Customer',
+                                             'Part Number'],
                                      keep='last')
     deprecatedEntries = mastLook[duplicates].reset_index(drop=True)
     mastLook = mastLook[~duplicates].reset_index(drop=True)
