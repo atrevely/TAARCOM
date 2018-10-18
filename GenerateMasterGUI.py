@@ -7,6 +7,7 @@ from PyQt5.QtWidgets import QMainWindow, QPushButton, QApplication, \
                             QTreeWidgetItem, QInputDialog, QComboBox, QLabel
 from PyQt5.QtCore import pyqtSlot
 import GenerateMaster
+import MergeFixedEntries
 
 
 class Stream(QtCore.QObject):
@@ -115,6 +116,12 @@ class GenMast(QMainWindow):
         self.btnEditColumns.resize(150, 100)
         self.btnEditColumns.clicked.connect(self.editColumnsClicked)
 
+        # Button for writing fixed entries.
+        self.btnFixEntries = QPushButton('Copy Fixed Entries', self)
+        self.btnFixEntries.move(550, 30)
+        self.btnFixEntries.resize(150, 100)
+        self.btnFixEntries.clicked.connect(self.fixEntriesClicked)
+
         # Button for clearing filename and master choices.
         self.btnClearAll = QPushButton('Clear Filename(s) \n and Running \n'
                                        'Commissions \n Selection', self)
@@ -168,6 +175,11 @@ class GenMast(QMainWindow):
         worker = Worker(self.genMastExecute)
         self.threadpool.start(worker)
 
+    def fixEntriesClicked(self):
+        """Send the MergeFixedEntries execution to a worker thread."""
+        worker = Worker(self.fixEntriesExecute)
+        self.threadpool.start(worker)
+
     def clearAllClicked(self):
         """Clear the filenames and master variables."""
         self.filenames = []
@@ -204,6 +216,15 @@ class GenMast(QMainWindow):
         elif princ == '(No Selection)':
             print('Please select a principal from the dropdown menu!\n'
                   '---')
+
+    def fixEntriesExecute(self):
+        """Copy over fixed entries to Master."""
+        # Turn buttons off.
+        self.lockButtons()
+        # Run the GenerateMaster.py file.
+        MergeFixedEntries.main()
+        # Turn buttons back on.
+        self.restoreButtons()
 
     def uploadMastClicked(self):
         """Upload an existing master list."""
@@ -253,6 +274,7 @@ class GenMast(QMainWindow):
         self.btnEditColumns.setEnabled(False)
         self.btnClearAll.setEnabled(False)
         self.princMenu.setEnabled(False)
+        self.btnFixedEntries.setEnabled(False)
 
     def restoreButtons(self):
         self.btnGenMast.setEnabled(True)
@@ -261,6 +283,7 @@ class GenMast(QMainWindow):
         self.btnEditColumns.setEnabled(True)
         self.btnClearAll.setEnabled(True)
         self.princMenu.setEnabled(True)
+        self.btnFixedEntries.setEnabled(True)
 
 
 class Worker(QtCore.QRunnable):

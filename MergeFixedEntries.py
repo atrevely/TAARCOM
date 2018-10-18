@@ -4,6 +4,8 @@ import datetime
 from dateutil.parser import parse
 import calendar
 import math
+import os.path
+from xlrd import XLRDError
 
 
 def tableFormat(sheetData, sheetName, wbook):
@@ -70,19 +72,75 @@ def main():
     used in 2+ years.
     """
     # Load up the Entries Need Fixing file.
-    fixList = pd.read_excel('Entries Need Fixing.xlsx', 'Data').fillna('')
+    if os.path.exists('Entries Need Fixing.xlsx'):
+        try:
+            fixList = pd.read_excel('Entries Need Fixing.xlsx',
+                                    'Data').fillna('')
+        except XLRDError:
+            print('---\n'
+                  'Error reading sheet name for Entries Need Fixing.xlsx!\n'
+                  'Please make sure the main tab is named Data.\n'
+                  '***')
+            return
+    else:
+        print('---\n'
+              'No Entries Need Fixing file found!\n'
+              'Please make sure Entries Need Fixing.xlsx is in the directory.\n'
+              '***')
+        return
 
     # Load up the current Running Commissions file.
-    runningCom = pd.read_excel('Running Commissions Oct 2018.xlsx',
-                               'Master').fillna('')
-    filesProcessed = pd.read_excel('Running Commissions Oct 2018.xlsx',
-                                   'Files Processed').fillna('')
+    if os.path.exists('Running Commissions Oct 2018.xlsx'):
+        try:
+            runningCom = pd.read_excel('Running Commissions Oct 2018.xlsx',
+                                       'Master').fillna('')
+            filesProcessed = pd.read_excel('Running Commissions Oct 2018.xlsx',
+                                           'Files Processed').fillna('')
+        except XLRDError:
+            print('---\n'
+                  'Error reading sheet name for Running Commissions!\n'
+                  'Please make sure the main tab is named Master '
+                  'and there is a tab named Files Processed.\n'
+                  '***')
+            return
+    else:
+        print('---\n'
+              'No Running Commissions file found!\n'
+              '***')
+        return
 
-    # Load up the Master Lookup.
-    mastLook = pd.read_excel('Lookup Master Rebuild v1.xlsx').fillna('')
+    # Read in the Master Lookup. Exit if not found.
+    if os.path.exists('Master Lookup Rebuild v1.xlsx'):
+        mastLook = pd.read_excel('Master Lookup Rebuild v1.xlsx').fillna('')
+        # Check the column names.
+        lookupCols = ['CM Sales', 'Design Sales', 'CM Split',
+                      'Reported Customer', 'CM', 'Part Number', 'T-Name',
+                      'T-End Cust', 'Last Used', 'Principal', 'City',
+                      'Date Added']
+        missCols = [i for i in lookupCols if i not in list(mastLook)]
+        if missCols:
+            print('The following columns were not detected in '
+                  'Lookup Master.xlsx:\n%s' %
+                  ', '.join(map(str, missCols))
+                  + '\n***')
+            return
+    else:
+        print('---\n'
+              'No Lookup Master found!\n'
+              'Please make sure lookupMaster.xlsx is in the directory.\n'
+              '***')
+        return
 
     # Load the Quarantined Lookups.
-    #quarantinedLookups = pd.read_excel('Quarantined Lookups.xlsx').fillna('')
+    if os.path.exists('Quarantined Lookups.xlsx'):
+        quarantined = pd.read_excel('Quarantined Lookups.xlsx').fillna('')
+    else:
+        print('---\n'
+              'No Quarantied Lookups file found!\n'
+              'Please make sure Quarantined Lookups.xlsx is in the directory.\n'
+              '***')
+        return
+
 
     # Grab the lines that have been fixed.
     endCustFixed = fixList[fixList['T-End Cust'] != '']
@@ -113,9 +171,9 @@ def main():
             fixed.loc[row, 'Year'] = date.year
             fixed.loc[row, 'Month'] = calendar.month_name[date.month][0:3]
             fixed.loc[row, 'Quarter'] = (str(date.year)
-                                             + 'Q'
-                                             + str(math.ceil(date.month/3)))
-   
+                                         + 'Q'
+                                         + str(math.ceil(date.month/3)))
+
             # Replace the Running Commissions entry with the fixed one.
             RCIndex = fixed.loc[row, 'Running Com Index']
             runningCom.loc[RCIndex, :] = fixed.loc[row, :]
@@ -130,18 +188,23 @@ def main():
             if not any(i for i in skips if i in tName):
                 # Match the part number.
                 ppn = fixed.loc[row, 'Part Number']
-                ppnMatch = mastLook['Part Number'] == ppn
-                
+                ppnMatch = mastLook[mastLook['Part Number'] == ppn]
+
                 # Match the reported customer.
                 repCust = fixed.loc[row, 'Reported Customer']
                 custMatch = ppnMatch[ppnMatch['Reported Customer'] == repCust]
-                
-                if len(custMatch) == 0:
-                    
 
-                # Record date that the new entry was added to Lookup Master.
-                mastLook.loc[len(mastLook)-1, 'Date Added'] = time.strftime(
-                        '%m/%d/%Y')
+                # Check if there's already an entry for this customer/PPN.
+                if len(custMatch) == 0:
+                    # Create new lookup entry.
+                    lookupEntry = fixList.loc[row, ['CM Sales', 'Design Sales',
+                                                    'Reported Customer',
+                                                    'T-End Cust', 'T-Name',
+                                                    'CM', 'Principal',
+                                                    'Part Number', 'City']]
+                    lookupEntry['Date Added'] = time.strftime('%m/%d/%Y')
+                    lookupEntry['Last Used'] = fixList.loc[row, 'Invoice Date']
+                    mastLook = mastLook.append(lookupEntry, ignore_index=True)
 
 
 
@@ -161,10 +224,10 @@ def main():
     deprecatedEntries.loc[:, 'Date Quarantined'] = time.strftime('%m/%d/%Y')
     oldEntries.loc[:, 'Date Quarantined'] = time.strftime('%m/%d/%Y')
     # Add deprecated entries to the quarantine.
-    quarantinedLookups = quarantinedLookups.append(oldEntries,
-                                                   ignore_index=True)
-    quarantinedLookups = quarantinedLookups.append(deprecatedEntries,
-                                                   ignore_index=True)
+    quarantined = quarantined.append(oldEntries,
+                                     ignore_index=True)
+    quarantined = quarantined.append(deprecatedEntries,
+                                      ignore_index=True)
     # Notify us of changes.
     print(str(len(oldEntries))
           + 'entries quarantied for being more than 2 years old.\n'

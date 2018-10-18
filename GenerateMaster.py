@@ -499,7 +499,8 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
         # Check the column names.
         lookupCols = ['CM Sales', 'Design Sales', 'CM Split',
                       'Reported Customer', 'CM', 'Part Number', 'T-Name',
-                      'T-End Cust', 'Last Used', 'Principal', 'City']
+                      'T-End Cust', 'Last Used', 'Principal', 'City',
+                      'Date Added']
         missCols = [i for i in lookupCols if i not in list(masterLookup)]
         if missCols:
             print('The following columns were not detected in '
