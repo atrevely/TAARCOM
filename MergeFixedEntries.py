@@ -73,26 +73,21 @@ def main():
     fixList = pd.read_excel('Entries Need Fixing.xlsx', 'Data').fillna('')
 
     # Load up the current Running Commissions file.
-    runningCom = pd.read_excel('Running Commissions.xlsx',
+    runningCom = pd.read_excel('Running Commissions Oct 2018.xlsx',
                                'Master').fillna('')
-    filesProcessed = pd.read_excel('Running Commissions.xlsx',
+    filesProcessed = pd.read_excel('Running Commissions Oct 2018.xlsx',
                                    'Files Processed').fillna('')
 
     # Load up the Master Lookup.
     mastLook = pd.read_excel('Lookup Master 6-27-18.xlsx').fillna('')
 
     # Load the Quarantined Lookups.
-    quarantinedLookups = pd.read_excel('Quarantined Lookups.xlsx').fillna('')
+    #quarantinedLookups = pd.read_excel('Quarantined Lookups.xlsx').fillna('')
 
     # Grab the lines that have been fixed.
-    dateFixed = fixList['Invoice Date'] != ''
-    endCustFixed = fixList['T-End Cust'] != ''
-    distFixed = fixList['Corrected Distributor'] != ''
+    endCustFixed = fixList[fixList['T-End Cust'] != '']
+    dateFixed = endCustFixed[endCustFixed['Invoice Date'] != '']
 
-    fixdDat = fixList[[x and y and z for x, y, z in zip(dateFixed,
-                                                        endCustFixed,
-                                                        distFixed)]]
-    fixdDat.reset_index(inplace=True, drop=True)
 
     # %%
     # Go through each entry that's fixed and replace it in Running Commissions.
