@@ -95,7 +95,7 @@ def tailoredPreCalc(princ, sheet, sheetName):
     if princ == 'ISS':
         try:
             # Rename the 'Commissions Due' column.
-            sheet.rename(columns={'Commission Due': 'Ignore',
+            sheet.rename(columns={'Commission Due': 'Unmapped',
                                   'Name': 'OEM/POS'}, inplace=True)
             print('Ignoring the Commissions Due column.')
         except KeyError:
@@ -113,6 +113,26 @@ def tailoredPreCalc(princ, sheet, sheetName):
             try:
                 sheet.rename(columns={'Customer': 'Distributor',
                                       'BillDocNo': 'Unmapped'}, inplace=True)
+            except KeyError:
+                pass
+    # INF special processing.
+    if princ == 'INF':
+        if 'Rep Group' in list(sheet):
+            # Material Number is bad on this sheet.
+            try:
+                sheet.rename(columns={'Material Number': 'Unmapped'},
+                             inplace=True)
+            except KeyError:
+                pass
+        else:
+            # A bunch of things are bad on this sheet.
+            try:
+                sheet.rename(columns={'Material Description': 'Unmapped1',
+                                      'Sold To Name': 'Unmapped2',
+                                      'Ship To Name': 'Unmapped3',
+                                      'Item': 'Unmapped4',
+                                      'End Name': 'Customer Name'},
+                             inplace=True)
             except KeyError:
                 pass
 

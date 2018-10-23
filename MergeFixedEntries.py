@@ -198,7 +198,7 @@ def main():
 
             # Replace the Running Commissions entry with the fixed one.
             RCIndex = fixed.loc[row, 'Running Com Index']
-            runningCom.loc[RCIndex, :] = fixed.loc[row, :]
+            runningCom.loc[RCIndex, :] = fixed.loc[row, list(runningCom)]
 
             # Append entry to Lookup Master, if applicable.
             # Check if entry is individual, misc, or unknown.
@@ -223,7 +223,7 @@ def main():
                                                     'Part Number', 'City']]
                     lookupEntry['Date Added'] = time.strftime('%m/%d/%Y')
                     invDate = pd.Timestamp(fixList.loc[row, 'Invoice Date'])
-                    lookupEntry['Last Used'] = invDate
+                    lookupEntry['Last Used'] = invDate.strftime('%m/%d/%Y')
                     # Merge to the Lookup Master.
                     mastLook = mastLook.append(lookupEntry, ignore_index=True)
 
@@ -237,7 +237,8 @@ def main():
     # Check for entries that are too old and quarantine them.
     twoYearsAgo = datetime.datetime.today() - datetime.timedelta(days=720)
     try:
-        lastUsed = mastLook['Last Used'].map(lambda x: x.strftime('%Y%m%d'))
+        lastUsed = mastLook['Last Used'].map(lambda x: pd.Timestamp(x))
+        lastUsed = lastUsed.map(lambda x: x.strftime('%Y%m%d'))
     except AttributeError:
         print('Error reading one or more dates in the Lookup Master!\n'
               'Make sure the Last Used column is all MM/DD/YYYY format.\n'
