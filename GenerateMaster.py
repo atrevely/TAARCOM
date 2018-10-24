@@ -88,7 +88,8 @@ def tailoredPreCalc(princ, sheet, sheetName):
     if princ == 'OSR':
         # Get rid of the Item column.
         try:
-            sheet.rename(columns={'Item': 'OSR Item'}, inplace=True)
+            sheet.rename(columns={'Item': 'OSR Item',
+                                  'Material Number': 'Unmapped'}, inplace=True)
         except KeyError:
             pass
     # ISSI special processing.
@@ -164,7 +165,7 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
             sheet['Commission Rate'] = 0.03
             sheet['Paid-On Revenue'] = pd.to_numeric(sheet['Invoiced Dollars'],
                                                      errors='coerce')*0.7
-            sheet['Actual Comm Paid'] = sheet['Paid-On Revenue']*.03
+            sheet['Actual Comm Paid'] = sheet['Paid-On Revenue']*0.03
             print('Columns added from Abracon special processing:\n'
                   'Commission Rate, Paid-On Revenue, '
                   'Actual Comm Paid\n'

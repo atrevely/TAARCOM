@@ -65,9 +65,12 @@ def tableFormat(sheetData, sheetName, wbook):
         else:
             formatting = docFormat
         # Set column width and formatting.
-        maxWidth = max(len(str(val)) for val in sheetData[col].values)
-        sheet.set_column(i, i, maxWidth+0.8, formatting)
-        i += 1
+        if sheet.shape[0] > 0:
+            maxWidth = max(len(str(val)) for val in sheetData[col].values)
+            sheet.set_column(i, i, maxWidth+0.8, formatting)
+            i += 1
+        else:
+            sheet.set_column(i, i, len(col), formatting)
 
 
 def saveError(*excelFiles):
@@ -171,6 +174,7 @@ def main():
     fixed = endCustFixed[endCustFixed['Invoice Date'] != '']
 
     # %%
+    print('Writing fixed entries...')
     # Go through each entry that's fixed and replace it in Running Commissions.
     for row in fixed.index:
         # Try parsing the date.
