@@ -50,7 +50,7 @@ def tableFormat(sheetData, sheetName, wbook):
         elif col == 'Quantity':
             formatting = commaFormat
         elif col == 'Invoiced Dollars':
-            # Highlight any estimates in Invoiced Dollars.
+            # Highlight any estimates in Invoiced Dollars...
             for row in range(len(sheetData[col])):
                 if sheetData.loc[row, 'Ext. Cost']:
                     sheet.write(row+1, i,
