@@ -343,12 +343,13 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
             print('Calculating commissions as 5% of Cost Ext.\n'
                   'Subtracting 2% off of commissions for Allied shipments.\n'
                   '---')
-            for row in sheet.index:
-                sheet.loc[row, 'Commission Rate'] = 0.05
+            for row in sheet.index:    
                 extenCost = sheet.loc[row, 'Ext. Cost']
                 if sheet.loc[row, 'Distributor'] == 'ALLIED':
-                    sheet.loc[row, 'Actual Comm Paid'] = 0.05*0.98*extenCost
+                    sheet.loc[row, 'Commission Rate'] = 0.049
+                    sheet.loc[row, 'Actual Comm Paid'] = 0.049*extenCost
                 else:
+                    sheet.loc[row, 'Commission Rate'] = 0.05
                     sheet.loc[row, 'Actual Comm Paid'] = 0.05*extenCost
     # Globtek special Processing.
     if princ == 'GLO':
