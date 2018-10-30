@@ -7,13 +7,13 @@ def tableFormat(sheetData, sheetName, wbook):
     # Create the table.
     sheet = wbook.sheets[sheetName]
     header = [{'header': val} for val in sheetData.columns.tolist()]
-    setStyle = {'header_row': True, 'style': 'TableStyleMedium5',
+    setStyle = {'header_row': True, 'style': 'TableStyleLight1',
                 'columns': header}
     sheet.add_table(0, 0, len(sheetData.index),
                     len(sheetData.columns)-1, setStyle)
     # Set document formatting.
-    docFormat = wbook.book.add_format({'font': 'Century Gothic',
-                                       'font_size': 8})
+    docFormat = wbook.book.add_format({'font': 'Calibri',
+                                       'font_size': 11})
     # Format and fit each column.
     i = 0
     for col in sheetData.columns:

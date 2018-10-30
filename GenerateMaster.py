@@ -13,25 +13,25 @@ def tableFormat(sheetData, sheetName, wbook):
     # Create the table.
     sheet = wbook.sheets[sheetName]
     header = [{'header': val} for val in sheetData.columns.tolist()]
-    setStyle = {'header_row': True, 'style': 'TableStyleMedium5',
+    setStyle = {'header_row': True, 'style': 'TableStyleLight1',
                 'columns': header}
     sheet.add_table(0, 0, len(sheetData.index),
                     len(sheetData.columns)-1, setStyle)
     # Set document formatting.
-    docFormat = wbook.book.add_format({'font': 'Century Gothic',
-                                       'font_size': 8})
-    acctFormat = wbook.book.add_format({'font': 'Century Gothic',
-                                        'font_size': 8,
+    docFormat = wbook.book.add_format({'font': 'Calibri',
+                                       'font_size': 11})
+    acctFormat = wbook.book.add_format({'font': 'Calibri',
+                                        'font_size': 11,
                                         'num_format': 44})
-    commaFormat = wbook.book.add_format({'font': 'Century Gothic',
-                                         'font_size': 8,
+    commaFormat = wbook.book.add_format({'font': 'Calibri',
+                                         'font_size': 11,
                                          'num_format': 3})
-    estFormat = wbook.book.add_format({'font': 'Century Gothic',
-                                       'font_size': 8,
+    estFormat = wbook.book.add_format({'font': 'Calibri',
+                                       'font_size': 11,
                                        'num_format': 44,
                                        'bg_color': 'yellow'})
-    pctFormat = wbook.book.add_format({'font': 'Century Gothic',
-                                       'font_size': 8,
+    pctFormat = wbook.book.add_format({'font': 'Calibri',
+                                       'font_size': 11,
                                        'num_format': '0.0%'})
     # Format and fit each column.
     i = 0
@@ -343,7 +343,7 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
             print('Calculating commissions as 5% of Cost Ext.\n'
                   'Subtracting 2% off of commissions for Allied shipments.\n'
                   '---')
-            for row in sheet.index:    
+            for row in sheet.index:
                 extenCost = sheet.loc[row, 'Ext. Cost']
                 if sheet.loc[row, 'Distributor'] == 'ALLIED':
                     sheet.loc[row, 'Commission Rate'] = 0.049
