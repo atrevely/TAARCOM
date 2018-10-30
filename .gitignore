@@ -1,5 +1,11 @@
 *.xlsx
 *.xls
+!ATPCustomerLookup.xlsx
+!distributorLookup.xlsx
+!fieldMappings.xlsx
+!Lookup Master - Current.xlsx
+!Mill-Max Invoice Log.xlsx
+!principalList.xlsx
 TEMPworking.py
 LookupMasterIntegrator.py
 pokerhands.txt
