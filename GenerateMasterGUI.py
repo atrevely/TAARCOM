@@ -196,8 +196,13 @@ class GenMast(QMainWindow):
             # Turn buttons off.
             self.lockButtons()
             # Run the GenerateMaster.py file.
-            GenerateMaster.main(self.filenames, self.master,
-                                fieldMappings, princ)
+            try:
+                GenerateMaster.main(self.filenames, self.master,
+                                    fieldMappings, princ)
+            except Exception as error:
+                print('Unexpected Python error:\n'
+                      + str(error)
+                      + '\nPlease contact your local coder.')
             # Clear the filename selections.
             self.filenames = []
             # Turn buttons back on.
@@ -222,7 +227,12 @@ class GenMast(QMainWindow):
         # Turn buttons off.
         self.lockButtons()
         # Run the GenerateMaster.py file.
-        MergeFixedEntries.main()
+        try:
+            MergeFixedEntries.main()
+        except Exception as error:
+            print('Unexpected Python error:\n'
+                  + str(error)
+                  + '\nPlease contact your local coder.')
         # Turn buttons back on.
         self.restoreButtons()
 
