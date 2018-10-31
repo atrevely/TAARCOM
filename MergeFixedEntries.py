@@ -138,8 +138,8 @@ def main():
         return
 
     # Read in the Master Lookup. Exit if not found.
-    if os.path.exists('Master Lookup Rebuild v1.xlsx'):
-        mastLook = pd.read_excel('Master Lookup Rebuild v1.xlsx').fillna('')
+    if os.path.exists('Lookup Master - Current.xlsx'):
+        mastLook = pd.read_excel('Lookup Master - Current.xlsx').fillna('')
         # Check the column names.
         lookupCols = ['CM Sales', 'Design Sales', 'CM Split',
                       'Reported Customer', 'CM', 'Part Number', 'T-Name',
