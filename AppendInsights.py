@@ -36,8 +36,8 @@ def tableFormat(sheetData, sheetName, wbook):
         else:
             formatting = docFormat
         maxWidth = max(len(str(val)) for val in sheetData[col].values)
-        # Set maximum column width at 120.
-        maxWidth = min(maxWidth, 120)
+        # Set maximum column width at 50.
+        maxWidth = min(maxWidth, 50)
         sheet.set_column(i, i, maxWidth+0.8, formatting)
         i += 1
     # Highlight new root customer rows in the full report.

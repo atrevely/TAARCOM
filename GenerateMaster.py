@@ -66,6 +66,7 @@ def tableFormat(sheetData, sheetName, wbook):
             formatting = docFormat
         # Set column width and formatting.
         maxWidth = max(len(str(val)) for val in sheetData[col].values)
+        maxWidth = min(maxWidth, 50)
         sheet.set_column(i, i, maxWidth+0.8, formatting)
         i += 1
 
