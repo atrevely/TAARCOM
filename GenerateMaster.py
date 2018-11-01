@@ -89,10 +89,23 @@ def tailoredPreCalc(princ, sheet, sheetName):
     if princ == 'OSR':
         # Get rid of the Item column.
         try:
-            sheet.rename(columns={'Item': 'OSR Item',
-                                  'Material Number': 'Unmapped'}, inplace=True)
+            sheet.rename(columns={'Item': 'Unmapped',
+                                  'Material Number': 'Unmapped 2'},
+                         inplace=True)
         except KeyError:
             pass
+        # Combine Rep 1 % and Rep 2 %.
+        if 'Rep 1 %' in list(sheet) and 'Rep 2 %' in list(sheet):
+            for row in sheet.index:
+                if sheet.loc[row, 'Rep 2 %']:
+                    if not sheet.loc[row, 'Rep 1 %']:
+                        sheet.loc[row, 'Rep 1 %'] = sheet.loc[row, 'Rep 2 %']
+                    else:
+                        print('Conflict between Rep 1 % and Rep 2 % columns.\n'
+                              'Make sure each line has an entry in only '
+                              'one of the two columns.\n'
+                              '***')
+                        return
     # ISSI special processing.
     if princ == 'ISS':
         try:
@@ -107,14 +120,18 @@ def tailoredPreCalc(princ, sheet, sheetName):
         if sheetName == 'OEM':
             # The column Name 11 needs to be deleted.
             try:
-                sheet.rename(columns={'Name 11': 'Unmapped'}, inplace=True)
+                sheet.rename(columns={'Name 11': 'Unmapped',
+                                      'End Customer': 'Unmapped 2'},
+                             inplace=True)
             except KeyError:
                 pass
         elif sheetName == 'POS':
             # The column Customer is actually the Distributor.
             try:
                 sheet.rename(columns={'Customer': 'Distributor',
-                                      'BillDocNo': 'Unmapped'}, inplace=True)
+                                      'BillDocNo': 'Unmapped',
+                                      'End Customer': 'Unmapped 2'},
+                             inplace=True)
             except KeyError:
                 pass
     # INF special processing.
@@ -418,7 +435,7 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
                         'Year']
     columnNames[7:7] = ['T-End Cust', 'T-Name', 'CM',
                         'Principal', 'Corrected Distributor']
-    columnNames[25:25] = ['Sales Commission']
+    columnNames[26:26] = ['Sales Commission']
     columnNames.extend(['CM Split', 'TEMP/FINAL', 'Paid Date', 'From File',
                         'Sales Report Date'])
 

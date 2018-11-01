@@ -114,7 +114,8 @@ def main():
     else:
         print('---\n'
               'No Entries Need Fixing file found!\n'
-              'Please make sure Entries Need Fixing.xlsx is in the directory.\n'
+              'Please make sure Entries Need Fixing.xlsx '
+              'is in the directory.\n'
               '***')
         return
 
@@ -166,7 +167,8 @@ def main():
     else:
         print('---\n'
               'No Quarantied Lookups file found!\n'
-              'Please make sure Quarantined Lookups.xlsx is in the directory.\n'
+              'Please make sure Quarantined Lookups.xlsx '
+              'is in the directory.\n'
               '***')
         return
 
