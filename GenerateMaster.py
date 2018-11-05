@@ -115,6 +115,15 @@ def tailoredPreCalc(princ, sheet, sheetName):
             print('Ignoring the Commissions Due column.')
         except KeyError:
             pass
+    # ATS special processing.
+    if princ == 'ATS':
+        try:
+            # Rename the 'Commissions Due' column.
+            sheet.rename(columns={'Resale': 'Extended Resale',
+                                  'Cost': 'Extended Cost'}, inplace=True)
+            print('Matching Paid-On Revenue to the distributor.')
+        except KeyError:
+            pass
     # QRF special processing.
     if princ == 'QRF':
         if sheetName == 'OEM':
@@ -222,29 +231,15 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
                             pass
     # ATS special Processing.
     if princ == 'ATS':
-        if 'Commission Rate' not in list(sheet):
-            # Fill in commission rates and commission paid.
-            if 'Arrow' in sheetName and invDol:
-                sheet['Commission Rate'] = 0.035
-                sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*0.035
-                sheet['Distributor'] = 'Arrow'
-                print('Commission rate filled in for this tab: 3.5%\n'
-                      '---')
-            elif 'Digi' in sheetName and invDol:
-                sheet['Commission Rate'] = 0.02
-                sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*0.02
-                sheet['Distributor'] = 'Digikey'
-                print('Commission rate filled in for this tab: 2%\n'
-                      '---')
-            elif 'Mouser' in sheetName and invDol:
-                sheet['Commission Rate'] = 0.02
-                sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*0.02
-                sheet['Distributor'] = 'Mouser'
-                print('Commission rate filled in for this tab: 2%\n'
-                      '---')
-            else:
-                print('Invoice Dollars not found on this tab!\n'
-                      '---')
+        # Digikey and Mouser are paid on cost, not resale.
+        for row in sheet.index:
+            try:
+                if sheet.loc[row, 'Distributor'] in ['DIGIKEY', 'MOUSER']:
+                    sheet.loc[row, 'Paid-On Revenue'] = sheet.loc[row, 'Ext. Cost']
+                else:
+                    sheet.loc[row, 'Paid-On Revenue'] = sheet.loc[row, 'Invoiced Dollars']
+            except KeyError:
+                pass
     # ATP special Processing.
     if princ == 'ATP':
         # Load up the customer lookup file.

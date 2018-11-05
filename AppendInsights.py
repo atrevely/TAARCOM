@@ -27,6 +27,12 @@ def tableFormat(sheetData, sheetName, wbook):
                                        'bg_color': 'yellow'})
     # Format and fit each column.
     i = 0
+    # Columns which get shrunk down in reports.
+    hideCols = ['Technology', 'Excel Part Link', 'Report Part Nbr Link',
+                'MFG Part Description', 'Focus', 'Part Class Name',
+                'Vendor ID', 'Invoice Detail Nbr', 'Assigned Account Rep',
+                'Recipient', 'DKLI Report Date', 'Invoice Date Group',
+                'Comments', 'Sales Channel']
     for col in sheetData.columns:
         acctCols = ['Unit Price', 'Invoiced Dollars']
         if col in acctCols:
@@ -38,6 +44,8 @@ def tableFormat(sheetData, sheetName, wbook):
         maxWidth = max(len(str(val)) for val in sheetData[col].values)
         # Set maximum column width at 50.
         maxWidth = min(maxWidth, 50)
+        if col in hideCols:
+            maxWidth = 0
         sheet.set_column(i, i, maxWidth+0.8, formatting)
         i += 1
     # Highlight new root customer rows in the full report.
