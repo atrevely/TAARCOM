@@ -48,12 +48,11 @@ def tableFormat(sheetData, sheetName, wbook):
             maxWidth = 0
         sheet.set_column(i, i, maxWidth+0.8, formatting)
         i += 1
-    # Highlight new root customer rows in the full report.
+    # Highlight new root customer rows.
     try:
-        if sheetName == 'Full Data':
-            for row in range(len(sheetData)):
-                if sheetData.loc[row, 'Not In Map'] == 'Y':
-                    sheet.set_row(row+1, None, newFormat)
+        for row in range(len(sheetData)):
+            if sheetData.loc[row, 'Not In Map'] == 'Y':
+                sheet.set_row(row+1, None, newFormat)
     except KeyError:
         pass
 

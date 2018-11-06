@@ -10,6 +10,9 @@ import re
 
 def tableFormat(sheetData, sheetName, wbook):
     """Formats the Excel output as a table with correct column formatting."""
+    # Nothing to format (emtpy table), so return.
+    if sheetData.shape[0] == 0:
+        return
     # Create the table.
     sheet = wbook.sheets[sheetName]
     header = [{'header': val} for val in sheetData.columns.tolist()]
@@ -43,6 +46,8 @@ def tableFormat(sheetData, sheetName, wbook):
                     'Sales Commission']
         pctCols = ['Split Percentage', 'Commission Rate',
                    'Gross Rev Reduction', 'Shared Rev Tier Rate']
+        coreCols = ['CM Sales', 'Design Sales', 'T-End Cust', 'T-Name',
+                    'CM', 'Invoice Date']
         if col in acctCols:
             formatting = acctFormat
         elif col in pctCols:
@@ -66,7 +71,12 @@ def tableFormat(sheetData, sheetName, wbook):
             formatting = docFormat
         # Set column width and formatting.
         maxWidth = max(len(str(val)) for val in sheetData[col].values)
+        # If column is one that always gets filled in, then keep it expanded.
+        if col in coreCols:
+            maxWidth = max(maxWidth, len(col), 10)
+        # Don't let the columns get too wide.
         maxWidth = min(maxWidth, 50)
+        # Extra space for '$' in accounting format.
         if col in acctCols:
             maxWidth += 2
         sheet.set_column(i, i, maxWidth+0.8, formatting)
