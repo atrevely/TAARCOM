@@ -67,6 +67,8 @@ def tableFormat(sheetData, sheetName, wbook):
         # Set column width and formatting.
         maxWidth = max(len(str(val)) for val in sheetData[col].values)
         maxWidth = min(maxWidth, 50)
+        if col in acctCols:
+            maxWidth += 2
         sheet.set_column(i, i, maxWidth+0.8, formatting)
         i += 1
 
@@ -510,25 +512,6 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
               '***')
         return
 
-    # Read in file of entries that need fixing. Exit if not found.
-    if os.path.exists('Entries Need Fixing.xlsx'):
-        try:
-            fixList = pd.read_excel('Entries Need Fixing.xlsx',
-                                    'Data').fillna('')
-        except XLRDError:
-            print('---\n'
-                  'Error reading sheet name for Entries Need Fixing.xlsx!\n'
-                  'Please make sure the main tab is named Data.\n'
-                  '***')
-            return
-    else:
-        print('---\n'
-              'No Entries Need Fixing file found!\n'
-              'Please make sure Entries Need Fixing.xlsx'
-              'is in the directory.\n'
-              '***')
-        return
-
     # Read in the Master Lookup. Exit if not found.
     if os.path.exists('Lookup Master - Current.xlsx'):
         masterLookup = pd.read_excel('Lookup Master - Current.xlsx').fillna('')
@@ -754,6 +737,8 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
     # %%
     # Fill NaNs left over from appending.
     finalData.fillna('', inplace=True)
+    # Create the Entries Need Fixing dataframe.
+    fixList = pd.DataFrame(columns=list(finalData))
     # Find matches in Lookup Master and extract data from them.
     # Let us know how many rows are being processed.
     numRows = '{:,.0f}'.format(len(finalData) - runComLen)
@@ -893,7 +878,7 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
     # %%
     # Check if the files we're going to save are open already.
     fname1 = 'Running Commissions ' + time.strftime('%Y-%m-%d-%H%M') + '.xlsx'
-    fname2 = 'Entries Need Fixing.xlsx'
+    fname2 = 'Entries Need Fixing ' + time.strftime('%Y-%m-%d-%H%M') + '.xlsx'
     fname3 = 'Lookup Master ' + time.strftime('%Y-%m-%d-%H%M') + '.xlsx'
     if saveError(fname1, fname2, fname3):
         print('---\n'

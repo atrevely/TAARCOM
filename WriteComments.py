@@ -81,7 +81,7 @@ def main(filepaths):
             for row in range(len(sheet)):
                 matchMatrix = insMast == sheet.loc[row, :]
                 # Remove comments from matching criteria.
-                matchMatrix.drop(labels=['TAARCOM Comments', 'New Customer?'],
+                matchMatrix.drop(labels=['TAARCOM Comments', 'Not In Map'],
                                  axis=1, inplace=True)
                 # Find matching index and copy comments.
                 match = [i for i in range(len(matchMatrix))
