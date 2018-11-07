@@ -46,6 +46,8 @@ def tableFormat(sheetData, sheetName, wbook):
         maxWidth = min(maxWidth, 50)
         if col in hideCols:
             maxWidth = 0
+        elif col == 'TAARCOM Comments':
+            maxWidth = 25
         sheet.set_column(i, i, maxWidth+0.8, formatting)
         i += 1
     # Highlight new root customer rows.
@@ -147,6 +149,7 @@ def main(filepaths):
 
     # Get column name layout, prepare combined insight file.
     colNames = list(insMast)
+    colNames[14:14] = ['Invoiced Dollars']
     newDatComb = pd.DataFrame(columns=colNames)
 
     # Strip the root off of the filepaths and leave just the filenames.

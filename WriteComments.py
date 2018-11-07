@@ -1,5 +1,6 @@
 import pandas as pd
 import os
+from xlrd import XLRDError
 
 
 def tableFormat(sheetData, sheetName, wbook):
@@ -59,42 +60,48 @@ def main(filepaths):
     filenames = [os.path.basename(i) for i in filepaths]
 
     # Load the Insight files.
-    inputData = [pd.read_excel(i, None) for i in filepaths]
-
-    # Iterate through each file that we're appending to Digikey Master.
-    fileNum = 0
-    for filename in filenames:
-        # Grab the next file from the list.
-        newData = inputData[fileNum]
-        fileNum += 1
+    try:
+        inputData = [pd.read_excel(i, 'Report Data') for i in filepaths]
+    except XLRDError:
         print('---\n'
-              'Copying comments from file: ' + filename)
+              'Error reading sheet name(s) for Digikey Reports!\n'
+              'Please make sure the report tabs are named Report Data in '
+              'each file.\n'
+              '***')
 
-        # Iterate over each dataframe in the ordered dictionary.
-        # Each sheet in the file is its own dataframe in the dictionary.
-        for sheetName in list(newData):
-            # Grab next sheet in file.
-            # Rework the index just in case it got read in wrong.
-            sheet = newData[sheetName].reset_index(drop=True).fillna('')
+    fileNum = 0
+    for sheet in inputData:
+        print('---\n'
+              'Copying comments from file: ' + filenames[fileNum])
+        fileNum += 1
+        # Grab next sheet in file.
+        # Rework the index just in case it got read in wrong.
+        sheet = sheet.reset_index(drop=True).fillna('')
 
-            # Go through and fill in comments for matching entries.
-            for row in range(len(sheet)):
-                matchMatrix = insMast == sheet.loc[row, :]
-                # Remove comments from matching criteria.
-                matchMatrix.drop(labels=['TAARCOM Comments', 'Not In Map'],
-                                 axis=1, inplace=True)
-                # Find matching index and copy comments.
-                match = [i for i in range(len(matchMatrix))
-                         if matchMatrix.loc[i, :].all()]
-                if len(match) == 1:
-                    comments = sheet.loc[row, 'TAARCOM Comments']
-                    insMast.loc[max(match), 'TAARCOM Comments'] = comments
-                elif len(match) > 1:
-                    print('Multiple matches to Digikey Master found for row '
-                          + str(row))
-                else:
-                    print('Match to Digikey Master not found for row '
-                          + str(row))
+        # Go through and fill in comments for matching entries.
+        for row in range(len(sheet)):
+            matchMatrix = insMast == sheet.loc[row, :]
+            # Remove comments from matching criteria.
+            matchMatrix.drop(labels=['TAARCOM Comments', 'Not In Map'],
+                             axis=1, inplace=True)
+            # Find matching index and copy comments.
+            match = [i for i in range(len(matchMatrix))
+                     if matchMatrix.loc[i, :].all()]
+            if len(match) == 1:
+                comments = sheet.loc[row, 'TAARCOM Comments']
+                insMast.loc[max(match), 'TAARCOM Comments'] = comments
+            elif len(match) > 1:
+                print('Multiple matches to Digikey Master found for row '
+                      + str(row))
+            else:
+                print('Match to Digikey Master not found for row '
+                      + str(row))
+
+    # Remove the Not In Map column.
+    try:
+        insMast.drop(['Not In Map'], axis=1, inplace=True)
+    except KeyError:
+        pass
 
     # Try saving the files, exit with error if any file is currently open.
     fname1 = 'Digikey Insight Master.xlsx'

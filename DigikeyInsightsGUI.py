@@ -207,7 +207,6 @@ class GenMast(QMainWindow):
 
     def openInsightClicked(self):
         """Provide filepath for new data to process using LookupSales."""
-
         # Let us know we're clearing old selections.
         if self.filename:
             print('Selecting new file, old selection cleared...')
@@ -232,7 +231,6 @@ class GenMast(QMainWindow):
 
     def openFinishedClicked(self):
         """Provide filepath for new data to process using AppendInsights."""
-
         # Let us know we're clearing old selections.
         if self.filenames:
             print('Selecting new files, old selections cleared...')
