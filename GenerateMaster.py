@@ -149,7 +149,7 @@ def tailoredPreCalc(princ, sheet, sheetName):
         elif sheetName == 'POS':
             # The column Customer is actually the Distributor.
             try:
-                sheet.rename(columns={'Customer': 'Distributor',
+                sheet.rename(columns={'Company': 'Distributor',
                                       'BillDocNo': 'Unmapped',
                                       'End Customer': 'Unmapped 2'},
                              inplace=True)

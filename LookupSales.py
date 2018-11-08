@@ -149,8 +149,7 @@ def main(filepath):
     # Add the 'City Moved' column.
     insFile['City Moved'] = ''
     insFile['Not In Acct List'] = ''
-    colNames.append('City Moved')
-    colNames.append('Not In Acct List')
+    colNames.extend(['City Moved', 'Not In Acct List'])
 
     # Go through each entry in the Insight file and look for a sales match.
     for row in range(len(insFile)):
