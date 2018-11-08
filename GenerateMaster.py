@@ -102,7 +102,8 @@ def tailoredPreCalc(princ, sheet, sheetName):
         # Get rid of the Item column.
         try:
             sheet.rename(columns={'Item': 'Unmapped',
-                                  'Material Number': 'Unmapped 2'},
+                                  'Material Number': 'Unmapped 2',
+                                  'Customer Name': 'Unmapped 3'},
                          inplace=True)
         except KeyError:
             pass
@@ -146,7 +147,7 @@ def tailoredPreCalc(princ, sheet, sheetName):
                              inplace=True)
             except KeyError:
                 pass
-        elif sheetName == 'POS':
+        elif sheetName in ['POS', 'OFF']:
             # The column Customer is actually the Distributor.
             try:
                 sheet.rename(columns={'Company': 'Distributor',
