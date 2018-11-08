@@ -415,7 +415,6 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
 
 
 # %%
-# The main function.
 def main(filepaths, runningCom, fieldMappings, inPrinc):
     """Processes commission files and appends them to Running Commissions.
 
@@ -887,9 +886,10 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
 
     # %%
     # Check if the files we're going to save are open already.
-    fname1 = 'Running Commissions ' + time.strftime('%Y-%m-%d-%H%M') + '.xlsx'
-    fname2 = 'Entries Need Fixing ' + time.strftime('%Y-%m-%d-%H%M') + '.xlsx'
-    fname3 = 'Lookup Master ' + time.strftime('%Y-%m-%d-%H%M') + '.xlsx'
+    currentTime = time.strftime('%Y-%m-%d-%H%M')
+    fname1 = 'Running Commissions ' + currentTime + '.xlsx'
+    fname2 = 'Entries Need Fixing ' + currentTime + '.xlsx'
+    fname3 = 'Lookup Master ' + currentTime + '.xlsx'
     if saveError(fname1, fname2, fname3):
         print('---\n'
               'One or more files are currently open in Excel!\n'

@@ -25,6 +25,9 @@ def tableFormat(sheetData, sheetName, wbook):
     newFormat = wbook.book.add_format({'font': 'Calibri',
                                        'font_size': 11,
                                        'bg_color': 'yellow'})
+    movedFormat = wbook.book.add_format({'font': 'Calibri',
+                                         'font_size': 11,
+                                         'bg_color': 'orange'})
     # Format and fit each column.
     i = 0
     # Columns which get shrunk down in reports.
@@ -50,11 +53,13 @@ def tableFormat(sheetData, sheetName, wbook):
             maxWidth = 25
         sheet.set_column(i, i, maxWidth+0.8, formatting)
         i += 1
-    # Highlight new root customer rows.
+    # Highlight new root customer and moved city rows.
     try:
         for row in range(len(sheetData)):
-            if sheetData.loc[row, 'Not In Map'] == 'Y':
+            if sheetData.loc[row, 'Not In Acct List'] == 'Y':
                 sheet.set_row(row+1, None, newFormat)
+            elif sheetData.loc[row, 'City Moved'] == 'Y':
+                sheet.set_row(row+1, None, movedFormat)
     except KeyError:
         pass
 
@@ -71,7 +76,6 @@ def saveError(*excelFiles):
     return False
 
 
-# The main function.
 def main(filepaths):
     """Appends new Digikey Insight file to the Digikey Insight Master.
 
@@ -115,34 +119,6 @@ def main(filepaths):
         print('---\n'
               'No Root Customer Mappings file found!\n'
               'Please make sure rootCustomerMappings.xlsx'
-              'is in the directory.\n'
-              '***')
-        return
-
-    # Load the Master Account List file.
-    if os.path.exists('Master Account List 10-5-2018.xlsx'):
-        try:
-            mastAcct = pd.read_excel('Master Account List 10-5-2018.xlsx',
-                                     'Allacct').fillna('')
-        except XLRDError:
-            print('---\n'
-                  'Error reading sheet name for Master Account List.xlsx!\n'
-                  'Please make sure the main tab is named Allacct.\n'
-                  '***')
-            return
-        # Check the column names.
-        mastCols = ['PROPERNAME', 'SLS']
-        missCols = [i for i in mastCols if i not in list(mastAcct)]
-        if missCols:
-            print('The following columns were not detected in '
-                  'Master Account List.xlsx:\n%s' %
-                  ', '.join(map(str, missCols))
-                  + '\n***')
-            return
-    else:
-        print('---\n'
-              'No Master Account List file found!\n'
-              'Please make sure the Master Account List '
               'is in the directory.\n'
               '***')
         return
@@ -194,9 +170,6 @@ def main(filepaths):
             # Rework the index just in case it got read in wrong.
             sheet = newData[sheetName].reset_index(drop=True).fillna('')
 
-            # Add a 'Not In Map' column.
-            sheet['Not In Map'] = ''
-
             # Calculate the Invoiced Dollars.
             try:
                 qty = pd.to_numeric(sheet['Qty Shipped'], errors='coerce')
@@ -225,9 +198,9 @@ def main(filepaths):
                 cust = sheet.loc[row, 'Root Customer..']
                 salesperson = sheet.loc[row, 'Sales']
                 if not salesperson:
-                    print('Missing salesperson entry detected!'
-                          '\nPlease check Sales column for each file.'
-                          '\n***')
+                    print('Missing salesperson entry detected!\n'
+                          'Please check Sales column for each file.\n'
+                          '***')
                 if cust and salesperson:
                     # Find match in rootCustomerMappings.
                     custMatch = rootCustMap['Root Customer'] == cust
@@ -241,9 +214,6 @@ def main(filepaths):
                                                 'Salesperson': [salesperson]})
                         rootCustMap = rootCustMap.append(newCust,
                                                          ignore_index=True)
-                        if cust not in list(mastAcct['PROPERNAME']):
-                            # Mark as a new customer.
-                            sheet.loc[row, 'Not In Map'] = 'Y'
                     else:
                         print('There appears to be a duplicate customer in'
                               ' rootCustomerMappings:\n'

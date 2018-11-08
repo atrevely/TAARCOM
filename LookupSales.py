@@ -79,6 +79,34 @@ def main(filepath):
               '***')
         return
 
+    # Load the Master Account List file.
+    if os.path.exists('Master Account List 10-5-2018.xlsx'):
+        try:
+            mastAcct = pd.read_excel('Master Account List 10-5-2018.xlsx',
+                                     'Allacct').fillna('')
+        except XLRDError:
+            print('---\n'
+                  'Error reading sheet name for Master Account List.xlsx!\n'
+                  'Please make sure the main tab is named Allacct.\n'
+                  '***')
+            return
+        # Check the column names.
+        mastCols = ['PROPERNAME', 'SLS', 'CITY']
+        missCols = [i for i in mastCols if i not in list(mastAcct)]
+        if missCols:
+            print('The following columns were not detected in '
+                  'Master Account List.xlsx:\n%s' %
+                  ', '.join(map(str, missCols))
+                  + '\n***')
+            return
+    else:
+        print('---\n'
+              'No Master Account List file found!\n'
+              'Please make sure the Master Account List '
+              'is in the directory.\n'
+              '***')
+        return
+
     print('Looking up salespeople...')
 
     # Strip the root off of the filepath and leave just the filename.
@@ -118,6 +146,12 @@ def main(filepath):
     newInsFile = pd.DataFrame(columns=list(insFile))
     newRootCusts = pd.DataFrame(columns=list(insFile))
 
+    # Add the 'City Moved' column.
+    insFile['City Moved'] = ''
+    insFile['Not In Acct List'] = ''
+    colNames.append('City Moved')
+    colNames.append('Not In Acct List')
+
     # Go through each entry in the Insight file and look for a sales match.
     for row in range(len(insFile)):
         # Check for individuals and CMs and note them in comments.
@@ -125,21 +159,37 @@ def main(filepath):
             insFile.loc[row, 'TAARCOM Comments'] = 'Contract Manufacturer'
         if 'individual' in insFile.loc[row, 'Root Customer Class'].lower():
             insFile.loc[row, 'TAARCOM Comments'] = 'Individual'
-        salesMatch = insFile.loc[row, 'Root Customer..'] == rootCustMap['Root Customer']
-        match = rootCustMap[salesMatch]
+        cust = insFile.loc[row, 'Root Customer..']
+        # Check for customer match in account list.
+        acctMatch = mastAcct[mastAcct['PROPERNAME'] == cust]
+        if cust and len(acctMatch) == 1:
+            # Check if the city is different from our account list.
+            if insFile.loc[row, 'Customer City'] != acctMatch['CITY'].iloc[0]:
+                insFile.loc[row, 'City Moved'] = 'Y'
+            # Copy over salesperson and append.
+            insFile.loc[row, 'Sales'] = acctMatch['SLS'].iloc[0]
+            newInsFile = newInsFile.append(insFile.loc[row, :],
+                                           ignore_index=True)
+        else:
+            # Look for match in rootCustMap file.
+            salesMatch = rootCustMap['Root Customer'] == cust
+            match = rootCustMap[salesMatch]
+            if cust and len(match) == 1:
+                # Match to salesperson if exactly one match is found.
+                insFile.loc[row, 'Sales'] = match['Salesperson'].iloc[0]
+                newInsFile = newInsFile.append(insFile.loc[row, :],
+                                               ignore_index=True)
+                # Mark as not in Master Account List.
+                insFile.loc[row, 'Not In Acct List'] = 'Y'
+            else:
+                # Append to the New Root Customers file.
+                newRootCusts = newRootCusts.append(insFile.loc[row, :],
+                                                   ignore_index=True)
+
         # Convert applicable entries to numeric.
         for col in list(insFile):
             insFile.loc[row, col] = pd.to_numeric(insFile.loc[row, col],
                                                   errors='ignore')
-        if len(match) == 1:
-            # Match to salesperson if exactly one match is found.
-            insFile.loc[row, 'Sales'] = match['Salesperson'].iloc[0]
-            newInsFile = newInsFile.append(insFile.loc[row, :],
-                                           ignore_index=True)
-        else:
-            # Append to the New Root Customers file.
-            newRootCusts = newRootCusts.append(insFile.loc[row, :],
-                                               ignore_index=True)
 
     # Reorder columns.
     newInsFile = newInsFile.loc[:, colNames]
