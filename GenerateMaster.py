@@ -77,7 +77,7 @@ def tableFormat(sheetData, sheetName, wbook):
         # Don't let the columns get too wide.
         maxWidth = min(maxWidth, 50)
         # Extra space for '$' in accounting format.
-        if col in acctCols:
+        if col in acctCols or col == 'Invoiced Dollars':
             maxWidth += 2
         sheet.set_column(i, i, maxWidth+0.8, formatting)
         i += 1
@@ -139,7 +139,7 @@ def tailoredPreCalc(princ, sheet, sheetName):
             pass
     # QRF special processing.
     if princ == 'QRF':
-        if sheetName == 'OEM':
+        if sheetName in ['OEM', 'OFF']:
             # The column Name 11 needs to be deleted.
             try:
                 sheet.rename(columns={'Name 11': 'Unmapped',
@@ -147,7 +147,7 @@ def tailoredPreCalc(princ, sheet, sheetName):
                              inplace=True)
             except KeyError:
                 pass
-        elif sheetName in ['POS', 'OFF']:
+        elif sheetName == 'POS':
             # The column Customer is actually the Distributor.
             try:
                 sheet.rename(columns={'Company': 'Distributor',
