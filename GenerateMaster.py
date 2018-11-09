@@ -100,13 +100,10 @@ def tailoredPreCalc(princ, sheet, sheetName):
     # Osram special processing.
     if princ == 'OSR':
         # Get rid of the Item column.
-        try:
-            sheet.rename(columns={'Item': 'Unmapped',
-                                  'Material Number': 'Unmapped 2',
-                                  'Customer Name': 'Unmapped 3'},
-                         inplace=True)
-        except KeyError:
-            pass
+        sheet.rename(columns={'Item': 'Unmapped',
+                              'Material Number': 'Unmapped 2',
+                              'Customer Name': 'Unmapped 3'},
+                     inplace=True)
         # Combine Rep 1 % and Rep 2 %.
         if 'Rep 1 %' in list(sheet) and 'Rep 2 %' in list(sheet):
             for row in sheet.index:
@@ -121,61 +118,48 @@ def tailoredPreCalc(princ, sheet, sheetName):
                         return
     # ISSI special processing.
     if princ == 'ISS':
-        try:
-            # Rename the 'Commissions Due' column.
-            sheet.rename(columns={'Commission Due': 'Unmapped',
-                                  'Name': 'OEM/POS'}, inplace=True)
-            print('Ignoring the Commissions Due column.')
-        except KeyError:
-            pass
+        # Rename the 'Commissions Due' column.
+        sheet.rename(columns={'Commission Due': 'Unmapped',
+                              'Name': 'OEM/POS'}, inplace=True)
+        print('Ignoring the Commissions Due column.')
     # ATS special processing.
     if princ == 'ATS':
-        try:
-            # Rename the 'Commissions Due' column.
-            sheet.rename(columns={'Resale': 'Extended Resale',
-                                  'Cost': 'Extended Cost'}, inplace=True)
-            print('Matching Paid-On Revenue to the distributor.')
-        except KeyError:
-            pass
+        # Rename the 'Commissions Due' column.
+        sheet.rename(columns={'Resale': 'Extended Resale',
+                              'Cost': 'Extended Cost'}, inplace=True)
+        print('Matching Paid-On Revenue to the distributor.')
     # QRF special processing.
     if princ == 'QRF':
         if sheetName in ['OEM', 'OFF']:
             # The column Name 11 needs to be deleted.
-            try:
-                sheet.rename(columns={'Name 11': 'Unmapped',
-                                      'End Customer': 'Unmapped 2'},
-                             inplace=True)
-            except KeyError:
-                pass
+            sheet.rename(columns={'Name 11': 'Unmapped',
+                                  'End Customer': 'Unmapped 2'},
+                         inplace=True)
         elif sheetName == 'POS':
             # The column Customer is actually the Distributor.
-            try:
-                sheet.rename(columns={'Company': 'Distributor',
-                                      'BillDocNo': 'Unmapped',
-                                      'End Customer': 'Unmapped 2'},
-                             inplace=True)
-            except KeyError:
-                pass
+            sheet.rename(columns={'Company': 'Distributor',
+                                  'BillDocNo': 'Unmapped',
+                                  'End Customer': 'Unmapped 2'},
+                         inplace=True)
     # INF special processing.
     if princ == 'INF':
         if 'Rep Group' in list(sheet):
             # Material Number is bad on this sheet.
-            try:
-                sheet.rename(columns={'Material Number': 'Unmapped'},
-                             inplace=True)
-            except KeyError:
-                pass
+            sheet.rename(columns={'Material Number': 'Unmapped'},
+                         inplace=True)
+            # Drop the RunRate row(s) on this sheet.
+            runRate = sheet[sheet['INF Comm Type'] == 'OffShoreRunRate'].index
+            sheet.drop(axis=0, index=runRate)
+            print('Dropping any lines with Comm Type as OffShoreRunRate.\n'
+                  '-')
         else:
             # A bunch of things are bad on this sheet.
-            try:
-                sheet.rename(columns={'Material Description': 'Unmapped1',
-                                      'Sold To Name': 'Unmapped2',
-                                      'Ship To Name': 'Unmapped3',
-                                      'Item': 'Unmapped4',
-                                      'End Name': 'Customer Name'},
-                             inplace=True)
-            except KeyError:
-                pass
+            sheet.rename(columns={'Material Description': 'Unmapped1',
+                                  'Sold To Name': 'Unmapped2',
+                                  'Ship To Name': 'Unmapped3',
+                                  'Item': 'Unmapped4',
+                                  'End Name': 'Customer Name'},
+                         inplace=True)
 
 
 def tailoredCalc(princ, sheet, sheetName, distMap):
@@ -222,10 +206,12 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
             print('Columns added from Abracon special processing:\n'
                   'Commission Rate\n'
                   '---')
+        # Abracon is paid on ...
+        sheet['Comm Source'] = ''
     # ISSI special processing.
     if princ == 'ISS':
         if 'OEM/POS' in list(sheet):
-            for row in range(len(sheet)):
+            for row in sheet.index:
                 # Deal with OEM idiosyncrasies.
                 if 'OEM' in sheet.loc[row, 'OEM/POS']:
                     # Put Sales Region into City.
@@ -242,6 +228,8 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
                             sheet.loc[row, 'Distributor'] = cust
                         except KeyError:
                             pass
+        # ISSI is paid on ...
+        sheet['Comm Source'] = ''
     # ATS special Processing.
     if princ == 'ATS':
         # Digikey and Mouser are paid on cost, not resale.
@@ -253,6 +241,8 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
                     sheet.loc[row, 'Paid-On Revenue'] = sheet.loc[row, 'Invoiced Dollars']
             except KeyError:
                 pass
+        # ATS is paid on ...
+        sheet['Comm Source'] = ''
     # ATP special Processing.
     if princ == 'ATP':
         # Load up the customer lookup file.
@@ -315,6 +305,8 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
                 mloc = ATPCustLook['Name'] == custMatches[0]
                 corrCust = ATPCustLook[mloc].iloc[0]['Corrected']
                 sheet.loc[row, 'Reported Customer'] = corrCust
+        # ATP is paid on ...
+        sheet['Comm Source'] = ''
     # Mill-Max special Processing.
     if princ == 'MIL':
         invNum = True
@@ -334,6 +326,8 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
             # Sometimes the Totals are written in the Part Number column.
             sheet = sheet[sheet['Part Number'] != 'Totals']
             sheet.reset_index(drop=True, inplace=True)
+            # These commissions are paid on cost.
+            sheet['Comm Source'] = 'Cost'
         elif 'Part Number' not in list(sheet) and invNum:
             # We need to load in the part number log.
             if os.path.exists('Mill-Max Invoice Log.xlsx'):
@@ -348,7 +342,7 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
                       '---')
                 return
             # Input part number from Mill-Max Invoice Log.
-            for row in range(len(sheet)):
+            for row in sheet.index:
                 match = MMaxLog['Inv#'] == sheet.loc[row, 'Invoice Number']
                 if sum(match) == 1:
                     partNum = MMaxLog[match].iloc[0]['Part Number']
@@ -362,12 +356,14 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
         # For World Star POS tab, enter World Star as the distributor.
         if 'World' in sheetName:
             sheet['Distributor'] = 'World Star'
+        # Osram is paid on ...
+        sheet['Comm Source'] = ''
     # Cosel special Processing.
     if princ == 'COS':
         # Only work with the Details tab.
         if sheetName == 'Details' and extCost:
             print('Calculating commissions as 5% of Cost Ext.\n'
-                  'Subtracting 2% off of commissions for Allied shipments.\n'
+                  'For Allied shipments, 4.9% of Cost Ext.\n'
                   '---')
             for row in sheet.index:
                 extenCost = sheet.loc[row, 'Ext. Cost']
@@ -377,12 +373,22 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
                 else:
                     sheet.loc[row, 'Commission Rate'] = 0.05
                     sheet.loc[row, 'Actual Comm Paid'] = 0.05*extenCost
+                # Estimate invoiced dollars as 15% markup on cost.
+                sheet.loc[row, 'Invoiced Dollars'] = 1.15*extenCost
+        # Cosel is paid on cost.
+        sheet['Comm Source'] = 'Cost'
     # Globtek special Processing.
     if princ == 'GLO':
-        # Make sure we have Invoiced Dollars.
-        if invDol:
-            sheet['Commission Rate'] = 0.05
-            sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*0.05
+        try:
+            comPct = sheet['Commission Rate']
+            sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*comPct
+        except KeyError:
+            print('No Commission Rate and/or Invoiced Dollars found!\n'
+                  'Please check these columns and try again.\n'
+                  '***')
+            return
+        # Globtek is paid on ...
+        sheet['Comm Source'] = ''
 
     # Test the Commission Dollars to make sure they're correct.
     if 'Paid-On Revenue' in list(sheet):
@@ -442,7 +448,7 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
                         'Year']
     columnNames[7:7] = ['T-End Cust', 'T-Name', 'CM',
                         'Principal', 'Corrected Distributor']
-    columnNames[26:26] = ['Sales Commission']
+    columnNames[26:26] = ['Comm Source', 'Sales Commission']
     columnNames.extend(['CM Split', 'TEMP/FINAL', 'Paid Date', 'From File',
                         'Sales Report Date'])
 
