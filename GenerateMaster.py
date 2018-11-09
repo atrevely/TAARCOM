@@ -343,14 +343,13 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
                 return
             # Input part number from Mill-Max Invoice Log.
             for row in sheet.index:
-                match = MMaxLog['Inv#'] == sheet.loc[row, 'Invoice Number']
-                if sum(match) == 1:
-                    partNum = MMaxLog[match].iloc[0]['Part Number']
-                    sheet.loc[row, 'Part Number'] = partNum
-                else:
-                    print('Part number match error (invoice number either '
-                          'not found or duplicated)!\n'
-                          '---')
+                if sheet.loc[row, 'Invoice Number']:
+                    match = MMaxLog['Inv#'] == sheet.loc[row, 'Invoice Number']
+                    if sum(match) == 1:
+                        partNum = MMaxLog[match].iloc[0]['Part Number']
+                        sheet.loc[row, 'Part Number'] = partNum
+                    else:
+                        sheet.loc[row, 'Part Number'] = 'NOT FOUND'
     # Osram special Processing.
     if princ == 'OSR':
         # For World Star POS tab, enter World Star as the distributor.
