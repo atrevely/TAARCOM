@@ -99,10 +99,11 @@ def tailoredPreCalc(princ, sheet, sheetName):
     """Do special pre-processing tailored to the principal input."""
     # Osram special processing.
     if princ == 'OSR':
-        # Get rid of the Item column.
+        # Get rid of the bad columns.
         sheet.rename(columns={'Item': 'Unmapped',
                               'Material Number': 'Unmapped 2',
-                              'Customer Name': 'Unmapped 3'},
+                              'Customer Name': 'Unmapped 3',
+                              'Sales Date': 'Unmapped 4'},
                      inplace=True)
         # Combine Rep 1 % and Rep 2 %.
         if 'Rep 1 %' in list(sheet) and 'Rep 2 %' in list(sheet):
