@@ -6,6 +6,7 @@ import calendar
 import math
 import os.path
 import re
+import datetime
 
 
 def tableFormat(sheetData, sheetName, wbook):
@@ -207,8 +208,8 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
             print('Columns added from Abracon special processing:\n'
                   'Commission Rate\n'
                   '---')
-        # Abracon is paid on ...
-        sheet['Comm Source'] = ''
+        # Abracon is paid on resale.
+        sheet['Comm Source'] = 'Resale'
     # ISSI special processing.
     if princ == 'ISS':
         if 'OEM/POS' in list(sheet):
@@ -229,8 +230,8 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
                             sheet.loc[row, 'Distributor'] = cust
                         except KeyError:
                             pass
-        # ISSI is paid on ...
-        sheet['Comm Source'] = ''
+        # ISSI is paid on resale.
+        sheet['Comm Source'] = 'Resale'
     # ATS special Processing.
     if princ == 'ATS':
         # Digikey and Mouser are paid on cost, not resale.
@@ -242,8 +243,8 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
                     sheet.loc[row, 'Paid-On Revenue'] = sheet.loc[row, 'Invoiced Dollars']
             except KeyError:
                 pass
-        # ATS is paid on ...
-        sheet['Comm Source'] = ''
+        # ATS is paid on resale.
+        sheet['Comm Source'] = 'Resale'
     # ATP special Processing.
     if princ == 'ATP':
         # Load up the customer lookup file.
@@ -306,8 +307,8 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
                 mloc = ATPCustLook['Name'] == custMatches[0]
                 corrCust = ATPCustLook[mloc].iloc[0]['Corrected']
                 sheet.loc[row, 'Reported Customer'] = corrCust
-        # ATP is paid on ...
-        sheet['Comm Source'] = ''
+        # ATP is paid on resale.
+        sheet['Comm Source'] = 'Resale'
     # Mill-Max special Processing.
     if princ == 'MIL':
         invNum = True
@@ -351,13 +352,15 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
                         sheet.loc[row, 'Part Number'] = partNum
                     else:
                         sheet.loc[row, 'Part Number'] = 'NOT FOUND'
+            # These commissions are paid on resale.
+            sheet['Comm Source'] = 'Resale'
     # Osram special Processing.
     if princ == 'OSR':
         # For World Star POS tab, enter World Star as the distributor.
         if 'World' in sheetName:
             sheet['Distributor'] = 'World Star'
-        # Osram is paid on ...
-        sheet['Comm Source'] = ''
+        # Osram is paid on resale.
+        sheet['Comm Source'] = 'Resale'
     # Cosel special Processing.
     if princ == 'COS':
         # Only work with the Details tab.
@@ -387,8 +390,12 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
                   'Please check these columns and try again.\n'
                   '***')
             return
-        # Globtek is paid on ...
-        sheet['Comm Source'] = ''
+        # Globtek is paid on resale.
+        sheet['Comm Source'] = 'Resale'
+    # RF360 special Processing.
+    if princ == 'QRF':
+        # RF360 is paid on resale.
+        sheet['Comm Source'] = 'Resale'
 
     # Test the Commission Dollars to make sure they're correct.
     if 'Paid-On Revenue' in list(sheet):
@@ -743,7 +750,7 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
             # Append filename and total commissions to Files Processed sheet.
             newFile = pd.DataFrame({'Filename': [filename],
                                     'Total Commissions': [totalComm],
-                                    'Date Added': [time.strftime('%m/%d/%Y')],
+                                    'Date Added': [datetime.datetime.now().date()],
                                     'Paid Date': ['']})
             filesProcessed = filesProcessed.append(newFile, ignore_index=True)
         else:
@@ -796,7 +803,7 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
             finalData.loc[row, 'CM Split'] = custMatches['CM Split']
             # Update usage in lookup Master.
             masterLookup.loc[custMatches['index'],
-                             'Last Used'] = time.strftime('%m/%d/%Y')
+                             'Last Used'] = datetime.datetime.now().date()
             # Update OOT city if not already filled in.
             if custMatches['T-Name'][0:3] == 'OOT' and not custMatches['City']:
                 masterLookup.loc[custMatches['index'],
@@ -826,14 +833,14 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
             dateError = True
         # If no error found in date, fill in the month/year/quarter
         if not dateError:
-            date = parse(dateGiven)
+            date = parse(dateGiven).date()
             # Make sure the date actually makes sense.
             currentYear = int(time.strftime('%Y'))
             if currentYear - date.year not in [0, 1]:
                 dateError = True
             else:
                 # Cast date format into mm/dd/yyyy.
-                finalData.loc[row, 'Invoice Date'] = date.strftime('%m/%d/%Y')
+                finalData.loc[row, 'Invoice Date'] = date
                 # Fill in quarter/year/month data.
                 finalData.loc[row, 'Year'] = date.year
                 finalData.loc[row, 'Month'] = calendar.month_name[date.month][0:3]
@@ -860,6 +867,8 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
         # Go through each column and convert applicable entries to numeric.
         cols = list(finalData)
         cols.remove('Principal')
+        # Invoice number sometimes has leading zeros we'd like to keep.
+        cols.remove('Invoice Number')
         for col in cols:
             finalData.loc[row, col] = pd.to_numeric(finalData.loc[row, col],
                                                     errors='ignore')
@@ -870,7 +879,7 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
             fixList.loc[row, 'Running Com Index'] = row
             fixList.loc[row, 'Distributor Matches'] = len(distMatches)
             fixList.loc[row, 'Lookup Master Matches'] = lookMatches
-            fixList.loc[row, 'Date Added'] = time.strftime('%m/%d/%Y')
+            fixList.loc[row, 'Date Added'] = datetime.datetime.now().date()
             finalData.loc[row, 'TEMP/FINAL'] = 'TEMP'
         else:
             # Everything found, so entry is final.
