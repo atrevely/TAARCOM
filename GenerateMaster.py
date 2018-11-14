@@ -815,11 +815,11 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
         dateError = False
         dateGiven = finalData.loc[row, 'Invoice Date']
         # Check if the date is read in as a float/int, and convert to string.
-        if isinstance(finalData.loc[row, 'Invoice Date'], (float, int)):
+        if isinstance(dateGiven, (float, int)):
             dateGiven = str(int(dateGiven))
         # Check if Pandas read it in as a Timestamp object.
         # If so, turn it back into a string (a bit roundabout, oh well).
-        elif isinstance(dateGiven, pd.Timestamp):
+        elif isinstance(dateGiven, (pd.Timestamp,  datetime.datetime)):
             dateGiven = str(dateGiven)
         try:
             parse(dateGiven)

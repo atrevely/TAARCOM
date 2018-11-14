@@ -154,8 +154,8 @@ def main(runCom):
         return
 
     # Grab the lines that have been fixed.
-    TNameFixed = fixList[fixList['T-End Cust'] != '']
-    fixed = TNameFixed[TNameFixed['Invoice Date'] != '']
+    endCustFixed = fixList[fixList['T-End Cust'] != '']
+    fixed = endCustFixed[endCustFixed['Invoice Date'] != '']
     # Return if there's nothing fixed.
     if fixed.shape[0] == 0:
         print('No new fixed entries detected.\n'
@@ -169,11 +169,11 @@ def main(runCom):
         dateError = False
         dateGiven = fixed.loc[row, 'Invoice Date']
         # Check if the date is read in as a float/int, and convert to string.
-        if isinstance(fixed.loc[row, 'Invoice Date'], (float, int)):
+        if isinstance(dateGiven, (float, int)):
             dateGiven = str(int(dateGiven))
         # Check if Pandas read it in as a Timestamp object.
         # If so, turn it back into a string (a bit roundabout, oh well).
-        elif isinstance(dateGiven, pd.Timestamp):
+        elif isinstance(dateGiven, (pd.Timestamp,  datetime.datetime)):
             dateGiven = str(dateGiven)
         try:
             parse(dateGiven)
