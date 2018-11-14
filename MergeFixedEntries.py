@@ -265,8 +265,8 @@ def main(runCom):
               + ' entries quarantied for being more than 2 years old.\n')
 
     # Check if the files we're going to save are open already.
-    fname1 = 'Running Commissions ' + time.strftime('%Y-%m-%d-%H%M') + '.xlsx'
-    fname2 = 'Entries Need Fixing.xlsx'
+    fname1 = 'Running Commissions ' + comDate
+    fname2 = 'Entries Need Fixing ' + comDate
     fname3 = 'Lookup Master - Current.xlsx'
     fname4 = 'Quarantined Lookups.xlsx'
     if saveError(fname1, fname2, fname3, fname4):
