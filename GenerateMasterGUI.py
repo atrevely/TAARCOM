@@ -224,17 +224,21 @@ class GenMast(QMainWindow):
 
     def fixEntriesExecute(self):
         """Copy over fixed entries to Master."""
-        # Turn buttons off.
-        self.lockButtons()
-        # Run the GenerateMaster.py file.
-        try:
-            MergeFixedEntries.main()
-        except Exception as error:
-            print('Unexpected Python error:\n'
-                  + str(error)
-                  + '\nPlease contact your local coder.')
-        # Turn buttons back on.
-        self.restoreButtons()
+        if self.master:
+            # Turn buttons off.
+            self.lockButtons()
+            # Run the GenerateMaster.py file.
+            try:
+                MergeFixedEntries.main(self.master)
+            except Exception as error:
+                print('Unexpected Python error:\n'
+                      + str(error)
+                      + '\nPlease contact your local coder.')
+            # Turn buttons back on.
+            self.restoreButtons()
+        else:
+            print('Please upload the current Running Commissions file.\n'
+                  '---')
 
     def uploadMastClicked(self):
         """Upload an existing master list."""

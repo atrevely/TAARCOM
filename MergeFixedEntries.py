@@ -87,7 +87,7 @@ def saveError(*excelFiles):
 
 
 # The main function.
-def main():
+def main(runCom):
     """Replaces bad entries in Running Commissions with their fixed versions.
 
     Entries in Running Commissions which need attention are copied to the
@@ -100,42 +100,25 @@ def main():
     entries when needed, and quarantining old entries that have not been
     used in 2+ years.
     """
+    # Load up the current Running Commissions file.
+    runningCom = pd.read_excel(runCom, 'Master').fillna('')
+    filesProcessed = pd.read_excel(runCom, 'Files Processed').fillna('')
+    comDate = runCom[-20:]
+
     # Load up the Entries Need Fixing file.
-    if os.path.exists('Entries Need Fixing.xlsx'):
+    if os.path.exists('Entries Need Fixing ' + comDate):
         try:
-            fixList = pd.read_excel('Entries Need Fixing.xlsx',
+            fixList = pd.read_excel('Entries Need Fixing ' + comDate,
                                     'Data').fillna('')
         except XLRDError:
-            print('---\n'
-                  'Error reading sheet name for Entries Need Fixing.xlsx!\n'
+            print('Error reading sheet name for Entries Need Fixing.xlsx!\n'
                   'Please make sure the main tab is named Data.\n'
                   '***')
             return
     else:
-        print('---\n'
-              'No Entries Need Fixing file found!\n'
+        print('No Entries Need Fixing file found!\n'
               'Please make sure Entries Need Fixing.xlsx '
               'is in the directory.\n'
-              '***')
-        return
-
-    # Load up the current Running Commissions file.
-    if os.path.exists('Running Commissions Oct 2018.xlsx'):
-        try:
-            runningCom = pd.read_excel('Running Commissions Oct 2018.xlsx',
-                                       'Master').fillna('')
-            filesProcessed = pd.read_excel('Running Commissions Oct 2018.xlsx',
-                                           'Files Processed').fillna('')
-        except XLRDError:
-            print('---\n'
-                  'Error reading sheet name for Running Commissions!\n'
-                  'Please make sure the main tab is named Master '
-                  'and there is a tab named Files Processed.\n'
-                  '***')
-            return
-    else:
-        print('---\n'
-              'No Running Commissions file found!\n'
               '***')
         return
 
@@ -155,8 +138,7 @@ def main():
                   + '\n***')
             return
     else:
-        print('---\n'
-              'No Lookup Master found!\n'
+        print('No Lookup Master found!\n'
               'Please make sure lookupMaster.xlsx is in the directory.\n'
               '***')
         return
@@ -165,43 +147,61 @@ def main():
     if os.path.exists('Quarantined Lookups.xlsx'):
         quarantined = pd.read_excel('Quarantined Lookups.xlsx').fillna('')
     else:
-        print('---\n'
-              'No Quarantied Lookups file found!\n'
+        print('No Quarantied Lookups file found!\n'
               'Please make sure Quarantined Lookups.xlsx '
               'is in the directory.\n'
               '***')
         return
 
     # Grab the lines that have been fixed.
-    endCustFixed = fixList[fixList['T-End Cust'] != '']
-    fixed = endCustFixed[endCustFixed['Invoice Date'] != '']
+    TNameFixed = fixList[fixList['T-End Cust'] != '']
+    fixed = TNameFixed[TNameFixed['Invoice Date'] != '']
+    # Return if there's nothing fixed.
+    if fixed.shape[0] == 0:
+        print('No new fixed entries detected.\n'
+              '***')
+        return
 
     # %%
     print('Writing fixed entries...')
     # Go through each entry that's fixed and replace it in Running Commissions.
     for row in fixed.index:
-        # Try parsing the date.
         dateError = False
+        dateGiven = fixed.loc[row, 'Invoice Date']
+        # Check if the date is read in as a float/int, and convert to string.
+        if isinstance(fixed.loc[row, 'Invoice Date'], (float, int)):
+            dateGiven = str(int(dateGiven))
+        # Check if Pandas read it in as a Timestamp object.
+        # If so, turn it back into a string (a bit roundabout, oh well).
+        elif isinstance(dateGiven, pd.Timestamp):
+            dateGiven = str(dateGiven)
         try:
-            date = fixed.loc[row, 'Invoice Date']
-            date = parse(str(date))
+            parse(dateGiven)
+        except (ValueError, TypeError):
+            # The date isn't recognized by the parser.
+            dateError = True
+        except KeyError:
+            print('There is no Invoice Date column in Entries Need Fixing!\n'
+                  'Please check to make sure an Invoice Date column exists.\n'
+                  'Note: Spelling, whitespace, and capitalization matter.\n'
+                  '---')
+            dateError = True
+        # If no error found in date, finish filling out the fixed entry.
+        if not dateError:
+            date = parse(dateGiven).date()
             # Make sure the date actually makes sense.
             currentYear = int(time.strftime('%Y'))
             if currentYear - date.year not in [0, 1]:
                 dateError = True
-        except ValueError:
-            dateError = True
-            print('Error parsing date for Master Index row ' + str(row))
-        # If no error found in date, finish filling out the fixed entry.
-        if not dateError:
-            # Cast date format into mm/dd/yyyy.
-            fixed.loc[row, 'Invoice Date'] = date.strftime('%m/%d/%Y')
-            # Fill in quarter/year/month data.
-            fixed.loc[row, 'Year'] = date.year
-            fixed.loc[row, 'Month'] = calendar.month_name[date.month][0:3]
-            fixed.loc[row, 'Quarter'] = (str(date.year)
-                                         + 'Q'
-                                         + str(math.ceil(date.month/3)))
+            else:
+                # Cast date format into mm/dd/yyyy.
+                fixed.loc[row, 'Invoice Date'] = date
+                # Fill in quarter/year/month data.
+                fixed.loc[row, 'Year'] = date.year
+                fixed.loc[row, 'Month'] = calendar.month_name[date.month][0:3]
+                fixed.loc[row, 'Quarter Shipped'] = (str(date.year)
+                                                     + 'Q'
+                                                     + str(math.ceil(date.month/3)))
 
             # Replace the Running Commissions entry with the fixed one.
             RCIndex = fixed.loc[row, 'Running Com Index']
@@ -228,7 +228,7 @@ def main():
                                                     'T-End Cust', 'T-Name',
                                                     'CM', 'Principal',
                                                     'Part Number', 'City']]
-                    lookupEntry['Date Added'] = time.strftime('%m/%d/%Y')
+                    lookupEntry['Date Added'] = datetime.datetime.now().date()
                     invDate = pd.Timestamp(fixList.loc[row, 'Invoice Date'])
                     lookupEntry['Last Used'] = invDate.strftime('%m/%d/%Y')
                     # Merge to the Lookup Master.
@@ -254,14 +254,15 @@ def main():
     dateCutoff = lastUsed < twoYearsAgo.strftime('%Y%m%d')
     oldEntries = mastLook[dateCutoff].reset_index(drop=True)
     mastLook = mastLook[~dateCutoff].reset_index(drop=True)
-    # Record the date we quarantined the entries.
-    oldEntries.loc[:, 'Date Quarantined'] = time.strftime('%m/%d/%Y')
-    # Add deprecated entries to the quarantine.
-    quarantined = quarantined.append(oldEntries,
-                                     ignore_index=True)
-    # Notify us of changes.
-    print(str(len(oldEntries))
-          + ' entries quarantied for being more than 2 years old.\n')
+    if oldEntries.shape[0] > 0:
+        # Record the date we quarantined the entries.
+        oldEntries.loc[:, 'Date Quarantined'] = datetime.datetime.now().date()
+        # Add deprecated entries to the quarantine.
+        quarantined = quarantined.append(oldEntries,
+                                         ignore_index=True)
+        # Notify us of changes.
+        print(str(len(oldEntries))
+              + ' entries quarantied for being more than 2 years old.\n')
 
     # Check if the files we're going to save are open already.
     fname1 = 'Running Commissions ' + time.strftime('%Y-%m-%d-%H%M') + '.xlsx'
