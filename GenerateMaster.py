@@ -135,13 +135,15 @@ def tailoredPreCalc(princ, sheet, sheetName):
         if sheetName in ['OEM', 'OFF']:
             # The column Name 11 needs to be deleted.
             sheet.rename(columns={'Name 11': 'Unmapped',
-                                  'End Customer': 'Unmapped 2'},
+                                  'End Customer': 'Unmapped 2',
+                                  'Item': 'Unmapped 3'},
                          inplace=True)
         elif sheetName == 'POS':
             # The column Customer is actually the Distributor.
             sheet.rename(columns={'Company': 'Distributor',
                                   'BillDocNo': 'Unmapped',
-                                  'End Customer': 'Unmapped 2'},
+                                  'End Customer': 'Unmapped 2',
+                                  'Item': 'Unmapped 3'},
                          inplace=True)
     # INF special processing.
     if princ == 'INF':
