@@ -198,8 +198,8 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
                   '---')
         elif revIn and commRateNotIn:
             # Fill down Distributor for their grouping scheme.
-            sheet['Distributor'].fillna(method='ffill', inplace=True)
-            sheet['Distributor'].fillna('', inplace=True)
+            sheet['Reported Distributor'].fillna(method='ffill', inplace=True)
+            sheet['Reportedd Distributor'].fillna('', inplace=True)
             # Calculate the Commission Rate.
             comPaid = pd.to_numeric(sheet['Actual Comm Paid'], errors='coerce')
             revenue = pd.to_numeric(sheet['Paid-On Revenue'], errors='coerce')
@@ -227,7 +227,7 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
                     if len(distMatches) == 1:
                         # Copy to distributor column.
                         try:
-                            sheet.loc[row, 'Distributor'] = cust
+                            sheet.loc[row, 'Reported Distributor'] = cust
                         except KeyError:
                             pass
         # ISSI is paid on resale.
@@ -237,7 +237,7 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
         # Digikey and Mouser are paid on cost, not resale.
         for row in sheet.index:
             try:
-                if sheet.loc[row, 'Distributor'] in ['DIGIKEY', 'MOUSER']:
+                if sheet.loc[row, 'Reported Distributor'] in ['DIGIKEY', 'MOUSER']:
                     sheet.loc[row, 'Paid-On Revenue'] = sheet.loc[row, 'Ext. Cost']
                 else:
                     sheet.loc[row, 'Paid-On Revenue'] = sheet.loc[row, 'Invoiced Dollars']
@@ -358,7 +358,7 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
     if princ == 'OSR':
         # For World Star POS tab, enter World Star as the distributor.
         if 'World' in sheetName:
-            sheet['Distributor'] = 'World Star'
+            sheet['Reported Distributor'] = 'World Star'
         # Osram is paid on resale.
         sheet['Comm Source'] = 'Resale'
     # Cosel special Processing.
@@ -370,7 +370,7 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
                   '---')
             for row in sheet.index:
                 extenCost = sheet.loc[row, 'Ext. Cost']
-                if sheet.loc[row, 'Distributor'] == 'ALLIED':
+                if sheet.loc[row, 'Reported Distributor'] == 'ALLIED':
                     sheet.loc[row, 'Commission Rate'] = 0.049
                     sheet.loc[row, 'Actual Comm Paid'] = 0.049*extenCost
                 else:
@@ -850,7 +850,7 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
         # Find a corrected distributor match.
         # Strip extraneous characters and all spaces, and make lowercase.
         distName = re.sub('[^a-zA-Z0-9]', '',
-                          str(finalData.loc[row, 'Distributor'])).lower()
+                          str(finalData.loc[row, 'Reported Distributor'])).lower()
 
         # Find matches for the distName in the Distributor Abbreviations.
         distMatches = [i for i in distMap['Search Abbreviation']
