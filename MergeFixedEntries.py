@@ -105,6 +105,16 @@ def main(runCom):
     filesProcessed = pd.read_excel(runCom, 'Files Processed').fillna('')
     comDate = runCom[-20:]
 
+    # Track commission dollars.
+    try:
+        comm = pd.to_numeric(runningCom['Actual Comm Paid'],
+                             errors='coerce').fillna(0)
+        totComm = sum(comm)
+    except TypeError:
+        print('Non-numeric entry detected in Actual Comm Paid.\n'
+              '***')
+        return
+
     # Load up the Entries Need Fixing file.
     if os.path.exists('Entries Need Fixing ' + comDate):
         try:
@@ -238,7 +248,16 @@ def main(runCom):
             fixList.drop(row, inplace=True)
 
     # %%
-    # Re-index the fix list and drop nans in Lookup Master
+    # Check to make sure commission dollars still match.
+    comm = pd.to_numeric(runningCom['Actual Comm Paid'],
+                         errors='coerce').fillna(0)
+    if sum(comm) != totComm:
+        print('Commission dollars do not match after fixing entries!\n'
+              'Make sure Entries Need fixing aligns properly with '
+              'Running Commissions.\n'
+              '***')
+        return
+    # Re-index the fix list and drop nans in Lookup Master.
     fixList.reset_index(drop=True, inplace=True)
     mastLook.fillna('', inplace=True)
     # Check for entries that are too old and quarantine them.
