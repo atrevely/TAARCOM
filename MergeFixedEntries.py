@@ -33,6 +33,9 @@ def tableFormat(sheetData, sheetName, wbook):
     pctFormat = wbook.book.add_format({'font': 'Calibri',
                                        'font_size': 11,
                                        'num_format': '0.0%'})
+    dateFormat = wbook.book.add_format({'font': 'Calibri',
+                                        'font_size': 11,
+                                        'num_format': 14})
     # Format and fit each column.
     i = 0
     for col in sheetData.columns:
@@ -43,10 +46,16 @@ def tableFormat(sheetData, sheetName, wbook):
                     'Sales Commission']
         pctCols = ['Split Percentage', 'Commission Rate',
                    'Gross Rev Reduction', 'Shared Rev Tier Rate']
+        coreCols = ['CM Sales', 'Design Sales', 'T-End Cust', 'T-Name',
+                    'CM', 'Invoice Date']
+        dateCols = ['Invoice Date', 'Paid Date', 'Sales Report Date',
+                    'Date Added']
         if col in acctCols:
             formatting = acctFormat
         elif col in pctCols:
             formatting = pctFormat
+        elif col in dateCols:
+            formatting = dateFormat
         elif col == 'Quantity':
             formatting = commaFormat
         elif col == 'Invoiced Dollars':
@@ -65,13 +74,20 @@ def tableFormat(sheetData, sheetName, wbook):
         else:
             formatting = docFormat
         # Set column width and formatting.
-        if sheetData.shape[0] > 0:
+        try:
             maxWidth = max(len(str(val)) for val in sheetData[col].values)
-            maxWidth = min(maxWidth, 50)
-            sheet.set_column(i, i, maxWidth+0.8, formatting)
-            i += 1
-        else:
-            sheet.set_column(i, i, len(col), formatting)
+        except ValueError:
+            maxWidth = 0
+        # If column is one that always gets filled in, then keep it expanded.
+        if col in coreCols:
+            maxWidth = max(maxWidth, len(col), 10)
+        # Don't let the columns get too wide.
+        maxWidth = min(maxWidth, 50)
+        # Extra space for '$' in accounting format.
+        if col in acctCols or col == 'Invoiced Dollars':
+            maxWidth += 2
+        sheet.set_column(i, i, maxWidth+0.8, formatting)
+        i += 1
 
 
 def saveError(*excelFiles):
@@ -212,10 +228,17 @@ def main(runCom):
                 fixed.loc[row, 'Quarter Shipped'] = (str(date.year)
                                                      + 'Q'
                                                      + str(math.ceil(date.month/3)))
-
-            # Replace the Running Commissions entry with the fixed one.
+            # Check for match in commission dollars.
             RCIndex = fixed.loc[row, 'Running Com Index']
-            runningCom.loc[RCIndex, :] = fixed.loc[row, list(runningCom)]
+            comm = fixed.loc[row, 'Actual Comm Paid']
+            if runningCom.loc[RCIndex, 'Actual Comm Paid'] == comm:
+                # Replace the Running Commissions entry with the fixed one.
+                runningCom.loc[RCIndex, :] = fixed.loc[row, list(runningCom)]
+            else:
+                print('Mismatch in commission dollars found in row '
+                      + str(row + 2)
+                      + '\n***')
+                return
 
             # Append entry to Lookup Master, if applicable.
             # Check if entry is individual, misc, or unknown.

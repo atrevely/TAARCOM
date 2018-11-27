@@ -133,10 +133,13 @@ class GenMast(QMainWindow):
         self.princMenu = QComboBox(self)
         self.princMenu.resize(200, 30)
         self.princMenu.move(650, 100)
-        self.princMenu.addItem('(No Selection)')
         # Fill in principals, if file is found.
         if princList is not None:
             self.princMenu.addItems(list(princList['Abbreviation']))
+        else:
+            print('Principal list not found!\n'
+                  'Please make sure principalList.xlsx is '
+                  'in the directory!')
         self.princLabel = QLabel('Select Principal:', self)
         self.princLabel.resize(150, 100)
         self.princLabel.move(650, 35)
