@@ -271,17 +271,17 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
             return
         # Fill in commission rates and commission paid.
         if 'US' in sheetName and invDol:
-            sheet['Commission Rate'] = 0.05
-            sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*0.05
-            print('Commission rate filled in for this tab: 5%\n'
+            sheet['Commission Rate'] = 0.03
+            sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*0.03
+            print('Commission rate filled in for this tab: 3%\n'
                   '---')
             sheet['Reported Customer'].fillna(method='ffill', inplace=True)
             print('Correcting customer names.\n'
                   '---')
         elif 'TW' in sheetName and invDol:
-            sheet['Commission Rate'] = 0.04
-            sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*0.04
-            print('Commission rate filled in for this tab: 4%\n'
+            sheet['Commission Rate'] = 0.024
+            sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*0.024
+            print('Commission rate filled in for this tab: 2.4%\n'
                   '---')
             sheet['Reported Customer'].fillna(method='ffill', inplace=True)
             print('Correcting customer names.\n'
@@ -932,7 +932,8 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
         return
 
     # Write the Running Commissions file.
-    writer1 = pd.ExcelWriter(fname1, engine='xlsxwriter')
+    writer1 = pd.ExcelWriter(fname1, engine='xlsxwriter',
+                             datetime_format='mm/dd/yyyy')
     finalData.to_excel(writer1, sheet_name='Master', index=False)
     filesProcessed.to_excel(writer1, sheet_name='Files Processed',
                             index=False)
@@ -941,13 +942,15 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
     tableFormat(filesProcessed, 'Files Processed', writer1)
 
     # Write the Needs Fixing file.
-    writer2 = pd.ExcelWriter(fname2, engine='xlsxwriter')
+    writer2 = pd.ExcelWriter(fname2, engine='xlsxwriter',
+                             datetime_format='mm/dd/yyyy')
     fixList.to_excel(writer2, sheet_name='Data', index=False)
     # Format as table in Excel.
     tableFormat(fixList, 'Data', writer2)
 
     # Write the Lookup Master.
-    writer3 = pd.ExcelWriter(fname3, engine='xlsxwriter')
+    writer3 = pd.ExcelWriter(fname3, engine='xlsxwriter',
+                             datetime_format='mm/dd/yyyy')
     masterLookup.to_excel(writer3, sheet_name='Lookup', index=False)
     # Format as table in Excel.
     tableFormat(masterLookup, 'Lookup', writer3)

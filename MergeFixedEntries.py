@@ -319,7 +319,8 @@ def main(runCom):
         return
 
     # Write the Running Commissions file.
-    writer1 = pd.ExcelWriter(fname1, engine='xlsxwriter')
+    writer1 = pd.ExcelWriter(fname1, engine='xlsxwriter',
+                             datetime_format='mm/dd/yyyy')
     runningCom.to_excel(writer1, sheet_name='Master', index=False)
     filesProcessed.to_excel(writer1, sheet_name='Files Processed',
                             index=False)
@@ -328,19 +329,22 @@ def main(runCom):
     tableFormat(filesProcessed, 'Files Processed', writer1)
 
     # Write the Needs Fixing file.
-    writer2 = pd.ExcelWriter(fname2, engine='xlsxwriter')
+    writer2 = pd.ExcelWriter(fname2, engine='xlsxwriter',
+                             datetime_format='mm/dd/yyyy')
     fixList.to_excel(writer2, sheet_name='Data', index=False)
     # Format as table in Excel.
     tableFormat(fixList, 'Data', writer2)
 
     # Write the Lookup Master file.
-    writer3 = pd.ExcelWriter(fname3, engine='xlsxwriter')
+    writer3 = pd.ExcelWriter(fname3, engine='xlsxwriter',
+                             datetime_format='mm/dd/yyyy')
     mastLook.to_excel(writer3, sheet_name='Lookup', index=False)
     # Format as table in Excel.
     tableFormat(mastLook, 'Lookup', writer3)
 
     # Write the Quarantined Lookups file.
-    writer4 = pd.ExcelWriter(fname4, engine='xlsxwriter')
+    writer4 = pd.ExcelWriter(fname4, engine='xlsxwriter',
+                             datetime_format='mm/dd/yyyy')
     quarantined.to_excel(writer4, sheet_name='Lookup', index=False)
     # Format as table in Excel.
     tableFormat(quarantined, 'Lookup', writer4)
