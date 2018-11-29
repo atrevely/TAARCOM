@@ -243,7 +243,8 @@ def main(filepaths):
             return
 
         # Write report to file.
-        writer = pd.ExcelWriter(fname, engine='xlsxwriter')
+        writer = pd.ExcelWriter(fname, engine='xlsxwriter',
+                                datetime_format='mm/dd/yyyy')
         repDat.to_excel(writer, sheet_name='Report Data', index=False)
         # Format as table in Excel.
         tableFormat(repDat, 'Report Data', writer)
@@ -267,7 +268,8 @@ def main(filepaths):
         return
 
     # Write the Insight Master file.
-    writer1 = pd.ExcelWriter(fname1, engine='xlsxwriter')
+    writer1 = pd.ExcelWriter(fname1, engine='xlsxwriter',
+                             datetime_format='mm/dd/yyyy')
     insMast.to_excel(writer1, sheet_name='Master', index=False)
     filesProcessed.to_excel(writer1, sheet_name='Files Processed',
                             index=False)
@@ -276,13 +278,15 @@ def main(filepaths):
     tableFormat(filesProcessed, 'Files Processed', writer1)
 
     # Write the rootCustomerMappings file.
-    writer2 = pd.ExcelWriter(fname2, engine='xlsxwriter')
+    writer2 = pd.ExcelWriter(fname2, engine='xlsxwriter',
+                             datetime_format='mm/dd/yyyy')
     rootCustMap.to_excel(writer2, sheet_name='Sales Lookup', index=False)
     # Format as table in Excel.
     tableFormat(rootCustMap, 'Sales Lookup', writer2)
 
     # Write the full salespeople file.
-    writer3 = pd.ExcelWriter(fname3, engine='xlsxwriter')
+    writer3 = pd.ExcelWriter(fname3, engine='xlsxwriter',
+                             datetime_format='mm/dd/yyyy')
     newDatComb.to_excel(writer3, sheet_name='Full Data', index=False)
     # Format as table in Excel.
     tableFormat(newDatComb, 'Full Data', writer3)

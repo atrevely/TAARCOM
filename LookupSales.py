@@ -205,13 +205,15 @@ def main(filepath):
         return
 
     # Write the Insight file, which now contains salespeople.
-    writer1 = pd.ExcelWriter(fname1, engine='xlsxwriter')
+    writer1 = pd.ExcelWriter(fname1, engine='xlsxwriter',
+                             datetime_format='mm/dd/yyyy')
     newInsFile.to_excel(writer1, sheet_name='Data', index=False)
     # Format as table in Excel.
     tableFormat(newInsFile, 'Data', writer1)
 
     # Write the New Root Customers file.
-    writer2 = pd.ExcelWriter(fname2, engine='xlsxwriter')
+    writer2 = pd.ExcelWriter(fname2, engine='xlsxwriter',
+                             datetime_format='mm/dd/yyyy')
     newRootCusts.to_excel(writer2, sheet_name='Data', index=False)
     # Format as table in Excel.
     tableFormat(newRootCusts, 'Data', writer2)

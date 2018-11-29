@@ -113,7 +113,8 @@ def main(filepaths):
         return
 
     # Write the Insight Master file.
-    writer1 = pd.ExcelWriter(fname1, engine='xlsxwriter')
+    writer1 = pd.ExcelWriter(fname1, engine='xlsxwriter',
+                             datetime_format='mm/dd/yyyy')
     insMast.to_excel(writer1, sheet_name='Master', index=False)
     filesProcessed.to_excel(writer1, sheet_name='Files Processed',
                             index=False)
