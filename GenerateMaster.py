@@ -162,10 +162,14 @@ def tailoredPreCalc(princ, sheet, sheetName):
             sheet.rename(columns={'Material Number': 'Unmapped'},
                          inplace=True)
             # Drop the RunRate row(s) on this sheet.
-            runRate = sheet[sheet['INF Comm Type'] == 'OffShoreRunRate'].index
-            sheet.drop(axis=0, index=runRate)
-            print('Dropping any lines with Comm Type as OffShoreRunRate.\n'
-                  '-')
+            try:
+                runRate = sheet[sheet['Comm Type'] == 'OffShoreRunRate'].index
+                sheet.drop(axis=0, index=runRate)
+                print('Dropping any lines with Comm Type as OffShoreRunRate.\n'
+                      '-')
+            except KeyError:
+                print('Found no Comm Type column!\n'
+                      '-')
         else:
             # A bunch of things are bad on this sheet.
             sheet.rename(columns={'Material Description': 'Unmapped1',
@@ -211,7 +215,7 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
         elif revIn and commRateNotIn:
             # Fill down Distributor for their grouping scheme.
             sheet['Reported Distributor'].fillna(method='ffill', inplace=True)
-            sheet['Reportedd Distributor'].fillna('', inplace=True)
+            sheet['Reported Distributor'].fillna('', inplace=True)
             # Calculate the Commission Rate.
             comPaid = pd.to_numeric(sheet['Actual Comm Paid'], errors='coerce')
             revenue = pd.to_numeric(sheet['Paid-On Revenue'], errors='coerce')
