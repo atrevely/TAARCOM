@@ -495,6 +495,23 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
                   ', '.join(map(str, addCols))
                   + '\n***')
             return
+        # Load in the matching Entries Need Fixing file.
+        comDate = runningCom[-20:]
+        fixName = 'Entries Need Fixing ' + comDate
+        try:
+            fixList = pd.read_excel(fixName, 'Data').fillna('')
+        except FileNotFoundError:
+            print('No matching Entries Need Fixing file found for this '
+                  'Running Commissions file!\n'
+                  'Make sure Entries Need Fixing ' + fixName
+                  + '.xlsx is in the proper folder.\n'
+                  '***')
+            return
+        except XLRDError:
+            print('No sheet named Data found in Entries Need Fixing '
+                  + fixName + '.xlsx!\n'
+                  + '***')
+            return
     # Start new Running Commissions.
     else:
         print('No Running Commissions file provided. Starting a new one.')
@@ -782,8 +799,9 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
     # %%
     # Fill NaNs left over from appending.
     finalData.fillna('', inplace=True)
-    # Create the Entries Need Fixing dataframe.
-    fixList = pd.DataFrame(columns=list(finalData))
+    # Create the Entries Need Fixing dataframe (if not loaded in already).
+    if not runningCom:
+        fixList = pd.DataFrame(columns=list(finalData))
     # Find matches in Lookup Master and extract data from them.
     # Let us know how many rows are being processed.
     numRows = '{:,.0f}'.format(len(finalData) - runComLen)
@@ -918,8 +936,7 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
                         'Date Added', 'Running Com Index'])
     # Fix up the Entries Need Fixing file.
     fixList = fixList.loc[:, columnNames]
-    fixList.index.name = 'Master Index'
-    fixList.reset_index(inplace=True)
+    fixList.reset_index(drop=True, inplace=True)
     fixList.fillna('', inplace=True)
 
     # %%
