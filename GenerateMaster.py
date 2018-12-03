@@ -7,6 +7,7 @@ import math
 import os.path
 import re
 import datetime
+import math
 
 
 def tableFormat(sheetData, sheetName, wbook):
@@ -361,7 +362,7 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
                 return
             # Input part number from Mill-Max Invoice Log.
             for row in sheet.index:
-                if sheet.loc[row, 'Invoice Number']:
+                if not math.isnan(sheet.loc[row, 'Invoice Number']):
                     match = MMaxLog['Inv#'] == sheet.loc[row, 'Invoice Number']
                     if sum(match) == 1:
                         partNum = MMaxLog[match].iloc[0]['Part Number']
@@ -773,11 +774,6 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
                     appCols = matchingColumns + ['From File', 'Principal']
                     finalData = finalData.append(sheet[appCols],
                                                  ignore_index=True)
-                    # Let us know which columns are missing.
-                    if missingCols:
-                        print('The following columns were not found: %s' %
-                              ', '.join(map(str, missingCols))
-                              + '\n-')
                 else:
                     print('Found no data on this tab. Moving on.\n'
                           '-')

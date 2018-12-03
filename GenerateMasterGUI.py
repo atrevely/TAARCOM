@@ -27,6 +27,13 @@ class GenMast(QMainWindow):
     def __init__(self):
         super().__init__()
 
+        # Custom output stream.
+        sys.stdout = Stream(newText=self.onUpdateText)
+
+        # Set working directory as current file directory.
+        dirPath = os.path.dirname(os.path.realpath(__file__))
+        os.chdir(dirPath)
+
         # Initialize the threadpool for handling worker jobs.
         self.threadpool = QtCore.QThreadPool()
         # Initialize UI and supporting filenames.
@@ -34,16 +41,10 @@ class GenMast(QMainWindow):
         self.filenames = []
         self.master = []
 
-        # Custom output stream.
-        sys.stdout = Stream(newText=self.onUpdateText)
         # Show welcome message.
         print('Welcome to the TAARCOM Commissions Manager.\n'
               'Messages and updates will display below.\n'
               '______________________________________________________')
-
-        # Set working directory as current file directory.
-        dirPath = os.path.dirname(os.path.realpath(__file__))
-        os.chdir(dirPath)
 
         # Initialize global variables.
         global fieldMappings
