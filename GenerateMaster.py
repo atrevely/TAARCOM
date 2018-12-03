@@ -163,8 +163,8 @@ def tailoredPreCalc(princ, sheet, sheetName):
                          inplace=True)
             # Drop the RunRate row(s) on this sheet.
             try:
-                runRate = sheet[sheet['Comm Type'] == 'OffShoreRunRate'].index
-                sheet.drop(axis=0, index=runRate)
+                ID = sheet[sheet['Comm Type'] == 'OffShoreRunRate'].index
+                sheet.loc[ID, :] = ''
                 print('Dropping any lines with Comm Type as OffShoreRunRate.\n'
                       '-')
             except KeyError:
@@ -632,11 +632,11 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
                 sheet = sheet.loc[:, ~sheet.columns.str.contains('^Unnamed')]
             except AttributeError:
                 pass
+            # Do specialized pre-processing tailored to principlal.
+            tailoredPreCalc(principal, sheet, sheetName)
             totalRows = sheet.shape[0]
             print('Found ' + str(totalRows) + ' entries in the tab '
                   + sheetName + '\n----------------------------------')
-            # Do specialized pre-processing tailored to principlal.
-            tailoredPreCalc(principal, sheet, sheetName)
 
             # Iterate over each column of data that we want to append.
             missingCols = []
