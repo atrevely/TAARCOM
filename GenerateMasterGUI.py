@@ -41,6 +41,10 @@ class GenMast(QMainWindow):
               'Messages and updates will display below.\n'
               '______________________________________________________')
 
+        # Set working directory as current file directory.
+        dirPath = os.path.dirname(os.path.realpath(__file__))
+        os.chdir(dirPath)
+
         # Initialize global variables.
         global fieldMappings
         # Upload field mappings, if found.
