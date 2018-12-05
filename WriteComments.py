@@ -1,5 +1,6 @@
 import pandas as pd
 import os
+import time
 from xlrd import XLRDError
 
 
@@ -38,30 +39,17 @@ def saveError(*excelFiles):
 
 # The main function.
 def main(filepaths):
-    """Writes comments from file into the Digikey Master.
+    """Combine files into one finalized monthly Digikey file.
 
     Arguments:
     filepaths -- The filepaths to the files with new comments.
     """
-    # Load the Digikey Insights Master file.
-    if os.path.exists('Digikey Insight Master.xlsx'):
-        insMast = pd.read_excel('Digikey Insight Master.xlsx',
-                                'Master').fillna('')
-        filesProcessed = pd.read_excel('Digikey Insight Master.xlsx',
-                                       'Files Processed').fillna('')
-    else:
-        print('---\n'
-              'No Insight Master file found!\n'
-              'Please make sure Digikey Insight Master is in the directory.\n'
-              '***')
-        return
-
     # Strip the root off of the filepaths and leave just the filenames.
     filenames = [os.path.basename(i) for i in filepaths]
 
     # Load the Insight files.
     try:
-        inputData = [pd.read_excel(i, 'Report Data') for i in filepaths]
+        inputData = [pd.read_excel(i, 'Full Data') for i in filepaths]
     except XLRDError:
         print('---\n'
               'Error reading sheet name(s) for Digikey Reports!\n'
@@ -69,42 +57,44 @@ def main(filepaths):
               'each file.\n'
               '***')
 
+    # Make sure each filename has a salesperson initials.
+    salespeople = ['CM', 'CR', 'DC', 'HS', 'IT', 'JC', 'JW', 'KC', 'LK',
+                   'MG', 'MM', 'VD']
+    for filename in filenames:
+        inits = filename[0:2]
+        if inits not in salespeople:
+            print('Salesperson initials ' + inits + ' not recognized!\n'
+                  'Make sure the first two letters of each filename are '
+                  'salesperson initials (capitalized).\n'
+                  '***')
+            return
+
+    # Create the master dataframe to append to.
+    finalData = pd.DataFrame(columns=list(inputData[0]))
+
     fileNum = 0
     for sheet in inputData:
         print('---\n'
               'Copying comments from file: ' + filenames[fileNum])
+
+        # Grab only the salesperson's data.
+        sales = filenames[fileNum][0:2]
+        sheetData = sheet[sheet['Sales'] == sales]
+        # Append data to the output dataframe.
+        finalData = finalData.append(sheetData, ignore_index=True)
+        # Next file.
         fileNum += 1
-        # Grab next sheet in file.
-        # Rework the index just in case it got read in wrong.
-        sheet = sheet.reset_index(drop=True).fillna('')
 
-        # Go through and fill in comments for matching entries.
-        for row in range(len(sheet)):
-            matchMatrix = insMast == sheet.loc[row, :]
-            # Remove comments from matching criteria.
-            matchMatrix.drop(labels=['TAARCOM Comments', 'Not In Map'],
-                             axis=1, inplace=True)
-            # Find matching index and copy comments.
-            match = [i for i in range(len(matchMatrix))
-                     if matchMatrix.loc[i, :].all()]
-            if len(match) == 1:
-                comments = sheet.loc[row, 'TAARCOM Comments']
-                insMast.loc[max(match), 'TAARCOM Comments'] = comments
-            elif len(match) > 1:
-                print('Multiple matches to Digikey Master found for row '
-                      + str(row))
-            else:
-                print('Match to Digikey Master not found for row '
-                      + str(row))
-
-    # Remove the Not In Map column.
+    # Drop any unnamed columns that got processed.
     try:
-        insMast.drop(['Not In Map'], axis=1, inplace=True)
-    except KeyError:
+        finalData = finalData.loc[:, ~sheet.columns.str.contains('^Unnamed')]
+        finalData = finalData.loc[:, list(inputData[0])]
+    except AttributeError:
         pass
 
     # Try saving the files, exit with error if any file is currently open.
-    fname1 = 'Digikey Insight Master.xlsx'
+    currentTime = time.strftime('%Y-%m-%d')
+    fname1 = 'Digikey Insight Final ' + currentTime + '.xlsx'
     if saveError(fname1):
         print('---\n'
               'Insight Master is currently open in Excel!\n'
@@ -115,12 +105,9 @@ def main(filepaths):
     # Write the Insight Master file.
     writer1 = pd.ExcelWriter(fname1, engine='xlsxwriter',
                              datetime_format='mm/dd/yyyy')
-    insMast.to_excel(writer1, sheet_name='Master', index=False)
-    filesProcessed.to_excel(writer1, sheet_name='Files Processed',
-                            index=False)
+    finalData.to_excel(writer1, sheet_name='Master', index=False)
     # Format as table in Excel.
-    tableFormat(insMast, 'Master', writer1)
-    tableFormat(filesProcessed, 'Files Processed', writer1)
+    tableFormat(finalData, 'Master', writer1)
 
     # Save the file.
     writer1.save()

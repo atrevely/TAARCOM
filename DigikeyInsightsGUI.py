@@ -80,8 +80,7 @@ class GenMast(QMainWindow):
         self.btnAddIns.clicked.connect(self.addInsClicked)
 
         # Button for copying over comments.
-        self.btnAddComments = QPushButton('Copy Feedback \n to Insight '
-                                          'Master', self)
+        self.btnAddComments = QPushButton('Compile \n Feedback', self)
         self.btnAddComments.move(650, 30)
         self.btnAddComments.resize(150, 150)
         self.btnAddComments.clicked.connect(self.addCommentsClicked)
@@ -101,8 +100,7 @@ class GenMast(QMainWindow):
         self.btnOpenInsight.clicked.connect(self.openInsightClicked)
 
         # Button for selecting files to append to master.
-        self.btnOpenFinished = QPushButton('Select Files \n Ready to Add'
-                                           '\n to Master',
+        self.btnOpenFinished = QPushButton('Select Files \n with Feedback',
                                            self)
         self.btnOpenFinished.move(250, 30)
         self.btnOpenFinished.resize(150, 100)

@@ -472,7 +472,7 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
                         'Year']
     columnNames[7:7] = ['T-End Cust', 'T-Name', 'CM',
                         'Principal', 'Corrected Distributor']
-    columnNames[26:26] = ['Comm Source', 'Sales Commission']
+    columnNames[26:26] = ['Sales Commission']
     columnNames.extend(['CM Split', 'TEMP/FINAL', 'Paid Date', 'From File',
                         'Sales Report Date'])
 
