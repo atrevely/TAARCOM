@@ -8,6 +8,7 @@ from PyQt5.QtWidgets import QMainWindow, QPushButton, QApplication, \
 from PyQt5.QtCore import pyqtSlot
 import GenerateMaster
 import MergeFixedEntries
+import SalesReportGenerator
 
 
 class Stream(QtCore.QObject):
@@ -127,6 +128,12 @@ class GenMast(QMainWindow):
         self.btnFixEntries.resize(150, 150)
         self.btnFixEntries.clicked.connect(self.fixEntriesClicked)
 
+        # Button for generating sales reports.
+        self.btnGenReports = QPushButton('Generate \n Sales Reports', self)
+        self.btnGenReports.move(850, 400)
+        self.btnGenReports.resize(150, 150)
+        self.btnGenReports.clicked.connect(self.genReportsClicked)
+
         # Button for clearing filename and master choices.
         self.btnClearAll = QPushButton('Clear Filename(s) \n and Running \n'
                                        'Commissions \n Selection', self)
@@ -183,6 +190,11 @@ class GenMast(QMainWindow):
         worker = Worker(self.genMastExecute)
         self.threadpool.start(worker)
 
+    def genReportsClicked(self):
+        """Send the SalesReportGenerator execution to a worker thread."""
+        worker = Worker(self.genReportsExecute)
+        self.threadpool.start(worker)
+
     def fixEntriesClicked(self):
         """Send the MergeFixedEntries execution to a worker thread."""
         worker = Worker(self.fixEntriesExecute)
@@ -215,7 +227,6 @@ class GenMast(QMainWindow):
             self.filenames = []
             # Turn buttons back on.
             self.restoreButtons()
-
         elif not mapExists:
             print('File fieldMappings.xlsx not found!\n'
                   'Please check file location and try again.\n'
@@ -228,6 +239,26 @@ class GenMast(QMainWindow):
 
         elif princ == '(No Selection)':
             print('Please select a principal from the dropdown menu!\n'
+                  '---')
+
+    def genReportsExecute(self):
+        """Runs function for generating salesperson reports."""
+        if self.master:
+            # Turn buttons off.
+            self.lockButtons()
+            # Run the SalesReportGenerator.py file.
+            try:
+                SalesReportGenerator.main(self.master)
+            except Exception as error:
+                print('Unexpected Python error:\n'
+                      + str(error)
+                      + '\nPlease contact your local coder.')
+            # Clear the master selection.
+            self.master = []
+            # Turn buttons back on.
+            self.restoreButtons()
+        else:
+            print('No Running Commissions uploaded!\n'
                   '---')
 
     def fixEntriesExecute(self):
@@ -297,6 +328,7 @@ class GenMast(QMainWindow):
         self.btnClearAll.setEnabled(False)
         self.princMenu.setEnabled(False)
         self.btnFixEntries.setEnabled(False)
+        self.btnGenReports.setEnabled(False)
 
     def restoreButtons(self):
         self.btnGenMast.setEnabled(True)
@@ -306,6 +338,7 @@ class GenMast(QMainWindow):
         self.btnClearAll.setEnabled(True)
         self.princMenu.setEnabled(True)
         self.btnFixEntries.setEnabled(True)
+        self.btnGenReports.setEnabled(True)
 
 
 class Worker(QtCore.QRunnable):

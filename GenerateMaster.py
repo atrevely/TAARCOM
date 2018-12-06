@@ -7,7 +7,6 @@ import math
 import os.path
 import re
 import datetime
-import math
 
 
 def tableFormat(sheetData, sheetName, wbook):

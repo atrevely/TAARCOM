@@ -100,7 +100,7 @@ class GenMast(QMainWindow):
         self.btnOpenInsight.clicked.connect(self.openInsightClicked)
 
         # Button for selecting files to append to master.
-        self.btnOpenFinished = QPushButton('Select Files \n with Feedback',
+        self.btnOpenFinished = QPushButton('Select Files \n with Salespeople',
                                            self)
         self.btnOpenFinished.move(250, 30)
         self.btnOpenFinished.resize(150, 100)

@@ -40,7 +40,7 @@ def tableFormat(sheetData, sheetName, wbook):
 
 
 # The main function.
-def main():
+def main(runCom):
     """Generates sales reports for each salesperson.
 
     Finds entries in Running Commissions that are marked as currently
