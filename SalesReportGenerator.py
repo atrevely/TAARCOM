@@ -147,23 +147,57 @@ def main(runCom):
         finalReport['Salesperson'] = person
         # Reorder columns.
         finalReport = finalReport.loc[:, reportCols]
+        # Make sure columns are numeric.
+        finalReport['Invoiced Dollars'] = pd.to_numeric(finalReport['Invoiced Dollars'],
+                                                        errors='coerce').fillna(0)
+        finalReport['Sales Commission'] = pd.to_numeric(finalReport['Sales Commission'],
+                                                        errors='coerce').fillna(0)
 
         # Build table of sales by principal.
         princTab = pd.DataFrame(columns=['Principal', 'Invoiced Dollars',
                                          'Sales Commission'])
         row = 0
+        totInv = 0
+        totComm = 0
+        # Tally up Invoiced Dollars and Sales Commission for each principal.
         for principal in finalReport['Principal'].unique():
             princSales = finalReport[finalReport['Principal'] == principal]
-            princSales['Invoiced Dollars'] = pd.to_numeric(princSales['Invoiced Dollars'],
-                                                           errors='coerce').fillna(0)
-            princSales['Sales Commission'] = pd.to_numeric(princSales['Sales Commission'],
-                                                           errors='coerce').fillna(0)
             princInv = sum(princSales['Invoiced Dollars'])
             princComm = sum(princSales['Sales Commission'])
+            totInv += princInv
+            totComm += princComm
+            # Fill in table with principal's totals.
             princTab.loc[row, 'Principal'] = principal
             princTab.loc[row, 'Invoiced Dollars'] = princInv
             princTab.loc[row, 'Sales Commission'] = princComm
             row += 1
+        # Fill in overall totals.
+        princTab.loc[row, 'Principal'] = 'Grand Total'
+        princTab.loc[row, 'Invoiced Dollars'] = totInv
+        princTab.loc[row, 'Sales Commission'] = totComm
+
+        # Build table of sales by customer.
+        custTab = pd.DataFrame(columns=['Customer', 'Principal',
+                                        'Invoiced Dollars',
+                                        'Sales Commission'])
+        row = 0
+        for customer in finalReport['T-End Cust'].unique():
+            custSales = finalReport[finalReport['T-End Cust'] == customer]
+            custInv = sum(custSales['Invoiced Dollars'])
+            custComm = sum(custSales['Sales Commission'])
+            custTab.loc[row, 'Customer'] = customer
+            custTab.loc[row, 'Invoiced Dollars'] = custInv
+            custTab.loc[row, 'Sales Commission'] = custComm
+            # Filter for each principal within a customer.
+            row += 1
+            for principal in custSales['Principal'].unique():
+                custSub = custSales[custSales['Principal'] == principal]
+                subInv = sum(custSub['Invoiced Dollars'])
+                subComm = sum(custSub['Sales Commission'])
+                custTab.loc[row, 'Principal'] = principal
+                custTab.loc[row, 'Invoiced Dollars'] = subInv
+                custTab.loc[row, 'Sales Commission'] = subComm
+                row += 1
 
         # Write report to file.
         writer = pd.ExcelWriter('Sales Report - ' + person
@@ -171,9 +205,11 @@ def main(runCom):
                                 + '.xlsx', engine='xlsxwriter',
                                 datetime_format='mm/dd/yyyy')
         princTab.to_excel(writer, sheet_name='Principals', index=False)
+        custTab.to_excel(writer, sheet_name='Customers', index=False)
         finalReport.to_excel(writer, sheet_name='Report Data', index=False)
         # Format as table in Excel.
         tableFormat(princTab, 'Principals', writer)
+        tableFormat(custTab, 'Customers', writer)
         tableFormat(finalReport, 'Report Data', writer)
 
         # Try saving the file, exit with error if file is currently open.
