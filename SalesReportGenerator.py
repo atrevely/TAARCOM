@@ -4,6 +4,9 @@ import time
 
 def tableFormat(sheetData, sheetName, wbook):
     """Formats the Excel output as a table with correct column formatting."""
+    # Nothing to format (emtpy table), so return.
+    if sheetData.shape[0] == 0:
+        return
     # Create the table.
     sheet = wbook.sheets[sheetName]
     header = [{'header': val} for val in sheetData.columns.tolist()]
@@ -20,21 +23,49 @@ def tableFormat(sheetData, sheetName, wbook):
     commaFormat = wbook.book.add_format({'font': 'Calibri',
                                          'font_size': 11,
                                          'num_format': 3})
+    pctFormat = wbook.book.add_format({'font': 'Calibri',
+                                       'font_size': 11,
+                                       'num_format': '0.0%'})
+    dateFormat = wbook.book.add_format({'font': 'Calibri',
+                                        'font_size': 11,
+                                        'num_format': 14})
     # Format and fit each column.
     i = 0
     for col in sheetData.columns:
         # Match the correct formatting to each column.
-        acctCols = ['Unit Price', 'Invoiced Dollars', 'Paid-On Revenue',
-                    'Actual Comm Paid', 'Total NDS', 'Post-Split NDS',
-                    'Customer Revenue YTD']
+        acctCols = ['Unit Price', 'Paid-On Revenue', 'Actual Comm Paid',
+                    'Total NDS', 'Post-Split NDS', 'Cust Revenue YTD',
+                    'Ext. Cost', 'Unit Cost', 'Total Commissions',
+                    'Sales Commission', 'Invoiced Dollars']
+        pctCols = ['Split Percentage', 'Commission Rate',
+                   'Gross Rev Reduction', 'Shared Rev Tier Rate']
+        coreCols = ['CM Sales', 'Design Sales', 'T-End Cust', 'T-Name',
+                    'CM', 'Invoice Date']
+        dateCols = ['Invoice Date', 'Paid Date', 'Sales Report Date',
+                    'Date Added']
         if col in acctCols:
             formatting = acctFormat
+        elif col in pctCols:
+            formatting = pctFormat
+        elif col in dateCols:
+            formatting = dateFormat
         elif col == 'Quantity':
             formatting = commaFormat
         else:
             formatting = docFormat
         # Set column width and formatting.
-        maxWidth = max(len(str(val)) for val in sheetData[col].values)
+        try:
+            maxWidth = max(len(str(val)) for val in sheetData[col].values)
+        except ValueError:
+            maxWidth = 0
+        # If column is one that always gets filled in, then keep it expanded.
+        if col in coreCols:
+            maxWidth = max(maxWidth, len(col), 10)
+        # Don't let the columns get too wide.
+        maxWidth = min(maxWidth, 50)
+        # Extra space for '$' in accounting format.
+        if col in acctCols or col == 'Invoiced Dollars':
+            maxWidth += 2
         sheet.set_column(i, i, maxWidth+0.8, formatting)
         i += 1
 
@@ -48,11 +79,9 @@ def main(runCom):
     marked as reported in Running Commissions after being assigned to a report
     by this function.
     """
-    # Load up the Running Master.
-    runningCom = pd.read_excel('Running Commissions 2018-06-29-1347.xlsx',
-                               'Master').fillna('')
-    filesProcessed = pd.read_excel('Running Commissions 2018-06-29-1347.xlsx',
-                                   'Files Processed').fillna('')
+    # Load up the current Running Commissions file.
+    runningCom = pd.read_excel(runCom, 'Master').fillna('')
+    filesProcessed = pd.read_excel(runCom, 'Files Processed').fillna('')
 
     # Grab all of the salespeople initials.
     salespeople = list(set().union(runningCom['CM Sales'].unique(),
@@ -75,7 +104,9 @@ def main(runCom):
         CMOnly = CMSales[CMSales['Design Sales'] == '']
         CMOnly['Sales Percent'] = 100
         CMWithDesign = CMSales[CMSales['Design Sales'] != '']
-        CMWithDesign['Sales Percent'] = CMWithDesign['CM Split']
+        split = CMWithDesign['CM Split']/100
+        CMWithDesign['Sales Percent'] = split*100
+        CMWithDesign['Sales Commission'] = split*CMWithDesign['Sales Commission']
 
         # Grab entries that are Design Sales only.
         designSales = unrepComms[[not x and y for x, y in zip(CM, Design)]]
@@ -83,7 +114,9 @@ def main(runCom):
         designOnly = designSales[designSales['CM Sales'] == '']
         designOnly['Sales Percent'] = 100
         designWithCM = designSales[designSales['CM Sales'] != '']
-        designWithCM['Sales Percent'] = 100 - designWithCM['CM Split']
+        split = (100 - designWithCM['CM Split'])/100
+        designWithCM['Sales Percent'] = split*100
+        designWithCM['Sales Commission'] = split*designWithCM['Sales Commission']
 
         # Grab CM + Design Sales entries.
         dualSales = unrepComms[[x and y for x, y in zip(CM, Design)]]
@@ -96,8 +129,8 @@ def main(runCom):
                       'Part Number', 'Quantity', 'Unit Price',
                       'Invoiced Dollars', 'Paid-On Revenue',
                       'Split Percentage', 'Commission Rate',
-                      'Actual Comm Paid', 'Invoice Date', 'On/Offshore',
-                      'City', 'Cust Part Number']
+                      'Actual Comm Paid', 'Sales Commission',
+                      'Invoice Date', 'On/Offshore', 'City']
 
         # Start creating report.
         finalReport = pd.DataFrame(columns=reportCols)
@@ -110,19 +143,37 @@ def main(runCom):
                                           designWithCM[colAppend],
                                           dualSales[colAppend]],
                                          ignore_index=True)
-
         # Fill in salesperson initials.
         finalReport['Salesperson'] = person
-
         # Reorder columns.
         finalReport = finalReport.loc[:, reportCols]
+
+        # Build table of sales by principal.
+        princTab = pd.DataFrame(columns=['Principal', 'Invoiced Dollars',
+                                         'Sales Commission'])
+        row = 0
+        for principal in finalReport['Principal'].unique():
+            princSales = finalReport[finalReport['Principal'] == principal]
+            princSales['Invoiced Dollars'] = pd.to_numeric(princSales['Invoiced Dollars'],
+                                                           errors='coerce').fillna(0)
+            princSales['Sales Commission'] = pd.to_numeric(princSales['Sales Commission'],
+                                                           errors='coerce').fillna(0)
+            princInv = sum(princSales['Invoiced Dollars'])
+            princComm = sum(princSales['Sales Commission'])
+            princTab.loc[row, 'Principal'] = principal
+            princTab.loc[row, 'Invoiced Dollars'] = princInv
+            princTab.loc[row, 'Sales Commission'] = princComm
+            row += 1
 
         # Write report to file.
         writer = pd.ExcelWriter('Sales Report - ' + person
                                 + time.strftime(' %Y-%m-%d')
-                                + '.xlsx', engine='xlsxwriter')
+                                + '.xlsx', engine='xlsxwriter',
+                                datetime_format='mm/dd/yyyy')
+        princTab.to_excel(writer, sheet_name='Principals', index=False)
         finalReport.to_excel(writer, sheet_name='Report Data', index=False)
         # Format as table in Excel.
+        tableFormat(princTab, 'Principals', writer)
         tableFormat(finalReport, 'Report Data', writer)
 
         # Try saving the file, exit with error if file is currently open.
@@ -144,7 +195,8 @@ def main(runCom):
     # Save the Running Commissions with entered report date.
     writer1 = pd.ExcelWriter('Running Commissions '
                              + time.strftime('%Y-%m-%d-%H%M')
-                             + '.xlsx', engine='xlsxwriter')
+                             + '.xlsx', engine='xlsxwriter',
+                             datetime_format='mm/dd/yyyy')
     runningCom.to_excel(writer1, sheet_name='Master', index=False)
     filesProcessed.to_excel(writer1, sheet_name='Files Processed',
                             index=False)
@@ -163,3 +215,6 @@ def main(runCom):
         return
     # No errors, so save the file.
     writer1.save()
+    print('---\n'
+          'Reports completed successfully!\n'
+          '+++')
