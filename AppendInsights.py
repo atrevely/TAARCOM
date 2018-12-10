@@ -125,6 +125,8 @@ def main(filepaths):
 
     # Get column name layout, prepare combined insight file.
     colNames = list(insMast)
+    colNames[5:5] = ['Must Contact', 'End Product', 'How Contacted',
+                     'Information for Digikey']
     colNames[14:14] = ['Invoiced Dollars']
     newDatComb = pd.DataFrame(columns=colNames)
 

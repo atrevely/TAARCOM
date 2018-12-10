@@ -26,10 +26,6 @@ def tableFormat(sheetData, sheetName, wbook):
     commaFormat = wbook.book.add_format({'font': 'Calibri',
                                          'font_size': 11,
                                          'num_format': 3})
-    estFormat = wbook.book.add_format({'font': 'Calibri',
-                                       'font_size': 11,
-                                       'num_format': 44,
-                                       'bg_color': 'yellow'})
     pctFormat = wbook.book.add_format({'font': 'Calibri',
                                        'font_size': 11,
                                        'num_format': '0.0%'})
@@ -43,7 +39,7 @@ def tableFormat(sheetData, sheetName, wbook):
         acctCols = ['Unit Price', 'Paid-On Revenue', 'Actual Comm Paid',
                     'Total NDS', 'Post-Split NDS', 'Cust Revenue YTD',
                     'Ext. Cost', 'Unit Cost', 'Total Commissions',
-                    'Sales Commission']
+                    'Sales Commission', 'Invoiced Dollars']
         pctCols = ['Split Percentage', 'Commission Rate',
                    'Gross Rev Reduction', 'Shared Rev Tier Rate']
         coreCols = ['CM Sales', 'Design Sales', 'T-End Cust', 'T-Name',
@@ -58,19 +54,6 @@ def tableFormat(sheetData, sheetName, wbook):
             formatting = dateFormat
         elif col == 'Quantity':
             formatting = commaFormat
-        elif col == 'Invoiced Dollars':
-            # Highlight any estimates in Invoiced Dollars...
-            for row in range(len(sheetData[col])):
-                if sheetData.loc[row, 'Ext. Cost']:
-                    sheet.write(row+1, i,
-                                sheetData.loc[row, 'Invoiced Dollars'],
-                                estFormat)
-                else:
-                    sheet.write(row+1, i,
-                                sheetData.loc[row, 'Invoiced Dollars'],
-                                acctFormat)
-            # Formatting already done, so leave blank.
-            formatting = []
         else:
             formatting = docFormat
         # Set column width and formatting.
@@ -83,8 +66,8 @@ def tableFormat(sheetData, sheetName, wbook):
             maxWidth = max(maxWidth, len(col), 10)
         # Don't let the columns get too wide.
         maxWidth = min(maxWidth, 50)
-        # Extra space for '$' in accounting format.
-        if col in acctCols or col == 'Invoiced Dollars':
+        # Extra space for '$'/'%' in accounting/percent format.
+        if col in acctCols or col in pctCols:
             maxWidth += 2
         sheet.set_column(i, i, maxWidth+0.8, formatting)
         i += 1
@@ -143,8 +126,8 @@ def main(runCom):
             return
     else:
         print('No Entries Need Fixing file found!\n'
-              'Please make sure Entries Need Fixing.xlsx '
-              'is in the directory.\n'
+              'Please make sure Entries Need Fixing ' + comDate
+              + ' is in the directory.\n'
               '***')
         return
 
@@ -159,13 +142,14 @@ def main(runCom):
         missCols = [i for i in lookupCols if i not in list(mastLook)]
         if missCols:
             print('The following columns were not detected in '
-                  'Lookup Master.xlsx:\n%s' %
+                  'Lookup Master - Current.xlsx:\n%s' %
                   ', '.join(map(str, missCols))
                   + '\n***')
             return
     else:
         print('No Lookup Master found!\n'
-              'Please make sure lookupMaster.xlsx is in the directory.\n'
+              'Please make sure Lookup Master - Current.xlsx is '
+              'in the directory.\n'
               '***')
         return
 
@@ -185,6 +169,8 @@ def main(runCom):
     # Return if there's nothing fixed.
     if fixed.shape[0] == 0:
         print('No new fixed entries detected.\n'
+              'Entries need a T-End Cust and an Invoice Date '
+              'in order to be eligible for migration to Running Commissions.\n'
               '***')
         return
 
@@ -278,6 +264,8 @@ def main(runCom):
         print('Commission dollars do not match after fixing entries!\n'
               'Make sure Entries Need fixing aligns properly with '
               'Running Commissions.\n'
+              'This error was likely caused by adding or removing rows '
+              'in either file.\n'
               '***')
         return
     # Re-index the fix list and drop nans in Lookup Master.
@@ -304,7 +292,8 @@ def main(runCom):
                                          ignore_index=True)
         # Notify us of changes.
         print(str(len(oldEntries))
-              + ' entries quarantied for being more than 2 years old.\n')
+              + ' entries quarantied for being more than 2 years old.\n'
+              '---')
 
     # Check if the files we're going to save are open already.
     fname1 = 'Running Commissions ' + comDate
@@ -355,6 +344,5 @@ def main(runCom):
     writer3.save()
     writer4.save()
 
-    print('---\n'
-          'Fixed entries copied over successfully!\n'
+    print('Fixed entries migrated successfully!\n'
           '+++')

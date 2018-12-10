@@ -80,9 +80,9 @@ def main(filepath):
         return
 
     # Load the Master Account List file.
-    if os.path.exists('Master Account List 10-5-2018.xlsx'):
+    if os.path.exists('Master Account List 11-27-2018.xlsx'):
         try:
-            mastAcct = pd.read_excel('Master Account List 10-5-2018.xlsx',
+            mastAcct = pd.read_excel('Master Account List 11-27-2018.xlsx',
                                      'Allacct').fillna('')
         except XLRDError:
             print('---\n'
@@ -91,7 +91,7 @@ def main(filepath):
                   '***')
             return
         # Check the column names.
-        mastCols = ['PROPERNAME', 'SLS', 'CITY']
+        mastCols = ['ProperName', 'SLS', 'CITY']
         missCols = [i for i in mastCols if i not in list(mastAcct)]
         if missCols:
             print('The following columns were not detected in '
@@ -160,7 +160,7 @@ def main(filepath):
             insFile.loc[row, 'TAARCOM Comments'] = 'Individual'
         cust = insFile.loc[row, 'Root Customer..']
         # Check for customer match in account list.
-        acctMatch = mastAcct[mastAcct['PROPERNAME'] == cust]
+        acctMatch = mastAcct[mastAcct['ProperName'] == cust]
         if cust and len(acctMatch) == 1:
             # Check if the city is different from our account list.
             if insFile.loc[row, 'Customer City'] != acctMatch['CITY'].iloc[0]:

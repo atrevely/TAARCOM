@@ -123,8 +123,8 @@ def main(runCom):
         dualSales['Sales Percent'] = 100
 
         # Set report columns.
-        reportCols = ['Salesperson', 'Sales Percent', 'T-End Cust', 'T-Name',
-                      'CM', 'Reported Customer', 'Reported End Customer',
+        reportCols = ['Salesperson', 'Sales Percent', 'Reported Customer',
+                      'T-Name', 'CM', 'T-End Cust', 'Reported End Customer',
                       'Principal', 'Corrected Distributor', 'Invoice Number',
                       'Part Number', 'Quantity', 'Unit Price',
                       'Invoiced Dollars', 'Paid-On Revenue',

@@ -30,10 +30,6 @@ def tableFormat(sheetData, sheetName, wbook):
     commaFormat = wbook.book.add_format({'font': 'Calibri',
                                          'font_size': 11,
                                          'num_format': 3})
-    estFormat = wbook.book.add_format({'font': 'Calibri',
-                                       'font_size': 11,
-                                       'num_format': 44,
-                                       'bg_color': 'yellow'})
     pctFormat = wbook.book.add_format({'font': 'Calibri',
                                        'font_size': 11,
                                        'num_format': '0.0%'})
@@ -47,7 +43,7 @@ def tableFormat(sheetData, sheetName, wbook):
         acctCols = ['Unit Price', 'Paid-On Revenue', 'Actual Comm Paid',
                     'Total NDS', 'Post-Split NDS', 'Cust Revenue YTD',
                     'Ext. Cost', 'Unit Cost', 'Total Commissions',
-                    'Sales Commission']
+                    'Sales Commission', 'Invoiced Dollars']
         pctCols = ['Split Percentage', 'Commission Rate',
                    'Gross Rev Reduction', 'Shared Rev Tier Rate']
         coreCols = ['CM Sales', 'Design Sales', 'T-End Cust', 'T-Name',
@@ -62,19 +58,6 @@ def tableFormat(sheetData, sheetName, wbook):
             formatting = dateFormat
         elif col == 'Quantity':
             formatting = commaFormat
-        elif col == 'Invoiced Dollars':
-            # Highlight any estimates in Invoiced Dollars.
-            for row in range(len(sheetData[col])):
-                if sheetData.loc[row, 'Ext. Cost']:
-                    sheet.write(row+1, i,
-                                sheetData.loc[row, 'Invoiced Dollars'],
-                                estFormat)
-                else:
-                    sheet.write(row+1, i,
-                                sheetData.loc[row, 'Invoiced Dollars'],
-                                acctFormat)
-            # Formatting already done, so leave blank.
-            formatting = []
         else:
             formatting = docFormat
         # Set column width and formatting.
@@ -87,8 +70,8 @@ def tableFormat(sheetData, sheetName, wbook):
             maxWidth = max(maxWidth, len(col), 10)
         # Don't let the columns get too wide.
         maxWidth = min(maxWidth, 50)
-        # Extra space for '$' in accounting format.
-        if col in acctCols or col == 'Invoiced Dollars':
+        # Extra space for '$'/'%' in accounting/percent format.
+        if col in acctCols or col in pctCols:
             maxWidth += 2
         sheet.set_column(i, i, maxWidth+0.8, formatting)
         i += 1
@@ -118,16 +101,12 @@ def tailoredPreCalc(princ, sheet, sheetName):
                      inplace=True)
         # Combine Rep 1 % and Rep 2 %.
         if 'Rep 1 %' in list(sheet) and 'Rep 2 %' in list(sheet):
+            print('Copying Rep 2 % into empty Rep 1 % lines.\n'
+                  '---')
             for row in sheet.index:
                 if sheet.loc[row, 'Rep 2 %']:
                     if not sheet.loc[row, 'Rep 1 %']:
                         sheet.loc[row, 'Rep 1 %'] = sheet.loc[row, 'Rep 2 %']
-                    else:
-                        print('Conflict between Rep 1 % and Rep 2 % columns.\n'
-                              'Make sure each line has an entry in only '
-                              'one of the two columns.\n'
-                              '***')
-                        return
     # ISSI special processing.
     if princ == 'ISS':
         # Rename the 'Commissions Due' column.
@@ -295,13 +274,6 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
             sheet.rename(columns={'Reported End Customer':
                                   'Reported Customer'}, inplace=True)
             sheet['Actual Comm Paid'] = sheet['Ext. Cost']*0.03
-            # Estimate invoiced dollars as 15% markup on cost.
-            sheet['Invoiced Dollars'] = sheet['Ext. Cost']*1.15
-            print('Commission rate filled in for this tab: 3%\n'
-                  'Invoiced dollars estimated as 15% over Ext. Cost '
-                  'for this tab.\n'
-                  'ESTIMATED ENTRIES HIGHLIGHTED YELLOW.\n'
-                  '---')
         else:
             print('-\n'
                   'Tab not labeled as US/TW/POS, '
@@ -335,12 +307,6 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
                   '---')
             invNum = False
         if 'Ext. Cost' in list(sheet) and not invDol:
-            # Estimate invoiced dollars as 15% markup on cost.
-            sheet['Invoiced Dollars'] = sheet['Ext. Cost']*1.15
-            print('Invoiced dollars estimated as 15% over Ext. Cost '
-                  'for this tab.\n'
-                  'ESTIMATED ENTRIES HIGHLIGHTED YELLOW.\n'
-                  '---')
             # Sometimes the Totals are written in the Part Number column.
             sheet = sheet[sheet['Part Number'] != 'Totals']
             sheet.reset_index(drop=True, inplace=True)
@@ -392,8 +358,6 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
                 else:
                     sheet.loc[row, 'Commission Rate'] = 0.05
                     sheet.loc[row, 'Actual Comm Paid'] = 0.05*extenCost
-                # Estimate invoiced dollars as 15% markup on cost.
-                sheet.loc[row, 'Invoiced Dollars'] = 1.15*extenCost
         # Cosel is paid on cost.
         sheet['Comm Source'] = 'Cost'
     # Globtek special Processing.
