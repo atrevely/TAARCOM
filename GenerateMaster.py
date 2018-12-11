@@ -467,8 +467,8 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
         except FileNotFoundError:
             print('No matching Entries Need Fixing file found for this '
                   'Running Commissions file!\n'
-                  'Make sure Entries Need Fixing ' + fixName
-                  + '.xlsx is in the proper folder.\n'
+                  'Make sure ' + fixName
+                  + ' is in the proper folder.\n'
                   '***')
             return
         except XLRDError:
