@@ -4,9 +4,10 @@ import time
 
 def tableFormat(sheetData, sheetName, wbook):
     """Formats the Excel output as a table with correct column formatting."""
-    # Nothing to format, so return.
+    # Nothing to format (emtpy table), so return.
     if sheetData.shape[0] == 0:
         return
+    sheet = wbook.sheets[sheetName]
     # Set document formatting.
     docFormat = wbook.book.add_format({'font': 'Calibri',
                                        'font_size': 11})
@@ -84,6 +85,10 @@ def main(runCom):
     # Select data that has not been reported yet.
     unrepComms = runningCom[runningCom['Sales Report Date'] == '']
 
+    # Create the dataframe with the Sales Totals information.
+    salesTot = pd.DataFrame(columns=['Salesperson', 'Invoiced Dollars',
+                                     'Sales Commission'])
+
     # %%
     # Go through each salesperson and pull their data.
     for person in salespeople:
@@ -145,6 +150,14 @@ def main(runCom):
                                                         errors='coerce').fillna(0)
         finalReport['Sales Commission'] = pd.to_numeric(finalReport['Sales Commission'],
                                                         errors='coerce').fillna(0)
+        # Total up the Invoiced Dollars and Sales Commission.
+        reportTot = pd.DataFrame(columns=['Salesperson', 'Invoiced Dollars',
+                                          'Sales Commission'])
+        reportTot['Salesperson'] = person
+        reportTot['Invoiced Dollars'] = sum(finalReport['Invoiced Dollars'])
+        reportTot['Sales Commission'] = sum(finalReport['Sales Commission'])
+        # Append to Sales Totals.
+        salesTot = salesTot.append(reportTot)
 
         # Build table of sales by principal.
         princTab = pd.DataFrame(columns=['Principal', 'Invoiced Dollars',
@@ -221,6 +234,14 @@ def main(runCom):
     # Fill in the Sales Report Date in Running Commissions.
     runningCom.loc[runningCom['Sales Report Date'] == '',
                    'Sales Report Date'] = time.strftime('%m/%d/%Y')
+    # Sum the sales totals into a grand total.
+    grandTot = pd.DataFrame(columns=['Salesperson', 'Invoiced Dollars',
+                                     'Sales Commission'])
+    grandTot['Salesperson'] = 'Grand total'
+    grandTot['Invoiced Dollars'] = sum(salesTot['Invoied Dollars'])
+    grandTot['Sales Commission'] = sum(salesTot['Sales Commission'])
+    # Append the grand totals to Sales Totals.
+    salesTot = salesTot.append(grandTot)
     # Save the Running Commissions with entered report date.
     writer1 = pd.ExcelWriter('Running Commissions '
                              + time.strftime('%Y-%m-%d-%H%M')
@@ -229,9 +250,12 @@ def main(runCom):
     runningCom.to_excel(writer1, sheet_name='Master', index=False)
     filesProcessed.to_excel(writer1, sheet_name='Files Processed',
                             index=False)
+    salesTot.to_excel(writer1, sheet_name='Sales Totals',
+                      index=False)
     # Format as table in Excel.
     tableFormat(runningCom, 'Master', writer1)
     tableFormat(filesProcessed, 'Files Processed', writer1)
+    tableFormat(salesTot, 'Sales Totals', writer1)
 
     # Try saving the file, exit with error if file is currently open.
     try:

@@ -14,6 +14,7 @@ def tableFormat(sheetData, sheetName, wbook):
     # Nothing to format, so return.
     if sheetData.shape[0] == 0:
         return
+    sheet = wbook.sheets[sheetName]
     # Set document formatting.
     docFormat = wbook.book.add_format({'font': 'Calibri',
                                        'font_size': 11})
