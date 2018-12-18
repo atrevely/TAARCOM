@@ -10,13 +10,9 @@ from xlrd import XLRDError
 
 def tableFormat(sheetData, sheetName, wbook):
     """Formats the Excel output as a table with correct column formatting."""
-    # Create the table.
-    sheet = wbook.sheets[sheetName]
-    header = [{'header': val} for val in sheetData.columns.tolist()]
-    setStyle = {'header_row': True, 'style': 'TableStyleLight1',
-                'columns': header}
-    sheet.add_table(0, 0, len(sheetData.index),
-                    len(sheetData.columns)-1, setStyle)
+    # Nothing to format, so return.
+    if sheetData.shape[0] == 0:
+        return
     # Set document formatting.
     docFormat = wbook.book.add_format({'font': 'Calibri',
                                        'font_size': 11})

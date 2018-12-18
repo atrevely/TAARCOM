@@ -11,16 +11,9 @@ import datetime
 
 def tableFormat(sheetData, sheetName, wbook):
     """Formats the Excel output as a table with correct column formatting."""
-    # Nothing to format (emtpy table), so return.
+    # Nothing to format, so return.
     if sheetData.shape[0] == 0:
         return
-    # Create the table.
-    sheet = wbook.sheets[sheetName]
-    header = [{'header': val} for val in sheetData.columns.tolist()]
-    setStyle = {'header_row': True, 'style': 'TableStyleLight1',
-                'columns': header}
-    sheet.add_table(0, 0, len(sheetData.index),
-                    len(sheetData.columns)-1, setStyle)
     # Set document formatting.
     docFormat = wbook.book.add_format({'font': 'Calibri',
                                        'font_size': 11})
