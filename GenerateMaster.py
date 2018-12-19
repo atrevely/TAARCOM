@@ -425,11 +425,11 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
     # Grab lookup table data names.
     columnNames = list(fieldMappings)
     # Add in non-lookup'd data names.
-    columnNames[0:0] = ['CM Sales', 'Design Sales', 'Quarter Shipped', 'Month',
-                        'Year']
-    columnNames[7:7] = ['T-End Cust', 'T-Name', 'CM',
-                        'Principal', 'Corrected Distributor']
-    columnNames[26:26] = ['Sales Commission']
+    columnNames[0:0] = ['CM Sales', 'Design Sales']
+    columnNames[3:3] = ['T-Name', 'CM', 'T-End Cust']
+    columnNames[7:7] = ['Principal', 'Corrected Distributor']
+    columnNames[18:18] = ['Sales Commission']
+    columnNames[20:20] = ['Quarter Shipped', 'Month', 'Year']
     columnNames.extend(['CM Split', 'TEMP/FINAL', 'Paid Date', 'From File',
                         'Sales Report Date'])
 

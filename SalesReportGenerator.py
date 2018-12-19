@@ -88,9 +88,9 @@ def main(runCom):
     # Create the dataframe with the Sales Totals information.
     salesTot = pd.DataFrame(columns=['Salesperson', 'Invoiced Dollars',
                                      'Sales Commission'])
-
     # %%
     # Go through each salesperson and pull their data.
+    print('Running reports...')
     for person in salespeople:
         # Find sales entries for the salesperson.
         CM = unrepComms['CM Sales'] == person
@@ -152,12 +152,12 @@ def main(runCom):
                                                         errors='coerce').fillna(0)
         # Total up the Invoiced Dollars and Sales Commission.
         reportTot = pd.DataFrame(columns=['Salesperson', 'Invoiced Dollars',
-                                          'Sales Commission'])
+                                          'Sales Commission'], index=[0])
         reportTot['Salesperson'] = person
         reportTot['Invoiced Dollars'] = sum(finalReport['Invoiced Dollars'])
         reportTot['Sales Commission'] = sum(finalReport['Sales Commission'])
         # Append to Sales Totals.
-        salesTot = salesTot.append(reportTot)
+        salesTot = salesTot.append(reportTot, ignore_index=True)
 
         # Build table of sales by principal.
         princTab = pd.DataFrame(columns=['Principal', 'Invoiced Dollars',
@@ -236,15 +236,15 @@ def main(runCom):
                    'Sales Report Date'] = time.strftime('%m/%d/%Y')
     # Sum the sales totals into a grand total.
     grandTot = pd.DataFrame(columns=['Salesperson', 'Invoiced Dollars',
-                                     'Sales Commission'])
+                                     'Sales Commission'], index=[0])
     grandTot['Salesperson'] = 'Grand total'
-    grandTot['Invoiced Dollars'] = sum(salesTot['Invoied Dollars'])
+    grandTot['Invoiced Dollars'] = sum(salesTot['Invoiced Dollars'])
     grandTot['Sales Commission'] = sum(salesTot['Sales Commission'])
     # Append the grand totals to Sales Totals.
-    salesTot = salesTot.append(grandTot)
+    salesTot = salesTot.append(grandTot, ignore_index=True)
     # Save the Running Commissions with entered report date.
     writer1 = pd.ExcelWriter('Running Commissions '
-                             + time.strftime('%Y-%m-%d-%H%M')
+                             + time.strftime('%Y-%m-%d') + ' Reported'
                              + '.xlsx', engine='xlsxwriter',
                              datetime_format='mm/dd/yyyy')
     runningCom.to_excel(writer1, sheet_name='Master', index=False)
