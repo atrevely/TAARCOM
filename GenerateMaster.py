@@ -197,8 +197,8 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
             print('Columns added from Abracon special processing:\n'
                   'Commission Rate\n'
                   '---')
-        # Abracon is paid on resale.
-        sheet['Comm Source'] = 'Resale'
+        # Abracon is paid on cost.
+        sheet['Comm Source'] = 'Cost'
     # ISSI special processing.
     if princ == 'ISS':
         if 'OEM/POS' in list(sheet):
@@ -228,12 +228,12 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
             try:
                 if sheet.loc[row, 'Reported Distributor'] in ['DIGIKEY', 'MOUSER']:
                     sheet.loc[row, 'Paid-On Revenue'] = sheet.loc[row, 'Ext. Cost']
+                    sheet.loc[row, 'Comm Source'] = 'Cost'
                 else:
                     sheet.loc[row, 'Paid-On Revenue'] = sheet.loc[row, 'Invoiced Dollars']
+                    sheet.loc[row, 'Comm Source'] = 'Resale'
             except KeyError:
                 pass
-        # ATS is paid on resale.
-        sheet['Comm Source'] = 'Resale'
     # ATP special Processing.
     if princ == 'ATP':
         # Load up the customer lookup file.
@@ -255,6 +255,8 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
             sheet['Reported Customer'].fillna(method='ffill', inplace=True)
             print('Correcting customer names.\n'
                   '---')
+            # US paid on resale.
+            sheet['Comm Source'] = 'Resale'
         elif 'TW' in sheetName and invDol:
             sheet['Commission Rate'] = 0.024
             sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*0.024
@@ -263,11 +265,15 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
             sheet['Reported Customer'].fillna(method='ffill', inplace=True)
             print('Correcting customer names.\n'
                   '---')
+            # TW paid on resale.
+            sheet['Comm Source'] = 'Resale'
         elif 'POS' in sheetName and extCost:
             sheet['Commission Rate'] = 0.03
             sheet.rename(columns={'Reported End Customer':
                                   'Reported Customer'}, inplace=True)
             sheet['Actual Comm Paid'] = sheet['Ext. Cost']*0.03
+            # POS paid on cost.
+            sheet['Comm Source'] = 'Cost'
         else:
             print('-\n'
                   'Tab not labeled as US/TW/POS, '
@@ -370,7 +376,18 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
     if princ == 'QRF':
         # RF360 is paid on resale.
         sheet['Comm Source'] = 'Resale'
-
+    # INF special processing.
+    if princ == 'INF':
+        # INF is paid on resale.
+        sheet['Comm Source'] = 'Resale'
+    # LAT special processing.
+    if princ == 'LAT':
+        # LAT is paid on resale.
+        sheet['Comm Source'] = 'Resale'
+    # SUR special processing.
+    if princ == 'SUR':
+        # SUR is paid on resale.
+        sheet['Comm Source'] = 'Resale'
     # Test the Commission Dollars to make sure they're correct.
     if 'Paid-On Revenue' in list(sheet):
         paidDol = sheet['Paid-On Revenue']

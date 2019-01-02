@@ -58,7 +58,7 @@ def tableFormat(sheetData, sheetName, wbook):
         # Don't let the columns get too wide.
         maxWidth = min(maxWidth, 50)
         # Extra space for '$' in accounting format.
-        if col in acctCols or col == 'Invoiced Dollars':
+        if col in acctCols:
             maxWidth += 2
         sheet.set_column(i, i, maxWidth+0.8, formatting)
         i += 1
@@ -86,8 +86,20 @@ def main(runCom):
     unrepComms = runningCom[runningCom['Sales Report Date'] == '']
 
     # Create the dataframe with the Sales Totals information.
-    salesTot = pd.DataFrame(columns=['Salesperson', 'Invoiced Dollars',
+    salesTot = pd.DataFrame(columns=['Salesperson', 'Paid-On Revenue',
                                      'Sales Commission'])
+
+    # Set report columns.
+    reportCols = ['Salesperson', 'Sales Percent', 'Reported Customer',
+                  'T-Name', 'CM', 'T-End Cust', 'Reported End Customer',
+                  'Principal', 'Corrected Distributor', 'Invoice Number',
+                  'Part Number', 'Quantity', 'Unit Price',
+                  'Invoiced Dollars', 'Paid-On Revenue',
+                  'Split Percentage', 'Commission Rate',
+                  'Actual Comm Paid', 'Sales Commission', 'Comm Source',
+                  'Quarter Shipped', 'Invoice Date', 'On/Offshore', 'City']
+    # Columns appended from Running Commissions.
+    colAppend = [val for val in reportCols if val in list(unrepComms)]
     # %%
     # Go through each salesperson and pull their data.
     print('Running reports...')
@@ -98,42 +110,41 @@ def main(runCom):
 
         # Grab entries that are CM Sales for this salesperson.
         CMSales = unrepComms[[x and not y for x, y in zip(CM, Design)]]
-        # Determine share of sales.
-        CMOnly = CMSales[CMSales['Design Sales'] == '']
-        CMOnly['Sales Percent'] = 100
-        CMWithDesign = CMSales[CMSales['Design Sales'] != '']
-        split = CMWithDesign['CM Split']/100
-        CMWithDesign['Sales Percent'] = split*100
-        CMWithDesign['Sales Commission'] = split*CMWithDesign['Sales Commission']
+        if CMSales.shape[0]:
+            # Determine share of sales.
+            CMOnly = CMSales[CMSales['Design Sales'] == '']
+            CMOnly['Sales Percent'] = 100
+            CMWithDesign = CMSales[CMSales['Design Sales'] != '']
+            split = CMWithDesign['CM Split']/100
+            CMWithDesign['Sales Percent'] = split*100
+            CMWithDesign['Sales Commission'] = split*CMWithDesign['Sales Commission']
+        else:
+            CMOnly = pd.DataFrame(columns=colAppend)
+            CMWithDesign = pd.DataFrame(columns=colAppend)
 
         # Grab entries that are Design Sales only.
         designSales = unrepComms[[not x and y for x, y in zip(CM, Design)]]
-        # Determine share of sales.
-        designOnly = designSales[designSales['CM Sales'] == '']
-        designOnly['Sales Percent'] = 100
-        designWithCM = designSales[designSales['CM Sales'] != '']
-        split = (100 - designWithCM['CM Split'])/100
-        designWithCM['Sales Percent'] = split*100
-        designWithCM['Sales Commission'] = split*designWithCM['Sales Commission']
+        if designSales.shape[0]:
+            # Determine share of sales.
+            designOnly = designSales[designSales['CM Sales'] == '']
+            designOnly['Sales Percent'] = 100
+            designWithCM = designSales[designSales['CM Sales'] != '']
+            split = (100 - designWithCM['CM Split'])/100
+            designWithCM['Sales Percent'] = split*100
+            designWithCM['Sales Commission'] = split*designWithCM['Sales Commission']
+        else:
+            designOnly = pd.DataFrame(columns=colAppend)
+            designWithCM = pd.DataFrame(columns=colAppend)
 
         # Grab CM + Design Sales entries.
         dualSales = unrepComms[[x and y for x, y in zip(CM, Design)]]
-        dualSales['Sales Percent'] = 100
-
-        # Set report columns.
-        reportCols = ['Salesperson', 'Sales Percent', 'Reported Customer',
-                      'T-Name', 'CM', 'T-End Cust', 'Reported End Customer',
-                      'Principal', 'Corrected Distributor', 'Invoice Number',
-                      'Part Number', 'Quantity', 'Unit Price',
-                      'Invoiced Dollars', 'Paid-On Revenue',
-                      'Split Percentage', 'Commission Rate',
-                      'Actual Comm Paid', 'Sales Commission',
-                      'Quarter Shipped', 'Invoice Date', 'On/Offshore', 'City']
+        if dualSales.shape[0]:
+            dualSales['Sales Percent'] = 100
+        else:
+            dualSales = pd.DataFrame(columns=colAppend)
 
         # Start creating report.
         finalReport = pd.DataFrame(columns=reportCols)
-        # Columns appended from Running Commissions.
-        colAppend = [val for val in reportCols if val in list(dualSales)]
         # Append the data.
         finalReport = finalReport.append([CMOnly[colAppend],
                                           CMWithDesign[colAppend],
@@ -146,62 +157,62 @@ def main(runCom):
         # Reorder columns.
         finalReport = finalReport.loc[:, reportCols]
         # Make sure columns are numeric.
-        finalReport['Invoiced Dollars'] = pd.to_numeric(finalReport['Invoiced Dollars'],
-                                                        errors='coerce').fillna(0)
+        finalReport['Paid-On Revenue'] = pd.to_numeric(finalReport['Paid-On Revenue'],
+                                                       errors='coerce').fillna(0)
         finalReport['Sales Commission'] = pd.to_numeric(finalReport['Sales Commission'],
                                                         errors='coerce').fillna(0)
-        # Total up the Invoiced Dollars and Sales Commission.
-        reportTot = pd.DataFrame(columns=['Salesperson', 'Invoiced Dollars',
+        # Total up the Paid-On Revenue and Sales Commission.
+        reportTot = pd.DataFrame(columns=['Salesperson', 'Paid-On Revenue',
                                           'Sales Commission'], index=[0])
         reportTot['Salesperson'] = person
-        reportTot['Invoiced Dollars'] = sum(finalReport['Invoiced Dollars'])
+        reportTot['Paid-On Revenue'] = sum(finalReport['Paid-On Revenue'])
         reportTot['Sales Commission'] = sum(finalReport['Sales Commission'])
         # Append to Sales Totals.
         salesTot = salesTot.append(reportTot, ignore_index=True)
 
         # Build table of sales by principal.
-        princTab = pd.DataFrame(columns=['Principal', 'Invoiced Dollars',
+        princTab = pd.DataFrame(columns=['Principal', 'Paid-On Revenue',
                                          'Sales Commission'])
         row = 0
         totInv = 0
         totComm = 0
-        # Tally up Invoiced Dollars and Sales Commission for each principal.
+        # Tally up Paid-On Revenue and Sales Commission for each principal.
         for principal in finalReport['Principal'].unique():
             princSales = finalReport[finalReport['Principal'] == principal]
-            princInv = sum(princSales['Invoiced Dollars'])
+            princInv = sum(princSales['Paid-On Revenue'])
             princComm = sum(princSales['Sales Commission'])
             totInv += princInv
             totComm += princComm
             # Fill in table with principal's totals.
             princTab.loc[row, 'Principal'] = principal
-            princTab.loc[row, 'Invoiced Dollars'] = princInv
+            princTab.loc[row, 'Paid-On Revenue'] = princInv
             princTab.loc[row, 'Sales Commission'] = princComm
             row += 1
         # Fill in overall totals.
         princTab.loc[row, 'Principal'] = 'Grand Total'
-        princTab.loc[row, 'Invoiced Dollars'] = totInv
+        princTab.loc[row, 'Paid-On Revenue'] = totInv
         princTab.loc[row, 'Sales Commission'] = totComm
 
         # Build table of sales by customer.
         custTab = pd.DataFrame(columns=['Customer', 'Principal',
-                                        'Invoiced Dollars',
+                                        'Paid-On Revenue',
                                         'Sales Commission'])
         row = 0
         for customer in finalReport['T-End Cust'].unique():
             custSales = finalReport[finalReport['T-End Cust'] == customer]
-            custInv = sum(custSales['Invoiced Dollars'])
+            custInv = sum(custSales['Paid-On Revenue'])
             custComm = sum(custSales['Sales Commission'])
             custTab.loc[row, 'Customer'] = customer
-            custTab.loc[row, 'Invoiced Dollars'] = custInv
+            custTab.loc[row, 'Paid-On Revenue'] = custInv
             custTab.loc[row, 'Sales Commission'] = custComm
             # Filter for each principal within a customer.
             row += 1
             for principal in custSales['Principal'].unique():
                 custSub = custSales[custSales['Principal'] == principal]
-                subInv = sum(custSub['Invoiced Dollars'])
+                subInv = sum(custSub['Paid-On Revenue'])
                 subComm = sum(custSub['Sales Commission'])
                 custTab.loc[row, 'Principal'] = principal
-                custTab.loc[row, 'Invoiced Dollars'] = subInv
+                custTab.loc[row, 'Paid-On Revenue'] = subInv
                 custTab.loc[row, 'Sales Commission'] = subComm
                 row += 1
 
@@ -235,10 +246,10 @@ def main(runCom):
     runningCom.loc[runningCom['Sales Report Date'] == '',
                    'Sales Report Date'] = time.strftime('%m/%d/%Y')
     # Sum the sales totals into a grand total.
-    grandTot = pd.DataFrame(columns=['Salesperson', 'Invoiced Dollars',
+    grandTot = pd.DataFrame(columns=['Salesperson', 'Paid-On Revenue',
                                      'Sales Commission'], index=[0])
     grandTot['Salesperson'] = 'Grand total'
-    grandTot['Invoiced Dollars'] = sum(salesTot['Invoiced Dollars'])
+    grandTot['Paid-On Revenue'] = sum(salesTot['Paid-On Revenue'])
     grandTot['Sales Commission'] = sum(salesTot['Sales Commission'])
     # Append the grand totals to Sales Totals.
     salesTot = salesTot.append(grandTot, ignore_index=True)
