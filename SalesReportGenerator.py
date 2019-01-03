@@ -248,11 +248,34 @@ def main(runCom):
     # Sum the sales totals into a grand total.
     grandTot = pd.DataFrame(columns=['Salesperson', 'Paid-On Revenue',
                                      'Sales Commission'], index=[0])
-    grandTot['Salesperson'] = 'Grand total'
+    grandTot['Salesperson'] = 'Grand Total'
     grandTot['Paid-On Revenue'] = sum(salesTot['Paid-On Revenue'])
     grandTot['Sales Commission'] = sum(salesTot['Sales Commission'])
     # Append the grand totals to Sales Totals.
     salesTot = salesTot.append(grandTot, ignore_index=True)
+
+    # Generate the table for sales numbers by principal.
+    princTab = pd.DataFrame(columns=['Principal', 'Paid-On Revenue',
+                            'Sales Commission'])
+    row = 0
+    for principal in unrepComms['Principal'].unique():
+        princSales = unrepComms[unrepComms['Principal'] == principal]
+        revenue = pd.to_numeric(princSales['Paid-On Revenue'],
+                                errors='coerce').fillna(0)
+        comm = pd.to_numeric(princSales['Sales Commission'],
+                             errors='coerce').fillna(0)
+        princInv = sum(revenue)
+        princComm = sum(comm)
+        # Fill in table with principal's totals.
+        princTab.loc[row, 'Principal'] = principal
+        princTab.loc[row, 'Paid-On Revenue'] = princInv
+        princTab.loc[row, 'Sales Commission'] = princComm
+        row += 1
+    # Fill in overall totals.
+    princTab.loc[row, 'Principal'] = 'Grand Total'
+    princTab.loc[row, 'Paid-On Revenue'] = sum(princTab['Paid-On Revenue'])
+    princTab.loc[row, 'Sales Commission'] = sum(princTab['Sales Commission'])
+
     # Save the Running Commissions with entered report date.
     writer1 = pd.ExcelWriter('Running Commissions '
                              + time.strftime('%Y-%m-%d') + ' Reported'
@@ -263,10 +286,13 @@ def main(runCom):
                             index=False)
     salesTot.to_excel(writer1, sheet_name='Sales Totals',
                       index=False)
+    princTab.to_excel(writer1, sheet_name='Principal Totals',
+                      index=False)
     # Format as table in Excel.
     tableFormat(runningCom, 'Master', writer1)
     tableFormat(filesProcessed, 'Files Processed', writer1)
     tableFormat(salesTot, 'Sales Totals', writer1)
+    tableFormat(princTab, 'Principal Totals', writer1)
 
     # Try saving the file, exit with error if file is currently open.
     try:
