@@ -36,6 +36,8 @@ def tableFormat(sheetData, sheetName, wbook):
                 'Vendor ID', 'Invoice Detail Nbr', 'Assigned Account Rep',
                 'Recipient', 'DKLI Report Date', 'Invoice Date Group',
                 'Comments', 'Sales Channel']
+    coreCols = ['Must Contact', 'End Product', 'How Contacted',
+                'Information for Digikey']
     for col in sheetData.columns:
         acctCols = ['Unit Price', 'Invoiced Dollars']
         if col in acctCols:
@@ -49,7 +51,7 @@ def tableFormat(sheetData, sheetName, wbook):
         maxWidth = min(maxWidth, 50)
         if col in hideCols:
             maxWidth = 0
-        elif col == 'TAARCOM Comments':
+        elif col in coreCols:
             maxWidth = 25
         sheet.set_column(i, i, maxWidth+0.8, formatting)
         i += 1
@@ -125,9 +127,6 @@ def main(filepaths):
 
     # Get column name layout, prepare combined insight file.
     colNames = list(insMast)
-    colNames[5:5] = ['Must Contact', 'End Product', 'How Contacted',
-                     'Information for Digikey']
-    colNames[14:14] = ['Invoiced Dollars']
     newDatComb = pd.DataFrame(columns=colNames)
 
     # Strip the root off of the filepaths and leave just the filenames.
@@ -171,6 +170,10 @@ def main(filepaths):
             # Grab next sheet in file.
             # Rework the index just in case it got read in wrong.
             sheet = newData[sheetName].reset_index(drop=True).fillna('')
+            sheet['Must Contact'] = ''
+            sheet['End Product'] = ''
+            sheet['How Contacted'] = ''
+            sheet['Information for Digikey'] = ''
 
             # Calculate the Invoiced Dollars.
             try:

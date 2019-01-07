@@ -113,6 +113,11 @@ def tailoredPreCalc(princ, sheet, sheetName):
         sheet.rename(columns={'Resale': 'Extended Resale',
                               'Cost': 'Extended Cost'}, inplace=True)
         print('Matching Paid-On Revenue to the distributor.')
+    # ATP special processing.
+    if princ == 'ATP':
+        # Rename the 'Commissions Due' column.
+        sheet.rename(columns={'Customer': 'Unmapped'}, inplace=True)
+        print('Ignoring the Customer column.')
     # QRF special processing.
     if princ == 'QRF':
         if sheetName in ['OEM', 'OFF']:

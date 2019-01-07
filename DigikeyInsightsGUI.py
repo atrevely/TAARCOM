@@ -222,7 +222,7 @@ class GenMast(QMainWindow):
 
         # Print out the selected filenames.
         if self.filename:
-            print('File selected:' + self.filename + '\n---')
+            print('File selected: ' + self.filename + '\n---')
             # Turn off/on the correct buttons.
             self.btnAddIns.setEnabled(False)
             self.btnLookSales.setEnabled(True)
