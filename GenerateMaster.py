@@ -156,6 +156,10 @@ def tailoredPreCalc(princ, sheet, sheetName):
                                   'Item': 'Unmapped4',
                                   'End Name': 'Customer Name'},
                          inplace=True)
+    # XMO special processing.
+    if princ == 'INF':
+        # The Amount column is Actual Comm Paid.
+         sheet.rename(columns={'Amount': 'Commission'}, inplace=True)       
 
 
 def tailoredCalc(princ, sheet, sheetName, distMap):
@@ -229,16 +233,16 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
     # ATS special Processing.
     if princ == 'ATS':
         # Digikey and Mouser are paid on cost, not resale.
-        for row in sheet.index:
-            try:
-                if sheet.loc[row, 'Reported Distributor'] in ['DIGIKEY', 'MOUSER']:
-                    sheet.loc[row, 'Paid-On Revenue'] = sheet.loc[row, 'Ext. Cost']
-                    sheet.loc[row, 'Comm Source'] = 'Cost'
-                else:
-                    sheet.loc[row, 'Paid-On Revenue'] = sheet.loc[row, 'Invoiced Dollars']
-                    sheet.loc[row, 'Comm Source'] = 'Resale'
-            except KeyError:
-                pass
+        if sheetName in ['DigiKey POS', 'Mouser POS']:
+            sheet['Paid-On Revenue'] = sheet['Ext. Cost']
+            sheet['Comm Source'] = 'Cost'
+            sheet['Actual Comm Paid'] = sheet['Paid-On Revenue']*0.02
+            sheet['Commission Rate'] = 0.02
+        else:
+            sheet['Paid-On Revenue'] = sheet['Invoiced Dollars']
+            sheet['Comm Source'] = 'Resale'
+            sheet['Actual Comm Paid'] = sheet['Paid-On Revenue']*0.035
+            sheet['Commission Rate'] = 0.035
     # ATP special Processing.
     if princ == 'ATP':
         # Load up the customer lookup file.
@@ -253,8 +257,8 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
             return
         # Fill in commission rates and commission paid.
         if 'US' in sheetName and invDol:
-            sheet['Commission Rate'] = 0.03
-            sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*0.03
+            sheet['Commission Rate'] = 0.05
+            sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*0.05
             print('Commission rate filled in for this tab: 3%\n'
                   '---')
             sheet['Reported Customer'].fillna(method='ffill', inplace=True)
@@ -263,8 +267,8 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
             # US paid on resale.
             sheet['Comm Source'] = 'Resale'
         elif 'TW' in sheetName and invDol:
-            sheet['Commission Rate'] = 0.024
-            sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*0.024
+            sheet['Commission Rate'] = 0.04
+            sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*0.04
             print('Commission rate filled in for this tab: 2.4%\n'
                   '---')
             sheet['Reported Customer'].fillna(method='ffill', inplace=True)
@@ -392,6 +396,10 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
     # SUR special processing.
     if princ == 'SUR':
         # SUR is paid on resale.
+        sheet['Comm Source'] = 'Resale'
+    # XMO special processing.
+    if princ == 'XMO':
+        # XMO is paid on resale.
         sheet['Comm Source'] = 'Resale'
     # Test the Commission Dollars to make sure they're correct.
     if 'Paid-On Revenue' in list(sheet):
