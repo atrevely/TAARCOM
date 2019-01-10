@@ -159,7 +159,8 @@ def tailoredPreCalc(princ, sheet, sheetName):
     # XMO special processing.
     if princ == 'XMO':
         # The Amount column is Actual Comm Paid.
-         sheet.rename(columns={'Amount': 'Commission'}, inplace=True)       
+         sheet.rename(columns={'Amount': 'Commission',
+                               'Commission Due': 'Unmapped'}, inplace=True)       
 
 
 def tailoredCalc(princ, sheet, sheetName, distMap):
