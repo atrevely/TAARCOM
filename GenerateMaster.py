@@ -234,11 +234,11 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
     if princ == 'ATS':
         # Digikey and Mouser are paid on cost, not resale.
         if sheetName in ['DigiKey POS', 'Mouser POS']:
-            sheet['Paid-On Revenue'] = sheet['Ext. Cost']
+            sheet['Paid-On Revenue'] = sheet['Invoiced Dollars']
             sheet['Comm Source'] = 'Cost'
             sheet['Actual Comm Paid'] = sheet['Paid-On Revenue']*0.02
             sheet['Commission Rate'] = 0.02
-        else:
+        elif sheetName == 'Arrow POS':
             sheet['Paid-On Revenue'] = sheet['Invoiced Dollars']
             sheet['Comm Source'] = 'Resale'
             sheet['Actual Comm Paid'] = sheet['Paid-On Revenue']*0.035
