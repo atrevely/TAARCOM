@@ -157,7 +157,7 @@ def tailoredPreCalc(princ, sheet, sheetName):
                                   'End Name': 'Customer Name'},
                          inplace=True)
     # XMO special processing.
-    if princ == 'INF':
+    if princ == 'XMO':
         # The Amount column is Actual Comm Paid.
          sheet.rename(columns={'Amount': 'Commission'}, inplace=True)       
 
@@ -428,7 +428,7 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
             errLocs = [i+2 for i in errLocs]
             print(', '.join(map(str, errLocs))
                   + '\n---')
-    except (KeyError, NameError):
+    except (KeyError, NameError, TypeError):
         pass
 
 
