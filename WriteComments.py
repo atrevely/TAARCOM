@@ -53,7 +53,7 @@ def main(filepaths):
     except XLRDError:
         print('---\n'
               'Error reading sheet name(s) for Digikey Reports!\n'
-              'Please make sure the report tabs are named Report Data in '
+              'Please make sure the report tabs are named Full Data in '
               'each file.\n'
               '***')
 
