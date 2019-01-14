@@ -97,7 +97,8 @@ def main(runCom):
     used in 2+ years.
     """
     # Load up the current Running Commissions file.
-    runningCom = pd.read_excel(runCom, 'Master').fillna('')
+    runningCom = pd.read_excel(runCom, 'Master', dtype=str)
+    runningCom.replace('nan', '', inplace=True)
     filesProcessed = pd.read_excel(runCom, 'Files Processed').fillna('')
     comDate = runCom[-20:]
 
@@ -115,7 +116,8 @@ def main(runCom):
     if os.path.exists('Entries Need Fixing ' + comDate):
         try:
             fixList = pd.read_excel('Entries Need Fixing ' + comDate,
-                                    'Data').fillna('')
+                                    'Data', dtype=str)
+            fixList.replace('nan', '', inplace=True)
         except XLRDError:
             print('Error reading sheet name for Entries Need Fixing.xlsx!\n'
                   'Please make sure the main tab is named Data.\n'
@@ -130,7 +132,9 @@ def main(runCom):
 
     # Read in the Master Lookup. Exit if not found.
     if os.path.exists('Lookup Master - Current.xlsx'):
-        mastLook = pd.read_excel('Lookup Master - Current.xlsx').fillna('')
+        mastLook = pd.read_excel('Lookup Master - Current.xlsx',
+                                 dtype=str)
+        mastLook.replace('nan', '', inplace=True)
         # Check the column names.
         lookupCols = ['CM Sales', 'Design Sales', 'CM Split',
                       'Reported Customer', 'CM', 'Part Number', 'T-Name',
@@ -152,8 +156,9 @@ def main(runCom):
 
     # Load the Quarantined Lookups.
     if os.path.exists('Quarantined Lookups.xlsx'):
-        quarantined = pd.read_excel('Quarantined Lookups.xlsx').fillna('')
-    else:
+        quarantined = pd.read_excel('Quarantined Lookups.xlsx',
+                                    dtype=str)
+        quarantined.replace('nan', '', inplace=True)
         print('No Quarantied Lookups file found!\n'
               'Please make sure Quarantined Lookups.xlsx '
               'is in the directory.\n'

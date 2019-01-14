@@ -326,7 +326,7 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
             # We need to load in the part number log.
             if os.path.exists('Mill-Max Invoice Log.xlsx'):
                 MMaxLog = pd.read_excel('Mill-Max Invoice Log.xlsx',
-                                        'Logs').fillna('')
+                                        'Logs', dtype=str).fillna('')
                 print('Looking up part numbers from invoice log.\n'
                       '---')
             else:
@@ -468,10 +468,12 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
 
     # Check to see if there's an existing Running Commissions to append to.
     if runningCom:
-        finalData = pd.read_excel(runningCom, 'Master').fillna('')
+        finalData = pd.read_excel(runningCom, 'Master', dtype=str)
+        finalData.replace('nan', '', inplace=True)
         runComLen = len(finalData)
-        filesProcessed = pd.read_excel(runningCom,
-                                       'Files Processed').fillna('')
+        filesProcessed = pd.read_excel(runningCom, 'Files Processed',
+                                       dtype=str)
+        filesProcessed.replace('nan', '', inplace=True)
         print('Appending files to Running Commissions.')
         # Make sure column names all match.
         if set(list(finalData)) != set(columnNames):
@@ -490,7 +492,8 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
         comDate = runningCom[-20:]
         fixName = 'Entries Need Fixing ' + comDate
         try:
-            fixList = pd.read_excel(fixName, 'Data').fillna('')
+            fixList = pd.read_excel(fixName, 'Data', dtype=str)
+            fixList.replace('nan', '', inplace=True)
         except FileNotFoundError:
             print('No matching Entries Need Fixing file found for this '
                   'Running Commissions file!\n'
@@ -537,7 +540,8 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
 
     # Read in each new file with Pandas and store them as dictionaries.
     # Each dictionary has a dataframe for each sheet in the file.
-    inputData = [pd.read_excel(filepath, None) for filepath in filepaths]
+    inputData = [pd.read_excel(filepath, None, dtype=str)
+                 for filepath in filepaths]
 
     # Read in distMap. Exit if not found or if errors in file.
     if os.path.exists('distributorLookup.xlsx'):
@@ -567,7 +571,9 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
 
     # Read in the Master Lookup. Exit if not found.
     if os.path.exists('Lookup Master - Current.xlsx'):
-        masterLookup = pd.read_excel('Lookup Master - Current.xlsx').fillna('')
+        masterLookup = pd.read_excel('Lookup Master - Current.xlsx',
+                                     dtype=str)
+        masterLookup.replace('nan', '', inplace=True)
         # Check the column names.
         lookupCols = ['CM Sales', 'Design Sales', 'CM Split',
                       'Reported Customer', 'CM', 'Part Number', 'T-Name',
@@ -892,7 +898,6 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
 
         # Go through each column and convert applicable entries to numeric.
         cols = list(finalData)
-        cols.remove('Principal')
         # Invoice number sometimes has leading zeros we'd like to keep.
         cols.remove('Invoice Number')
         for col in cols:
