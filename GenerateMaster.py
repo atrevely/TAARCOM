@@ -159,8 +159,8 @@ def tailoredPreCalc(princ, sheet, sheetName):
     # XMO special processing.
     if princ == 'XMO':
         # The Amount column is Actual Comm Paid.
-         sheet.rename(columns={'Amount': 'Commission',
-                               'Commission Due': 'Unmapped'}, inplace=True)       
+        sheet.rename(columns={'Amount': 'Commission',
+                              'Commission Due': 'Unmapped'}, inplace=True)
 
 
 def tailoredCalc(princ, sheet, sheetName, distMap):
@@ -373,8 +373,8 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
     # Globtek special Processing.
     if princ == 'GLO':
         try:
-            comPct = sheet['Commission Rate']
-            sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*comPct
+            sheet['Commission Rate'] = 0.05
+            sheet['Actual Comm Paid'] = sheet['Paid-On Revenue']*0.05
         except KeyError:
             print('No Commission Rate and/or Invoiced Dollars found!\n'
                   'Please check these columns and try again.\n'
