@@ -374,9 +374,11 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
     if princ == 'GLO':
         try:
             sheet['Commission Rate'] = 0.05
+            sheet['Paid-On Revenue'] = pd.to_numeric(sheet['Paid-On Revenue'],
+                                                     errors='coerce')
             sheet['Actual Comm Paid'] = sheet['Paid-On Revenue']*0.05
         except KeyError:
-            print('No Commission Rate and/or Invoiced Dollars found!\n'
+            print('No Commission Rate and/or Paid-On Revenue found!\n'
                   'Please check these columns and try again.\n'
                   '***')
             return
