@@ -246,7 +246,7 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
                                      errors='coerce')
                 sheet['Actual Comm Paid'] = sheet['Paid-On Revenue']*rate
             sheet['Reported Distributor'] = 'Digikey'
-        elif sheetName == 'DigiKey POS':
+        elif sheetName == 'Mouser POS':
             sheet['Paid-On Revenue'] = sheet['Invoiced Dollars']
             sheet['Comm Source'] = 'Cost'
             # Check for Commission Rate and fill it in if not found.
@@ -693,8 +693,11 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
                        'Paid-On Revenue', 'Actual Comm Paid',
                        'Unit Cost', 'Unit Price']
             for col in numCols:
-                sheet[col] = pd.to_numeric(sheet[col],
-                                           errors='coerce').fillna(0)
+                try:
+                    sheet[col] = pd.to_numeric(sheet[col],
+                                               errors='coerce').fillna(0)
+                except KeyError:
+                    pass
 
             # Fix Commission Rate if it got read in as a decimal.
             pctCols = ['Commission Rate', 'Split Percentage',
@@ -703,7 +706,7 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
                 try:
                     # Remove '%' sign if present.
                     col = sheet[pctCol].astype(str).map(lambda x: x.strip('%'))
-                    # Conver to numeric.
+                    # Convert to numeric.
                     col = pd.to_numeric(col, errors='coerce')
                     # Identify which entries are not decimal.
                     notDec = col > 1
@@ -910,6 +913,8 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
         cols = list(finalData)
         # Invoice number sometimes has leading zeros we'd like to keep.
         cols.remove('Invoice Number')
+        # The INF gets read in as infinity, so skip the principal column.
+        cols.remove('Principal')
         for col in cols:
             finalData.loc[row, col] = pd.to_numeric(finalData.loc[row, col],
                                                     errors='ignore')
