@@ -234,16 +234,42 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
     # ATS special Processing.
     if princ == 'ATS':
         # Digikey and Mouser are paid on cost, not resale.
-        if sheetName in ['DigiKey POS', 'Mouser POS']:
+        if sheetName == 'DigiKey POS':
             sheet['Paid-On Revenue'] = sheet['Invoiced Dollars']
             sheet['Comm Source'] = 'Cost'
-            sheet['Actual Comm Paid'] = sheet['Paid-On Revenue']*0.02
-            sheet['Commission Rate'] = 0.02
+            # Check for Commission Rate and fill it in if not found.
+            if 'Commission Rate' not in list(sheet):
+                sheet['Commission Rate'] = 0.02
+            # Check for Commission Paid and fill it in if not found.
+            if 'Actual Comm Paid' not in list(sheet):
+                rate = pd.to_numeric(sheet['Commission Rate'],
+                                     errors='coerce')
+                sheet['Actual Comm Paid'] = sheet['Paid-On Revenue']*rate
+            sheet['Reported Distributor'] = 'Digikey'
+        elif sheetName == 'DigiKey POS':
+            sheet['Paid-On Revenue'] = sheet['Invoiced Dollars']
+            sheet['Comm Source'] = 'Cost'
+            # Check for Commission Rate and fill it in if not found.
+            if 'Commission Rate' not in list(sheet):
+                sheet['Commission Rate'] = 0.045
+            # Check for Commission Paid and fill it in if not found.
+            if 'Actual Comm Paid' not in list(sheet):
+                rate = pd.to_numeric(sheet['Commission Rate'],
+                                     errors='coerce')
+                sheet['Actual Comm Paid'] = sheet['Paid-On Revenue']*rate
+                sheet['Reported Distributor'] = 'Mouser'
         elif sheetName == 'Arrow POS':
             sheet['Paid-On Revenue'] = sheet['Invoiced Dollars']
             sheet['Comm Source'] = 'Resale'
-            sheet['Actual Comm Paid'] = sheet['Paid-On Revenue']*0.035
-            sheet['Commission Rate'] = 0.035
+            # Check for Commission Rate and fill it in if not found.
+            if 'Commission Rate' not in list(sheet):
+                sheet['Commission Rate'] = 0.035
+            # Check for Commission Paid and fill it in if not found.
+            if 'Actual Comm Paid' not in list(sheet):
+                rate = pd.to_numeric(sheet['Commission Rate'],
+                                     errors='coerce')
+                sheet['Actual Comm Paid'] = sheet['Paid-On Revenue']*rate
+            sheet['Reported Distributor'] = 'Arrow'
     # ATP special Processing.
     if princ == 'ATP':
         # Load up the customer lookup file.
@@ -619,6 +645,8 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
             # Grab next sheet in file.
             # Rework the index just in case it got read in wrong.
             sheet = newData[sheetName].reset_index(drop=True)
+            # Remove the 'nan' strings that got read in.
+            sheet.replace('nan', '', inplace=True)
             # Make sure index is an integer, not a string.
             sheet.index = sheet.index.map(int)
             # Strip whitespace from column names.
@@ -707,7 +735,8 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
             tailoredCalc(principal, sheet, sheetName, distMap)
             # Drop entries with emtpy part number.
             try:
-                sheet.dropna(subset=['Part Number'], inplace=True)
+                sheet.drop(sheet[sheet['Part Number'] == ''].index,
+                           inplace=True)
             except KeyError:
                 pass
 
