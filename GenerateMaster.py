@@ -688,49 +688,30 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
                     sheet.rename(columns={columnName[0]: dataName},
                                  inplace=True)
 
+            # Convert applicable columns to numeric.
+            numCols = ['Quantity', 'Ext. Cost', 'Invoiced Dollars',
+                       'Paid-On Revenue', 'Actual Comm Paid',
+                       'Unit Cost', 'Unit Price']
+            for col in numCols:
+                sheet[col] = pd.to_numeric(sheet[col],
+                                           errors='coerce').fillna(0)
+
             # Fix Commission Rate if it got read in as a decimal.
-            try:
-                numCom = pd.to_numeric(sheet['Commission Rate'],
-                                       errors='coerce')
-                sheet['Commission Rate'] = numCom
-                decCom = sheet['Commission Rate'] > 0.9
-                newCom = sheet.loc[decCom, 'Commission Rate']/100
-                sheet.loc[decCom, 'Commission Rate'] = newCom.fillna('')
-            except (KeyError, TypeError):
-                pass
-            # Fix Split Percentage if it got read in as a decimal.
-            try:
-                # Remove '%' sign if present.
-                numSplit = sheet['Split Percentage'].astype(str).map(
-                                lambda x: x.strip('%'))
-                # Conver to numeric.
-                numSplit = pd.to_numeric(numSplit, errors='coerce')
-                sheet['Split Percentage'] = numSplit
-                decSplit = sheet['Split Percentage'] > 1
-                newSplit = sheet.loc[decSplit, 'Split Percentage']/100
-                sheet.loc[decSplit, 'Split Percentage'] = newSplit.fillna('')
-            except (KeyError, TypeError):
-                pass
-            # Fix Gross Rev Reduction if it got read in as a decimal.
-            try:
-                numRev = pd.to_numeric(sheet['Gross Rev Reduction'],
-                                       errors='coerce')
-                sheet['Gross Rev Reduction'] = numRev
-                decRev = sheet['Gross Rev Reduction'] > 1
-                newRev = sheet.loc[decRev, 'Gross Rev Reduction']/100
-                sheet.loc[decRev, 'Gross Rev Reduction'] = newRev.fillna('')
-            except (KeyError, TypeError):
-                pass
-            # Fix Shared Rev Tier Rate if it got read in as a decimal.
-            try:
-                numTier = pd.to_numeric(sheet['Shared Rev Tier Rate'],
-                                        errors='coerce')
-                sheet['Shared Rev Tier Rate'] = numTier
-                decTier = sheet['Shared Rev Tier Rate'] > 1
-                newTier = sheet.loc[decTier, 'Shared Rev Tier Rate']/100
-                sheet.loc[decTier, 'Shared Rev Tier Rate'] = newTier.fillna('')
-            except (KeyError, TypeError):
-                pass
+            pctCols = ['Commission Rate', 'Split Percentage',
+                       'Gross Rev Reduction', 'Shared Rev Tier Rate']
+            for pctCol in pctCols:
+                try:
+                    # Remove '%' sign if present.
+                    col = sheet[pctCol].astype(str).map(lambda x: x.strip('%'))
+                    # Conver to numeric.
+                    col = pd.to_numeric(col, errors='coerce')
+                    # Identify which entries are not decimal.
+                    notDec = col > 1
+                    col[notDec] = col[notDec]/100
+                    sheet[pctCol] = col.fillna(0)
+                except (KeyError, TypeError):
+                    pass
+
             # Do special processing for principal, if applicable.
             tailoredCalc(principal, sheet, sheetName, distMap)
             # Drop entries with emtpy part number.
