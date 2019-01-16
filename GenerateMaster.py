@@ -286,7 +286,7 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
         if 'US' in sheetName and invDol:
             sheet['Commission Rate'] = 0.05
             sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*0.05
-            print('Commission rate filled in for this tab: 3%\n'
+            print('Commission rate filled in for this tab: 5%\n'
                   '---')
             sheet['Reported Customer'].fillna(method='ffill', inplace=True)
             print('Correcting customer names.\n'
@@ -296,7 +296,7 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
         elif 'TW' in sheetName and invDol:
             sheet['Commission Rate'] = 0.04
             sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*0.04
-            print('Commission rate filled in for this tab: 2.4%\n'
+            print('Commission rate filled in for this tab: 4%\n'
                   '---')
             sheet['Reported Customer'].fillna(method='ffill', inplace=True)
             print('Correcting customer names.\n'
@@ -308,6 +308,8 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
             sheet.rename(columns={'Reported End Customer':
                                   'Reported Customer'}, inplace=True)
             sheet['Actual Comm Paid'] = sheet['Ext. Cost']*0.03
+            print('Commission rate filled in for this tab: 3%\n'
+                  '---')
             # POS paid on cost.
             sheet['Comm Source'] = 'Cost'
         else:
@@ -720,8 +722,6 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
             # Drop entries with emtpy part number or reported customer.
             try:
                 sheet.drop(sheet[sheet['Part Number'] == ''].index,
-                           inplace=True)
-                sheet.drop(sheet[sheet['Reported Customer'] == ''].index,
                            inplace=True)
                 sheet.reset_index(drop=True, inplace=True)
             except KeyError:
