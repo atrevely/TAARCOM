@@ -1,5 +1,6 @@
 *.xlsx
 *.xls
+*.pyc
 !ATPCustomerLookup.xlsx
 !distributorLookup.xlsx
 !fieldMappings.xlsx
