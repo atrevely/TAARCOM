@@ -1,6 +1,7 @@
 *.xlsx
 *.xls
 *.pyc
+__pycache__/
 !ATPCustomerLookup.xlsx
 !distributorLookup.xlsx
 !fieldMappings.xlsx
