@@ -363,7 +363,7 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
                 return
             # Input part number from Mill-Max Invoice Log.
             for row in sheet.index:
-                if not math.isnan(sheet.loc[row, 'Invoice Number']):
+                if sheet.loc[row, 'Invoice Number']:
                     match = MMaxLog['Inv#'] == sheet.loc[row, 'Invoice Number']
                     if sum(match) == 1:
                         partNum = MMaxLog[match].iloc[0]['Part Number']
