@@ -717,10 +717,13 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
 
             # Do special processing for principal, if applicable.
             tailoredCalc(principal, sheet, sheetName, distMap)
-            # Drop entries with emtpy part number.
+            # Drop entries with emtpy part number or reported customer.
             try:
                 sheet.drop(sheet[sheet['Part Number'] == ''].index,
                            inplace=True)
+                sheet.drop(sheet[sheet['Reported Customer'] == ''].index,
+                           inplace=True)
+                sheet.reset_index(drop=True, inplace=True)
             except KeyError:
                 pass
 
