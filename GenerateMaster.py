@@ -184,7 +184,6 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
     if princ == 'ABR':
         invIn = 'Invoiced Dollars' in list(sheet)
         commNotIn = 'Actual Comm Paid' not in list(sheet)
-        revIn = 'Paid-On Revenue' in list(sheet)
         commRateNotIn = 'Commission Rate' not in list(sheet)
         if invIn and commNotIn:
             # Input missing data. Commission Rate is always 3% here.
@@ -192,15 +191,30 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
             sheet['Paid-On Revenue'] = pd.to_numeric(sheet['Invoiced Dollars'],
                                                      errors='coerce')*0.7
             sheet['Actual Comm Paid'] = sheet['Paid-On Revenue']*0.03
+            # These are paid on resale.
+            sheet['Comm Source'] = 'Resale'
             print('Columns added from Abracon special processing:\n'
                   'Commission Rate, Paid-On Revenue, '
                   'Actual Comm Paid\n'
                   '---')
-        elif revIn and commRateNotIn:
+        elif not invIn and commRateNotIn:
             # Fill down Distributor for their grouping scheme.
             sheet['Reported Distributor'].replace('', np.nan, inplace=True)
             sheet['Reported Distributor'].fillna(method='ffill', inplace=True)
             sheet['Reported Distributor'].fillna('', inplace=True)
+            # Switch reported cost over to Invoiced Dollars for direct lines
+            for row in range(sheet.shape[0]):
+                cost = sheet.loc[row, 'Ext. Cost']
+                if sheet.loc[row, 'Reported Distributor'] == 'ABRACON DIRECT':
+                    # Direct is paid on resale.
+                    sheet.loc[row, 'Invoiced Dollars'] = cost
+                    sheet.loc[row, 'Paid-On Revenue'] =  cost                    
+                    sheet.loc[row, 'Ext. Cost'] = ''
+                    sheet.loc[row, 'Comm Source'] = 'Resale'
+                else:
+                    # All others paid on cost.
+                    sheet.loc[row, 'Paid-On Revenue'] = cost
+                    sheet.loc[row, 'Comm Source'] = 'Cost'
             # Calculate the Commission Rate.
             comPaid = pd.to_numeric(sheet['Actual Comm Paid'], errors='coerce')
             revenue = pd.to_numeric(sheet['Paid-On Revenue'], errors='coerce')
@@ -209,8 +223,6 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
             print('Columns added from Abracon special processing:\n'
                   'Commission Rate\n'
                   '---')
-        # Abracon is paid on cost.
-        sheet['Comm Source'] = 'Cost'
     # ISSI special processing.
     if princ == 'ISS':
         if 'OEM/POS' in list(sheet):
@@ -328,7 +340,7 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
             print('No Reported Customer column found!\n'
                   '---')
             return
-        for row in range(len(sheet)):
+        for row in range(sheet.shape[0]):
             custName = sheet.loc[row, 'Reported Customer']
             # Find matches for the distName in the Distributor Abbreviations.
             custMatches = [i for i in ATPCustLook['Name'] if i in custName]
@@ -353,6 +365,7 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
             sheet = sheet[sheet['Part Number'] != 'Totals']
             sheet.reset_index(drop=True, inplace=True)
             # These commissions are paid on cost.
+            sheet['Paid-On Revenue'] = sheet['Ext. Cost']
             sheet['Comm Source'] = 'Cost'
         elif 'Part Number' not in list(sheet) and invNum:
             # We need to load in the part number log.
@@ -392,6 +405,8 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
             print('Calculating commissions as 5% of Cost Ext.\n'
                   'For Allied shipments, 4.9% of Cost Ext.\n'
                   '---')
+            # Revenue is from cost.
+            sheet['Paid-On Revenue'] = sheet['Ext. Cost']
             for row in sheet.index:
                 extenCost = sheet.loc[row, 'Ext. Cost']
                 if sheet.loc[row, 'Reported Distributor'] == 'ALLIED':
@@ -406,8 +421,7 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
     if princ == 'GLO':
         try:
             sheet['Commission Rate'] = 0.05
-            sheet['Paid-On Revenue'] = pd.to_numeric(sheet['Paid-On Revenue'],
-                                                     errors='coerce')
+            sheet['Paid-On Revenue'] = sheet['Invoiced Dollars']
             sheet['Actual Comm Paid'] = sheet['Paid-On Revenue']*0.05
         except KeyError:
             print('No Commission Rate and/or Paid-On Revenue found!\n'
