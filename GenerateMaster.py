@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 from dateutil.parser import parse
 from xlrd import XLRDError
 import time
@@ -197,6 +198,7 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
                   '---')
         elif revIn and commRateNotIn:
             # Fill down Distributor for their grouping scheme.
+            sheet['Reported Distributor'].replace('', np.nan, inplace=True)
             sheet['Reported Distributor'].fillna(method='ffill', inplace=True)
             sheet['Reported Distributor'].fillna('', inplace=True)
             # Calculate the Commission Rate.
@@ -288,6 +290,7 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
             sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*0.05
             print('Commission rate filled in for this tab: 5%\n'
                   '---')
+            sheet['Reported Customer'].replace('', np.nan, inplace=True)
             sheet['Reported Customer'].fillna(method='ffill', inplace=True)
             print('Correcting customer names.\n'
                   '---')
@@ -298,6 +301,7 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
             sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*0.04
             print('Commission rate filled in for this tab: 4%\n'
                   '---')
+            sheet['Reported Customer'].replace('', np.nan, inplace=True)
             sheet['Reported Customer'].fillna(method='ffill', inplace=True)
             print('Correcting customer names.\n'
                   '---')
