@@ -208,7 +208,7 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
                 if sheet.loc[row, 'Reported Distributor'] == 'ABRACON DIRECT':
                     # Direct is paid on resale.
                     sheet.loc[row, 'Invoiced Dollars'] = cost
-                    sheet.loc[row, 'Paid-On Revenue'] =  cost                    
+                    sheet.loc[row, 'Paid-On Revenue'] = cost
                     sheet.loc[row, 'Ext. Cost'] = ''
                     sheet.loc[row, 'Comm Source'] = 'Resale'
                 else:
@@ -299,6 +299,7 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
         # Fill in commission rates and commission paid.
         if 'US' in sheetName and invDol:
             sheet['Commission Rate'] = 0.05
+            sheet['Paid-On Revenue'] = sheet['Invoiced Dollars']
             sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*0.05
             print('Commission rate filled in for this tab: 5%\n'
                   '---')
@@ -310,6 +311,7 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
             sheet['Comm Source'] = 'Resale'
         elif 'TW' in sheetName and invDol:
             sheet['Commission Rate'] = 0.04
+            sheet['Paid-On Revenue'] = sheet['Invoiced Dollars']
             sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*0.04
             print('Commission rate filled in for this tab: 4%\n'
                   '---')
@@ -321,6 +323,7 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
             sheet['Comm Source'] = 'Resale'
         elif 'POS' in sheetName and extCost:
             sheet['Commission Rate'] = 0.03
+            sheet['Paid-On Revenue'] = sheet['Ext. Cost']
             sheet.rename(columns={'Reported End Customer':
                                   'Reported Customer'}, inplace=True)
             sheet['Actual Comm Paid'] = sheet['Ext. Cost']*0.03
@@ -396,6 +399,7 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
         # For World Star POS tab, enter World Star as the distributor.
         if 'World' in sheetName:
             sheet['Reported Distributor'] = 'World Star'
+        sheet['Paid-On Revenue'] = sheet['Invoiced Dollars']
         # Osram is paid on resale.
         sheet['Comm Source'] = 'Resale'
     # Cosel special Processing.
@@ -432,6 +436,7 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
         sheet['Comm Source'] = 'Resale'
     # RF360 special Processing.
     if princ == 'QRF':
+        sheet['Paid-On Revenue'] = sheet['Invoiced Dollars']
         # RF360 is paid on resale.
         sheet['Comm Source'] = 'Resale'
     # INF special processing.
@@ -448,6 +453,7 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
         sheet['Comm Source'] = 'Resale'
     # XMO special processing.
     if princ == 'XMO':
+        sheet['Paid-On Revenue'] = sheet['Invoiced Dollars']
         # XMO is paid on resale.
         sheet['Comm Source'] = 'Resale'
     # Test the Commission Dollars to make sure they're correct.
