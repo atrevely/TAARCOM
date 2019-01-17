@@ -399,7 +399,10 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
         # For World Star POS tab, enter World Star as the distributor.
         if 'World' in sheetName:
             sheet['Reported Distributor'] = 'World Star'
-        sheet['Paid-On Revenue'] = sheet['Invoiced Dollars']
+        try:
+            sheet['Paid-On Revenue'] = sheet['Invoiced Dollars']
+        except KeyError:
+            pass
         # Osram is paid on resale.
         sheet['Comm Source'] = 'Resale'
     # Cosel special Processing.
@@ -436,7 +439,10 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
         sheet['Comm Source'] = 'Resale'
     # RF360 special Processing.
     if princ == 'QRF':
-        sheet['Paid-On Revenue'] = sheet['Invoiced Dollars']
+        try:
+            sheet['Paid-On Revenue'] = sheet['Invoiced Dollars']
+        except KeyError:
+            pass
         # RF360 is paid on resale.
         sheet['Comm Source'] = 'Resale'
     # INF special processing.
@@ -453,7 +459,10 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
         sheet['Comm Source'] = 'Resale'
     # XMO special processing.
     if princ == 'XMO':
-        sheet['Paid-On Revenue'] = sheet['Invoiced Dollars']
+        try:
+            sheet['Paid-On Revenue'] = sheet['Invoiced Dollars']
+        except KeyError:
+            pass
         # XMO is paid on resale.
         sheet['Comm Source'] = 'Resale'
     # Test the Commission Dollars to make sure they're correct.
