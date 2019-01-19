@@ -104,13 +104,13 @@ def tailoredPreCalc(princ, sheet, sheetName):
                         sheet.loc[row, 'Rep 1 %'] = sheet.loc[row, 'Rep 2 %']
     # ISSI special processing.
     if princ == 'ISS':
-        # Rename the 'Commissions Due' column.
+        # Rename the Commissions Due and Name columns.
         sheet.rename(columns={'Commission Due': 'Unmapped',
                               'Name': 'OEM/POS'}, inplace=True)
         print('Ignoring the Commissions Due column.')
     # ATS special processing.
     if princ == 'ATS':
-        # Rename the 'Commissions Due' column.
+        # Rename the Resale and Cost columns.
         sheet.rename(columns={'Resale': 'Extended Resale',
                               'Cost': 'Extended Cost'}, inplace=True)
         print('Matching Paid-On Revenue to the distributor.')
@@ -248,7 +248,7 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
     # ATS special Processing.
     if princ == 'ATS':
         # Digikey and Mouser are paid on cost, not resale.
-        if sheetName == 'DigiKey POS':
+        if 'Digi' in sheetName:
             sheet['Paid-On Revenue'] = sheet['Invoiced Dollars']
             sheet['Comm Source'] = 'Cost'
             # Check for Commission Rate and fill it in if not found.
@@ -260,19 +260,19 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
                                      errors='coerce')
                 sheet['Actual Comm Paid'] = sheet['Paid-On Revenue']*rate
             sheet['Reported Distributor'] = 'Digikey'
-        elif sheetName == 'Mouser POS':
+        elif 'Mouser' in sheetName:
             sheet['Paid-On Revenue'] = sheet['Invoiced Dollars']
             sheet['Comm Source'] = 'Cost'
             # Check for Commission Rate and fill it in if not found.
             if 'Commission Rate' not in list(sheet):
-                sheet['Commission Rate'] = 0.045
+                sheet['Commission Rate'] = 0.02
             # Check for Commission Paid and fill it in if not found.
             if 'Actual Comm Paid' not in list(sheet):
                 rate = pd.to_numeric(sheet['Commission Rate'],
                                      errors='coerce')
                 sheet['Actual Comm Paid'] = sheet['Paid-On Revenue']*rate
                 sheet['Reported Distributor'] = 'Mouser'
-        elif sheetName == 'Arrow POS':
+        elif 'Arrow' in sheetName:
             sheet['Paid-On Revenue'] = sheet['Invoiced Dollars']
             sheet['Comm Source'] = 'Resale'
             # Check for Commission Rate and fill it in if not found.
@@ -363,7 +363,7 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
             print('Found no Invoice Numbers on this sheet.\n'
                   '---')
             invNum = False
-        if 'Ext. Cost' in list(sheet) and not invDol:
+        if extCost and not invDol:
             # Sometimes the Totals are written in the Part Number column.
             sheet = sheet[sheet['Part Number'] != 'Totals']
             sheet.reset_index(drop=True, inplace=True)
@@ -455,6 +455,10 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
         sheet['Comm Source'] = 'Resale'
     # SUR special processing.
     if princ == 'SUR':
+        try:
+            sheet['Paid-On Revenue'] = sheet['Invoiced Dollars']
+        except KeyError:
+            pass
         # SUR is paid on resale.
         sheet['Comm Source'] = 'Resale'
     # XMO special processing.
