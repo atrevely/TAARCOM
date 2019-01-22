@@ -365,7 +365,8 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
             invNum = False
         if extCost and not invDol:
             # Sometimes the Totals are written in the Part Number column.
-            sheet = sheet[sheet['Part Number'] != 'Totals']
+            sheet.drop(sheet[sheet['Part Number'] == 'Totals'].index,
+                       inplace=True)
             sheet.reset_index(drop=True, inplace=True)
             # These commissions are paid on cost.
             sheet['Paid-On Revenue'] = sheet['Ext. Cost']
