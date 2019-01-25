@@ -53,6 +53,26 @@ def tableFormat(sheetData, sheetName, wbook):
             formatting = dateFormat
         elif col == 'Quantity':
             formatting = commaFormat
+        elif col == 'Invoice Number':
+            # We're going to do some work in order to format the Invoice
+            # Number as a number, yet keep leading zeros.
+            for row in sheetData.index:
+                invLen = len(sheetData.loc[row, 'Invoice Number'])
+                # Figure out how many places the number goes to.
+                numPadding = '0'*invLen
+                invNum = pd.to_numeric(sheetData.loc[row, 'Invoice Number'],
+                                       errors='ignore')
+                invFormat = wbook.book.add_format({'font': 'Calibri',
+                                                   'font_size': 11,
+                                                   'num_format': numPadding})
+                try:
+                    sheet.write_number(row+1, i, invNum, invFormat)
+                except TypeError:
+                    pass
+            # Move to the next column, as we're now done formatting
+            # the Invoice Numbers.
+            i += 1
+            continue
         else:
             formatting = docFormat
         # Set column width and formatting.
