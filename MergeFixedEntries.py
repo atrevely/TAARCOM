@@ -51,6 +51,25 @@ def tableFormat(sheetData, sheetName, wbook):
             formatting = dateFormat
         elif col == 'Quantity':
             formatting = commaFormat
+        elif col == 'Invoice Number':
+            # We're going to do some work in order to format the Invoice
+            # Number as a number, yet keep leading zeros.
+            for row in sheet.index:
+                invLen = len(sheet.loc[row, 'Invoice Number'])
+                # Figure out how many places the number goes to.
+                numPadding = '0'*invLen
+                invNum = pd.to_numeric(sheet.loc[row, 'Invoice Number'],
+                                       errors='ignore')
+                invFormat = wbook.book.add_format({'font': 'Calibri',
+                                                   'font_size': 11,
+                                                   'num_format': numPadding})
+                try:
+                    sheet.write_number(row+1, col, invNum, invFormat)
+                except TypeError:
+                    pass
+                # Move to the next column, as we're now done formatting
+                # the Invoice Numbers.
+                continue
         else:
             formatting = docFormat
         # Set column width and formatting.
@@ -159,6 +178,7 @@ def main(runCom):
         quarantined = pd.read_excel('Quarantined Lookups.xlsx',
                                     dtype=str)
         quarantined.replace('nan', '', inplace=True)
+    else:
         print('No Quarantied Lookups file found!\n'
               'Please make sure Quarantined Lookups.xlsx '
               'is in the directory.\n'
@@ -217,13 +237,21 @@ def main(runCom):
                                                      + 'Q'
                                                      + str(math.ceil(date.month/3)))
             # Check for match in commission dollars.
-            RCIndex = fixed.loc[row, 'Running Com Index']
+            try:
+                RCIndex = pd.to_numeric(fixed.loc[row, 'Running Com Index'],
+                                        errors='raise')
+            except ValueError:
+                print('Error reading Running Com Index!\n'
+                      'Make sure all values are numeric.\n'
+                      '***')
+                return
             comm = fixed.loc[row, 'Actual Comm Paid']
             if runningCom.loc[RCIndex, 'Actual Comm Paid'] == comm:
                 # Replace the Running Commissions entry with the fixed one.
                 runningCom.loc[RCIndex, :] = fixed.loc[row, list(runningCom)]
             else:
-                print('Mismatch in commission dollars found in row '
+                print('Mismatch in commission dollars found in Entries'
+                      'Need Fixing on row '
                       + str(row + 2)
                       + '\n***')
                 return
@@ -259,6 +287,17 @@ def main(runCom):
             fixList.drop(row, inplace=True)
 
     # %%
+    # Make sure all the dates are formatted correctly.
+    runningCom['Invoice Date'] = runningCom['Invoice Date'].map(
+            lambda x: parse(str(x)).date())
+    # Go through each column and convert applicable entries to numeric.
+    cols = list(runningCom)
+    # Invoice number sometimes has leading zeros we'd like to keep.
+    cols.remove('Invoice Number')
+    # The INF gets read in as infinity, so skip the principal column.
+    cols.remove('Principal')
+    for col in cols:
+        runningCom[col] = pd.to_numeric(runningCom[col], errors='ignore')
     # Check to make sure commission dollars still match.
     comm = pd.to_numeric(runningCom['Actual Comm Paid'],
                          errors='coerce').fillna(0)

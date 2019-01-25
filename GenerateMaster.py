@@ -65,7 +65,7 @@ def tableFormat(sheetData, sheetName, wbook):
             maxWidth = max(maxWidth, len(col), 10)
         # Don't let the columns get too wide.
         maxWidth = min(maxWidth, 50)
-        # Extra space for '$'/'%' in accounting/percent format.
+        # Extra space for $ and % characters in accounting/percent format.
         if col in acctCols or col in pctCols:
             maxWidth += 2
         sheet.set_column(i, i, maxWidth+0.8, formatting)
@@ -985,6 +985,11 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
     fixList = fixList.loc[:, columnNames]
     fixList.reset_index(drop=True, inplace=True)
     fixList.fillna('', inplace=True)
+    # Make sure all the dates are formatted correctly.
+    finalData['Invoice Date'] = finalData['Invoice Date'].map(
+            lambda x: parse(str(x)).date())
+    fixList['Invoice Date'] = fixList['Invoice Date'].map(
+            lambda x: parse(str(x)).date())
 
     # %%
     # Check if the files we're going to save are open already.
