@@ -447,15 +447,16 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
         sheet['Comm Source'] = 'Cost'
     # Globtek special Processing.
     if princ == 'GLO':
-        try:
+        if 'Commission Rate' not in sheet.columns:
             sheet['Commission Rate'] = 0.05
-            sheet['Paid-On Revenue'] = sheet['Invoiced Dollars']
-            sheet['Actual Comm Paid'] = sheet['Paid-On Revenue']*0.05
-        except KeyError:
-            print('No Commission Rate and/or Paid-On Revenue found!\n'
-                  'Please check these columns and try again.\n'
-                  '***')
-            return
+        if 'Actual Comm Paid' not in sheet.columns:
+            try:
+                sheet['Actual Comm Paid'] = sheet['Paid-On Revenue']*0.05
+            except KeyError:
+                print('No Paid-On Revenue found, could not calculate '
+                      'Actual Comm Paid.\n'
+                      '***')
+                return
         # Globtek is paid on resale.
         sheet['Comm Source'] = 'Resale'
     # RF360 special Processing.
