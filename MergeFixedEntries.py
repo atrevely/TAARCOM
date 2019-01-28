@@ -102,6 +102,15 @@ def saveError(*excelFiles):
     return False
 
 
+def formDate(inputDate):
+    """Attemps to format a string as a date, otherwise ignores it."""
+    try:
+        outputDate = parse(str(inputDate)).date()
+        return outputDate
+    except ValueError:
+        return inputDate
+
+
 # The main function.
 def main(runCom):
     """Replaces bad entries in Running Commissions with their fixed versions.
@@ -290,7 +299,7 @@ def main(runCom):
     # %%
     # Make sure all the dates are formatted correctly.
     runningCom['Invoice Date'] = runningCom['Invoice Date'].map(
-            lambda x: parse(str(x)).date())
+            lambda x: formDate(x))
     # Go through each column and convert applicable entries to numeric.
     cols = list(runningCom)
     # Invoice number sometimes has leading zeros we'd like to keep.

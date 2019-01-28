@@ -104,6 +104,15 @@ def saveError(*excelFiles):
     return False
 
 
+def formDate(inputDate):
+    """Attemps to format a string as a date, otherwise ignores it."""
+    try:
+        outputDate = parse(str(inputDate)).date()
+        return outputDate
+    except ValueError:
+        return inputDate
+
+
 def tailoredPreCalc(princ, sheet, sheetName):
     """Do special pre-processing tailored to the principal input."""
     # Osram special processing.
@@ -1008,9 +1017,9 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
     fixList.fillna('', inplace=True)
     # Make sure all the dates are formatted correctly.
     finalData['Invoice Date'] = finalData['Invoice Date'].map(
-            lambda x: parse(str(x)).date())
+            lambda x: formDate(x))
     fixList['Invoice Date'] = fixList['Invoice Date'].map(
-            lambda x: parse(str(x)).date())
+            lambda x: formDate(x))
 
     # %%
     # Check if the files we're going to save are open already.
