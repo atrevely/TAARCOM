@@ -565,11 +565,32 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
     # Check to see if there's an existing Running Commissions to append to.
     if runningCom:
         finalData = pd.read_excel(runningCom, 'Master', dtype=str)
+        # Convert applicable columns to numeric.
+        numCols = ['Quantity', 'Ext. Cost', 'Invoiced Dollars',
+                   'Paid-On Revenue', 'Actual Comm Paid', 'Unit Cost',
+                   'Unit Price', 'CM Split', 'Year', 'Sales Commission',
+                   'Split Percentage', 'Commission Rate',
+                   'Gross Rev Reduction', 'Shared Rev Tier Rate']
+        for col in numCols:
+            try:
+                finalData[col] = pd.to_numeric(finalData[col],
+                                               errors='coerce').fillna('')
+            except KeyError:
+                pass
+        # Convert individual numbers to numeric in rest of columns.
+        mixedCols = [col for col in list(finalData) if col not in numCols]
+        # Invoice number sometimes has leading zeros we'd like to keep.
+        mixedCols.remove('Invoice Number')
+        # The INF gets read in as infinity, so skip the principal column.
+        mixedCols.remove('Principal')
+        for col in mixedCols:
+            finalData[col] = finalData[col].map(
+                    lambda x: pd.to_numeric(x, errors='ignore'))
+        # Now remove the nans.
         finalData.replace('nan', '', inplace=True)
         runComLen = len(finalData)
-        filesProcessed = pd.read_excel(runningCom, 'Files Processed',
-                                       dtype=str)
-        filesProcessed.replace('nan', '', inplace=True)
+        filesProcessed = pd.read_excel(runningCom,
+                                       'Files Processed').fillna('')
         print('Appending files to Running Commissions.')
         # Make sure column names all match.
         if set(list(finalData)) != set(columnNames):
@@ -589,6 +610,28 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
         fixName = 'Entries Need Fixing ' + comDate
         try:
             fixList = pd.read_excel(fixName, 'Data', dtype=str)
+            # Convert applicable columns to numeric.
+            numCols = ['Quantity', 'Ext. Cost', 'Invoiced Dollars',
+                       'Paid-On Revenue', 'Actual Comm Paid', 'Unit Cost',
+                       'Unit Price', 'CM Split', 'Year', 'Sales Commission',
+                       'Split Percentage', 'Commission Rate',
+                       'Gross Rev Reduction', 'Shared Rev Tier Rate']
+            for col in numCols:
+                try:
+                    fixList[col] = pd.to_numeric(fixList[col],
+                                                 errors='coerce').fillna('')
+                except KeyError:
+                    pass
+            # Convert individual numbers to numeric in rest of columns.
+            mixedCols = [col for col in list(fixList) if col not in numCols]
+            # Invoice number sometimes has leading zeros we'd like to keep.
+            mixedCols.remove('Invoice Number')
+            # The INF gets read in as infinity, so skip the principal column.
+            mixedCols.remove('Principal')
+            for col in mixedCols:
+                fixList[col] = fixList[col].map(
+                        lambda x: pd.to_numeric(x, errors='ignore'))
+            # Now remove the nans.
             fixList.replace('nan', '', inplace=True)
         except FileNotFoundError:
             print('No matching Entries Need Fixing file found for this '

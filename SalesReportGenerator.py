@@ -309,14 +309,6 @@ def main(runCom):
     # Fill in the Sales Report Date in Running Commissions.
     runningCom.loc[runningCom['Sales Report Date'] == '',
                    'Sales Report Date'] = time.strftime('%m/%d/%Y')
-    # Sum the sales totals into a grand total.
-    grandTot = pd.DataFrame(columns=['Salesperson', 'Paid-On Revenue',
-                                     'Sales Commission'], index=[0])
-    grandTot['Salesperson'] = 'Grand Total'
-    grandTot['Paid-On Revenue'] = sum(salesTot['Paid-On Revenue'])
-    grandTot['Sales Commission'] = sum(salesTot['Sales Commission'])
-    # Append the grand totals to Sales Totals.
-    salesTot = salesTot.append(grandTot, ignore_index=True)
 
     # Generate the table for sales numbers by principal.
     princTab = pd.DataFrame(columns=['Principal', 'Paid-On Revenue',
@@ -336,9 +328,11 @@ def main(runCom):
         princTab.loc[row, 'Sales Commission'] = princComm
         row += 1
     # Fill in overall totals.
+    totRev = sum(princTab['Paid-On Revenue'])
+    totComm = sum(princTab['Sales Commission'])
+    princTab.loc[row, 'Paid-On Revenue'] = totRev
+    princTab.loc[row, 'Sales Commission'] = totComm
     princTab.loc[row, 'Principal'] = 'Grand Total'
-    princTab.loc[row, 'Paid-On Revenue'] = sum(princTab['Paid-On Revenue'])
-    princTab.loc[row, 'Sales Commission'] = sum(princTab['Sales Commission'])
 
     # Save the Running Commissions with entered report date.
     writer1 = pd.ExcelWriter('Running Commissions '
