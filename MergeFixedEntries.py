@@ -243,9 +243,9 @@ def main(runCom):
                 # Fill in quarter/year/month data.
                 fixed.loc[row, 'Year'] = date.year
                 fixed.loc[row, 'Month'] = calendar.month_name[date.month][0:3]
-                fixed.loc[row, 'Quarter Shipped'] = (str(date.year)
-                                                     + 'Q'
-                                                     + str(math.ceil(date.month/3)))
+                Qtr = str(math.ceil(date.month/3))
+                fixed.loc[row, 'Quarter Shipped'] = (str(date.year) + 'Q'
+                                                     + Qtr)
             # Check for match in commission dollars.
             try:
                 RCIndex = pd.to_numeric(fixed.loc[row, 'Running Com Index'],
@@ -286,7 +286,8 @@ def main(runCom):
                                                     'Reported Customer',
                                                     'T-End Cust', 'T-Name',
                                                     'CM', 'Principal',
-                                                    'Part Number', 'City']]
+                                                    'CM Split', 'Part Number',
+                                                    'City']]
                     lookupEntry['Date Added'] = datetime.datetime.now().date()
                     invDate = pd.Timestamp(fixList.loc[row, 'Invoice Date'])
                     lookupEntry['Last Used'] = invDate.strftime('%m/%d/%Y')
@@ -300,6 +301,8 @@ def main(runCom):
     # Make sure all the dates are formatted correctly.
     runningCom['Invoice Date'] = runningCom['Invoice Date'].map(
             lambda x: formDate(x))
+    mastLook['Last Used'] = mastLook['Last Used'].map(lambda x: formDate(x))
+    mastLook['Date Added'] = mastLook['Date Added'].map(lambda x: formDate(x))
     # Go through each column and convert applicable entries to numeric.
     cols = list(runningCom)
     # Invoice number sometimes has leading zeros we'd like to keep.

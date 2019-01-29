@@ -903,7 +903,8 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
         partNoMatches = masterLookup[partNum == PPN]
         # Next match reported customer.
         repCust = str(finalData.loc[row, 'Reported Customer']).lower()
-        POSCust = partNoMatches['Reported Customer'].map(lambda x: str(x).lower())
+        POSCust = partNoMatches['Reported Customer'].map(
+                lambda x: str(x).lower())
         custMatches = partNoMatches[repCust == POSCust].reset_index()
         # Record number of Lookup Master matches.
         lookMatches = len(custMatches)
@@ -960,8 +961,9 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
                 # Fill in quarter/year/month data.
                 finalData.loc[row, 'Year'] = date.year
                 finalData.loc[row, 'Month'] = calendar.month_name[date.month][0:3]
+                Qtr = str(math.ceil(date.month/3))
                 finalData.loc[row, 'Quarter Shipped'] = (str(date.year) + 'Q'
-                                                         + str(math.ceil(date.month/3)))
+                                                         + Qtr)
 
         # Find a corrected distributor match.
         # Strip extraneous characters and all spaces, and make lowercase.
@@ -1020,13 +1022,16 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
             lambda x: formDate(x))
     fixList['Invoice Date'] = fixList['Invoice Date'].map(
             lambda x: formDate(x))
-
+    masterLookup['Last Used'] = masterLookup['Last Used'].map(
+            lambda x: formDate(x))
+    masterLookup['Date Added'] = masterLookup['Date Added'].map(
+            lambda x: formDate(x))
     # %%
     # Check if the files we're going to save are open already.
     currentTime = time.strftime('%Y-%m-%d-%H%M')
     fname1 = 'Running Commissions ' + currentTime + '.xlsx'
     fname2 = 'Entries Need Fixing ' + currentTime + '.xlsx'
-    fname3 = 'Lookup Master ' + currentTime + '.xlsx'
+    fname3 = 'Lookup Master - Current.xlsx'
     if saveError(fname1, fname2, fname3):
         print('---\n'
               'One or more files are currently open in Excel!\n'
