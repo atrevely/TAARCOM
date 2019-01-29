@@ -30,7 +30,7 @@ def tableFormat(sheetData, sheetName, wbook):
                                         'font_size': 11,
                                         'num_format': 14})
     # Format and fit each column.
-    i = 0
+    index = 0
     for col in sheetData.columns:
         # Match the correct formatting to each column.
         acctCols = ['Unit Price', 'Paid-On Revenue', 'Actual Comm Paid',
@@ -64,13 +64,13 @@ def tableFormat(sheetData, sheetName, wbook):
                                                    'font_size': 11,
                                                    'num_format': numPadding})
                 try:
-                    sheet.write_number(row+1, i, invNum, invFormat)
+                    sheet.write_number(row+1, index, invNum, invFormat)
                 except TypeError:
                     pass
-                # Move to the next column, as we're now done formatting
-                # the Invoice Numbers.
-                i += 1
-                continue
+            # Move to the next column, as we're now done formatting
+            # the Invoice Numbers.
+            index += 1
+            continue
         else:
             formatting = docFormat
         # Set column width and formatting.
@@ -86,8 +86,8 @@ def tableFormat(sheetData, sheetName, wbook):
         # Extra space for '$'/'%' in accounting/percent format.
         if col in acctCols or col in pctCols:
             maxWidth += 2
-        sheet.set_column(i, i, maxWidth+0.8, formatting)
-        i += 1
+        sheet.set_column(index, index, maxWidth+0.8, formatting)
+        index += 1
 
 
 def saveError(*excelFiles):

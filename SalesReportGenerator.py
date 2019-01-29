@@ -1,5 +1,6 @@
 import pandas as pd
 import time
+from dateutil.parser import parse
 
 
 def tableFormat(sheetData, sheetName, wbook):
@@ -24,7 +25,7 @@ def tableFormat(sheetData, sheetName, wbook):
                                         'font_size': 11,
                                         'num_format': 14})
     # Format and fit each column.
-    i = 0
+    index = 0
     for col in sheetData.columns:
         # Match the correct formatting to each column.
         acctCols = ['Unit Price', 'Paid-On Revenue', 'Actual Comm Paid',
@@ -45,6 +46,26 @@ def tableFormat(sheetData, sheetName, wbook):
             formatting = dateFormat
         elif col == 'Quantity':
             formatting = commaFormat
+        elif col == 'Invoice Number':
+            # We're going to do some work in order to format the Invoice
+            # Number as a number, yet keep leading zeros.
+            for row in sheetData.index:
+                invLen = len(sheetData.loc[row, 'Invoice Number'])
+                # Figure out how many places the number goes to.
+                numPadding = '0'*invLen
+                invNum = pd.to_numeric(sheetData.loc[row, 'Invoice Number'],
+                                       errors='ignore')
+                invFormat = wbook.book.add_format({'font': 'Calibri',
+                                                   'font_size': 11,
+                                                   'num_format': numPadding})
+                try:
+                    sheet.write_number(row+1, index, invNum, invFormat)
+                except TypeError:
+                    pass
+            # Move to the next column, as we're now done formatting
+            # the Invoice Numbers.
+            index += 1
+            continue
         else:
             formatting = docFormat
         # Set column width and formatting.
@@ -60,8 +81,17 @@ def tableFormat(sheetData, sheetName, wbook):
         # Extra space for '$' in accounting format.
         if col in acctCols:
             maxWidth += 2
-        sheet.set_column(i, i, maxWidth+0.8, formatting)
-        i += 1
+        sheet.set_column(index, index, maxWidth+0.8, formatting)
+        index += 1
+
+
+def formDate(inputDate):
+    """Attemps to format a string as a date, otherwise ignores it."""
+    try:
+        outputDate = parse(str(inputDate)).date()
+        return outputDate
+    except ValueError:
+        return inputDate
 
 
 # The main function.
@@ -74,8 +104,36 @@ def main(runCom):
     by this function.
     """
     # Load up the current Running Commissions file.
-    runningCom = pd.read_excel(runCom, 'Master').fillna('')
+    runningCom = pd.read_excel(runCom, 'Master', dtype=str).fillna('')
     filesProcessed = pd.read_excel(runCom, 'Files Processed').fillna('')
+
+    # Convert applicable columns to numeric.
+    numCols = ['Quantity', 'Ext. Cost', 'Invoiced Dollars', 'Paid-On Revenue',
+               'Actual Comm Paid', 'Unit Cost', 'Unit Price', 'CM Split',
+               'Year', 'Sales Commission', 'Split Percentage',
+               'Commission Rate', 'Gross Rev Reduction',
+               'Shared Rev Tier Rate']
+    for col in numCols:
+        try:
+            runningCom[col] = pd.to_numeric(runningCom[col],
+                                            errors='coerce').fillna('')
+        except KeyError:
+            pass
+    # Convert individual numbers to numeric in rest of columns.
+    mixedCols = [col for col in list(runningCom) if col not in numCols]
+    # Invoice number sometimes has leading zeros we'd like to keep.
+    mixedCols.remove('Invoice Number')
+    # The INF gets read in as infinity, so skip the principal column.
+    mixedCols.remove('Principal')
+    for col in mixedCols:
+        runningCom[col] = runningCom[col].map(
+                lambda x: pd.to_numeric(x, errors='ignore'))
+    # Now remove the nans.
+    runningCom.replace('nan', '', inplace=True)
+
+    # Make sure all the dates are formatted correctly.
+    runningCom['Invoice Date'] = runningCom['Invoice Date'].map(
+            lambda x: formDate(x))
 
     # Grab all of the salespeople initials.
     salespeople = list(set().union(runningCom['CM Sales'].unique(),
@@ -115,7 +173,10 @@ def main(runCom):
             CMOnly = CMSales[CMSales['Design Sales'] == '']
             CMOnly['Sales Percent'] = 100
             CMWithDesign = CMSales[CMSales['Design Sales'] != '']
-            split = CMWithDesign['CM Split']/100
+            try:
+                split = CMWithDesign['CM Split']/100
+            except TypeError:
+                split = 0.8
             CMWithDesign['Sales Percent'] = split*100
             CMWithDesign['Sales Commission'] = split*CMWithDesign['Sales Commission']
         else:
@@ -129,7 +190,10 @@ def main(runCom):
             designOnly = designSales[designSales['CM Sales'] == '']
             designOnly['Sales Percent'] = 100
             designWithCM = designSales[designSales['CM Sales'] != '']
-            split = (100 - designWithCM['CM Split'])/100
+            try:
+                split = (100 - designWithCM['CM Split'])/100
+            except TypeError:
+                split = 0.2
             designWithCM['Sales Percent'] = split*100
             designWithCM['Sales Commission'] = split*designWithCM['Sales Commission']
         else:
@@ -157,10 +221,10 @@ def main(runCom):
         # Reorder columns.
         finalReport = finalReport.loc[:, reportCols]
         # Make sure columns are numeric.
-        finalReport['Paid-On Revenue'] = pd.to_numeric(finalReport['Paid-On Revenue'],
-                                                       errors='coerce').fillna(0)
-        finalReport['Sales Commission'] = pd.to_numeric(finalReport['Sales Commission'],
-                                                        errors='coerce').fillna(0)
+        finalReport['Paid-On Revenue'] = pd.to_numeric(
+                finalReport['Paid-On Revenue'], errors='coerce').fillna(0)
+        finalReport['Sales Commission'] = pd.to_numeric(
+                finalReport['Sales Commission'], errors='coerce').fillna(0)
         # Total up the Paid-On Revenue and Sales Commission.
         reportTot = pd.DataFrame(columns=['Salesperson', 'Paid-On Revenue',
                                           'Sales Commission'], index=[0])
