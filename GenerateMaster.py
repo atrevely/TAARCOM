@@ -943,7 +943,7 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
         POSCust = masterLookup['Reported Customer'].map(
                 lambda x: str(x).lower())
         custMatches = masterLookup[repCust == POSCust]
-        # If the T-Name info is unique, fill it in.
+        # If the T-Name/CM/T-End Cust info is unique, fill it in.
         fillCols = ['CM', 'T-Name', 'T-End Cust']
         for col in fillCols:
             if len(custMatches[col].unique()) == 1:
@@ -959,6 +959,11 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
         # Make sure we found exactly one match.
         if lookMatches == 1:
             fullMatch = fullMatch.iloc[0]
+            # If there are no salespeople, it means we found a "soft match."
+            # These have unknown End Customers and should go to
+            # Entries Need Fixing. So, set them to zero matches.
+            if fullMatch['CM Sales'] == fullMatch['Design Sales'] == '':
+                lookMatches = 0
             # Grab primary and secondary sales people from Lookup Master.
             finalData.loc[row, 'CM Sales'] = fullMatch['CM Sales']
             finalData.loc[row, 'Design Sales'] = fullMatch['Design Sales']
