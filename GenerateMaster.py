@@ -710,9 +710,7 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
 
     # Read in the Master Lookup. Exit if not found.
     if os.path.exists('Lookup Master - Current.xlsx'):
-        masterLookup = pd.read_excel('Lookup Master - Current.xlsx',
-                                     dtype=str)
-        masterLookup.replace('nan', '', inplace=True)
+        masterLookup = pd.read_excel('Lookup Master - Current.xlsx').fillna('')
         # Check the column names.
         lookupCols = ['CM Sales', 'Design Sales', 'CM Split',
                       'Reported Customer', 'CM', 'Part Number', 'T-Name',
@@ -940,33 +938,40 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
         # Fill in the Sales Commission.
         salesComm = finalData.loc[row, 'Actual Comm Paid']*0.45
         finalData.loc[row, 'Sales Commission'] = salesComm
-        # First match part number.
+        # First match reported customer.
+        repCust = str(finalData.loc[row, 'Reported Customer']).lower()
+        POSCust = masterLookup['Reported Customer'].map(
+                lambda x: str(x).lower())
+        custMatches = masterLookup[repCust == POSCust]
+        # If the T-Name info is unique, fill it in.
+        fillCols = ['CM', 'T-Name', 'T-End Cust']
+        for col in fillCols:
+            if len(custMatches[col].unique()) == 1:
+                finalData.loc[row, col] = custMatches.iloc[0][col]
+        # Now match part number.
         partNum = str(finalData.loc[row, 'Part Number']).lower()
         PPN = masterLookup['Part Number'].map(lambda x: str(x).lower())
-        partNoMatches = masterLookup[partNum == PPN]
-        # Next match reported customer.
-        repCust = str(finalData.loc[row, 'Reported Customer']).lower()
-        POSCust = partNoMatches['Reported Customer'].map(
-                lambda x: str(x).lower())
-        custMatches = partNoMatches[repCust == POSCust].reset_index()
+        # Reset index, but keep it around for updating usage below.
+        fullMatch = custMatches[partNum == PPN].reset_index()
+
         # Record number of Lookup Master matches.
-        lookMatches = len(custMatches)
+        lookMatches = len(fullMatch)
         # Make sure we found exactly one match.
         if lookMatches == 1:
-            custMatches = custMatches.iloc[0]
+            fullMatch = fullMatch.iloc[0]
             # Grab primary and secondary sales people from Lookup Master.
-            finalData.loc[row, 'CM Sales'] = custMatches['CM Sales']
-            finalData.loc[row, 'Design Sales'] = custMatches['Design Sales']
-            finalData.loc[row, 'T-Name'] = custMatches['T-Name']
-            finalData.loc[row, 'CM'] = custMatches['CM']
-            finalData.loc[row, 'T-End Cust'] = custMatches['T-End Cust']
-            finalData.loc[row, 'CM Split'] = custMatches['CM Split']
+            finalData.loc[row, 'CM Sales'] = fullMatch['CM Sales']
+            finalData.loc[row, 'Design Sales'] = fullMatch['Design Sales']
+            finalData.loc[row, 'T-Name'] = fullMatch['T-Name']
+            finalData.loc[row, 'CM'] = fullMatch['CM']
+            finalData.loc[row, 'T-End Cust'] = fullMatch['T-End Cust']
+            finalData.loc[row, 'CM Split'] = fullMatch['CM Split']
             # Update usage in lookup Master.
-            masterLookup.loc[custMatches['index'],
+            masterLookup.loc[fullMatch['index'],
                              'Last Used'] = datetime.datetime.now().date()
             # Update OOT city if not already filled in.
-            if custMatches['T-Name'][0:3] == 'OOT' and not custMatches['City']:
-                masterLookup.loc[custMatches['index'],
+            if fullMatch['T-Name'][0:3] == 'OOT' and not fullMatch['City']:
+                masterLookup.loc[fullMatch['index'],
                                  'City'] = finalData.loc[row, 'City']
 
         # Try parsing the date.
@@ -1065,6 +1070,7 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
             lambda x: formDate(x))
     fixList['Invoice Date'] = fixList['Invoice Date'].map(
             lambda x: formDate(x))
+    fixList['Date Added'] = fixList['Date Added'].map(lambda x: formDate(x))
     masterLookup['Last Used'] = masterLookup['Last Used'].map(
             lambda x: formDate(x))
     masterLookup['Date Added'] = masterLookup['Date Added'].map(
