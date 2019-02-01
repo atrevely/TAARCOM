@@ -11,23 +11,27 @@ import datetime
 
 
 def tableFormat(sheetData, sheetName, wbook):
-    """Formats the Excel output as a table with correct column formatting."""
+    """Formats the Excel output with correct column and data types."""
     # Nothing to format, so return.
     if sheetData.shape[0] == 0:
         return
     sheet = wbook.sheets[sheetName]
-    # Set document formatting.
+    # Set default document format.
     docFormat = wbook.book.add_format({'font': 'Calibri',
                                        'font_size': 11})
+    # Accounting format ($ XX.XX).
     acctFormat = wbook.book.add_format({'font': 'Calibri',
                                         'font_size': 11,
                                         'num_format': 44})
+    # Comma format (XX,XXX).
     commaFormat = wbook.book.add_format({'font': 'Calibri',
                                          'font_size': 11,
                                          'num_format': 3})
+    # Percent format, one decimal (XX.X%).
     pctFormat = wbook.book.add_format({'font': 'Calibri',
                                        'font_size': 11,
                                        'num_format': '0.0%'})
+    # Date format (YYYY-MM-DD).
     dateFormat = wbook.book.add_format({'font': 'Calibri',
                                         'font_size': 11,
                                         'num_format': 14})
@@ -54,14 +58,16 @@ def tableFormat(sheetData, sheetName, wbook):
         elif col == 'Quantity':
             formatting = commaFormat
         elif col == 'Invoice Number':
-            # We're going to do some work in order to format the Invoice
-            # Number as a number, yet keep leading zeros.
+            # We're going to do some work in order to format the
+            # Invoice Number as a number, yet keep leading zeros.
             for row in sheetData.index:
                 invLen = len(sheetData.loc[row, 'Invoice Number'])
                 # Figure out how many places the number goes to.
                 numPadding = '0'*invLen
                 invNum = pd.to_numeric(sheetData.loc[row, 'Invoice Number'],
                                        errors='ignore')
+                # Numerical format with forced leading digits.
+                # Total digits must equal length of numPadding.
                 invFormat = wbook.book.add_format({'font': 'Calibri',
                                                    'font_size': 11,
                                                    'num_format': numPadding})
@@ -70,7 +76,7 @@ def tableFormat(sheetData, sheetName, wbook):
                 except TypeError:
                     pass
             # Move to the next column, as we're now done formatting
-            # the Invoice Numbers.
+            # the Invoice Numbers, so we're skipping the rest of the loop.
             index += 1
             continue
         else:
@@ -531,7 +537,7 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
         pass
 
 
-# %%
+# %% Main function.
 def main(filepaths, runningCom, fieldMappings, inPrinc):
     """Processes commission files and appends them to Running Commissions.
 
@@ -730,17 +736,15 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
               '***')
         return
 
-    # %%
+    # %% Done loading in the data and supporting files, now go to work.
     # Iterate through each file that we're appending to Running Commissions.
     fileNum = 0
     for filename in filenames:
         # Grab the next file from the list.
         newData = inputData[fileNum]
         fileNum += 1
-        print('______________________________________________________\n'
-              'Working on file: ' + filename
-              + '\n______________________________________________________')
-        # Set total commissions for file back to zero.
+        print('_'*54 + '\nWorking on file: ' + filename + '\n' + '_'*54)
+        # Set total commissions for file at zero.
         totalComm = 0
 
         # If principal is auto-detected, find it from filename.
@@ -904,9 +908,10 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
             print('Total commissions for this file: '
                   '${:,.2f}'.format(totalComm))
             # Append filename and total commissions to Files Processed sheet.
+            currentDate = datetime.datetime.now().date()
             newFile = pd.DataFrame({'Filename': [filename],
                                     'Total Commissions': [totalComm],
-                                    'Date Added': [datetime.datetime.now().date()],
+                                    'Date Added': [currentDate],
                                     'Paid Date': ['']})
             filesProcessed = filesProcessed.append(newFile, ignore_index=True)
         else:
@@ -1060,7 +1065,7 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
         # Update progress every 1,000 rows.
         if row % 1000 == 0 and row > 0:
             print('Done with row ' '{:,.0f}'.format(row))
-
+    # %% Clean up the finalized data.
     # Reorder columns to match the desired layout in columnNames.
     finalData.fillna('', inplace=True)
     finalData = finalData.loc[:, columnNames]
@@ -1080,7 +1085,7 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
             lambda x: formDate(x))
     masterLookup['Date Added'] = masterLookup['Date Added'].map(
             lambda x: formDate(x))
-    # %%
+    # %% Get ready to save files.
     # Check if the files we're going to save are open already.
     currentTime = time.strftime('%Y-%m-%d-%H%M')
     fname1 = 'Running Commissions ' + currentTime + '.xlsx'
@@ -1088,8 +1093,9 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
     fname3 = 'Lookup Master - Current.xlsx'
     if saveError(fname1, fname2, fname3):
         print('---\n'
-              'One or more files are currently open in Excel!\n'
-              'Please close the files and try again.\n'
+              'One or more of these files are currently open in Excel:\n'
+              'Running Commissions, Entries Need Fixing, Lookup Master.\n'
+              'Please close these files and try again.\n'
               '***')
         return
 
@@ -1099,7 +1105,7 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
     finalData.to_excel(writer1, sheet_name='Master', index=False)
     filesProcessed.to_excel(writer1, sheet_name='Files Processed',
                             index=False)
-    # Format as table in Excel.
+    # Format everything in Excel.
     tableFormat(finalData, 'Master', writer1)
     tableFormat(filesProcessed, 'Files Processed', writer1)
 
@@ -1107,14 +1113,14 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
     writer2 = pd.ExcelWriter(fname2, engine='xlsxwriter',
                              datetime_format='mm/dd/yyyy')
     fixList.to_excel(writer2, sheet_name='Data', index=False)
-    # Format as table in Excel.
+    # Format everything in Excel.
     tableFormat(fixList, 'Data', writer2)
 
     # Write the Lookup Master.
     writer3 = pd.ExcelWriter(fname3, engine='xlsxwriter',
                              datetime_format='mm/dd/yyyy')
     masterLookup.to_excel(writer3, sheet_name='Lookup', index=False)
-    # Format as table in Excel.
+    # Format everything in Excel.
     tableFormat(masterLookup, 'Lookup', writer3)
 
     # Save the files.

@@ -14,18 +14,22 @@ def tableFormat(sheetData, sheetName, wbook):
     if sheetData.shape[0] == 0:
         return
     sheet = wbook.sheets[sheetName]
-    # Set document formatting.
+    # Set default document format.
     docFormat = wbook.book.add_format({'font': 'Calibri',
                                        'font_size': 11})
+    # Accounting format ($ XX.XX).
     acctFormat = wbook.book.add_format({'font': 'Calibri',
                                         'font_size': 11,
                                         'num_format': 44})
+    # Comma format (XX,XXX).
     commaFormat = wbook.book.add_format({'font': 'Calibri',
                                          'font_size': 11,
                                          'num_format': 3})
+    # Percent format, one decimal (XX.X%).
     pctFormat = wbook.book.add_format({'font': 'Calibri',
                                        'font_size': 11,
                                        'num_format': '0.0%'})
+    # Date format (YYYY-MM-DD).
     dateFormat = wbook.book.add_format({'font': 'Calibri',
                                         'font_size': 11,
                                         'num_format': 14})
@@ -111,9 +115,9 @@ def formDate(inputDate):
         return inputDate
 
 
-# The main function.
+# %% The main function.
 def main(runCom):
-    """Replaces bad entries in Running Commissions with their fixed versions.
+    """Replaces incomplete entries in Running Commissions with final versions.
 
     Entries in Running Commissions which need attention are copied to the
     Entries Need Fixing file. This function merges fixed entries in the Need
@@ -134,9 +138,9 @@ def main(runCom):
     # Track commission dollars.
     try:
         comm = pd.to_numeric(runningCom['Actual Comm Paid'],
-                             errors='coerce').fillna(0)
+                             errors='raise').fillna(0)
         totComm = sum(comm)
-    except TypeError:
+    except ValueError:
         print('Non-numeric entry detected in Actual Comm Paid.\n'
               '***')
         return
@@ -161,9 +165,7 @@ def main(runCom):
 
     # Read in the Master Lookup. Exit if not found.
     if os.path.exists('Lookup Master - Current.xlsx'):
-        mastLook = pd.read_excel('Lookup Master - Current.xlsx',
-                                 dtype=str)
-        mastLook.replace('nan', '', inplace=True)
+        mastLook = pd.read_excel('Lookup Master - Current.xlsx').fillna('')
         # Check the column names.
         lookupCols = ['CM Sales', 'Design Sales', 'CM Split',
                       'Reported Customer', 'CM', 'Part Number', 'T-Name',
@@ -185,9 +187,7 @@ def main(runCom):
 
     # Load the Quarantined Lookups.
     if os.path.exists('Quarantined Lookups.xlsx'):
-        quarantined = pd.read_excel('Quarantined Lookups.xlsx',
-                                    dtype=str)
-        quarantined.replace('nan', '', inplace=True)
+        quarantined = pd.read_excel('Quarantined Lookups.xlsx').fillna('')
     else:
         print('No Quarantied Lookups file found!\n'
               'Please make sure Quarantined Lookups.xlsx '
@@ -206,7 +206,7 @@ def main(runCom):
               '***')
         return
 
-    # %%
+    # %% Start the process of writing over fixed entries.
     print('Writing fixed entries...')
     # Go through each entry that's fixed and replace it in Running Commissions.
     for row in fixed.index:
@@ -268,9 +268,8 @@ def main(runCom):
 
             # Append entry to Lookup Master, if applicable.
             # Check if entry is individual, misc, or unknown.
-            skips = ['UNKNOWN', 'MISC', 'INDIVIDUAL']
             tName = fixed.loc[row, 'T-Name'].upper()
-            if not any(i for i in skips if i in tName):
+            if 'INDIVIDUAL' not in tName:
                 # Match the part number.
                 ppn = fixed.loc[row, 'Part Number']
                 ppnMatch = mastLook[mastLook['Part Number'] == ppn]
@@ -279,19 +278,27 @@ def main(runCom):
                 repCust = fixed.loc[row, 'Reported Customer']
                 custMatch = ppnMatch[ppnMatch['Reported Customer'] == repCust]
 
-                # Check if there's already an entry for this customer/PPN.
+                # Create the Lookup Master entry.
+                lookupEntry = fixList.loc[row, ['CM Sales', 'Design Sales',
+                                                'Reported Customer',
+                                                'T-End Cust', 'T-Name',
+                                                'CM', 'Principal',
+                                                'CM Split', 'Part Number',
+                                                'City']]    
+                invDate = pd.Timestamp(fixList.loc[row, 'Invoice Date'])
+                lookupEntry['Last Used'] = invDate.strftime('%m/%d/%Y')
+
+                # If this is a new entry, just append it.
                 if len(custMatch) == 0:
-                    # Create new lookup entry.
-                    lookupEntry = fixList.loc[row, ['CM Sales', 'Design Sales',
-                                                    'Reported Customer',
-                                                    'T-End Cust', 'T-Name',
-                                                    'CM', 'Principal',
-                                                    'CM Split', 'Part Number',
-                                                    'City']]
                     lookupEntry['Date Added'] = datetime.datetime.now().date()
-                    invDate = pd.Timestamp(fixList.loc[row, 'Invoice Date'])
-                    lookupEntry['Last Used'] = invDate.strftime('%m/%d/%Y')
-                    # Merge to the Lookup Master.
+                    mastLook = mastLook.append(lookupEntry, ignore_index=True)
+                # If there's already an entry, update it.
+                elif len(custMatch) > 0:
+                    lookupEntry['Date Added'] = custMatch.iloc[0]['Date Added']
+                    # If a Misc or Unknown entry, don't copy salespeople.
+                    if any(i in tName for i in ['MISC', 'UNKNOWN']):
+                        fixList.loc[row, 'CM Sales'] = ''
+                        fixList.loc[row, 'Design Sales'] = ''
                     mastLook = mastLook.append(lookupEntry, ignore_index=True)
 
             # Delete the fixed entry from the Needs Fixing file.
@@ -301,6 +308,7 @@ def main(runCom):
     # Make sure all the dates are formatted correctly.
     runningCom['Invoice Date'] = runningCom['Invoice Date'].map(
             lambda x: formDate(x))
+    mastLook.reset_index(drop=True, inplace=True)
     mastLook['Last Used'] = mastLook['Last Used'].map(lambda x: formDate(x))
     mastLook['Date Added'] = mastLook['Date Added'].map(lambda x: formDate(x))
     # Go through each column and convert applicable entries to numeric.
