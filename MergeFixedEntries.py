@@ -284,7 +284,7 @@ def main(runCom):
                                                 'T-End Cust', 'T-Name',
                                                 'CM', 'Principal',
                                                 'CM Split', 'Part Number',
-                                                'City']]    
+                                                'City']]
                 invDate = pd.Timestamp(fixList.loc[row, 'Invoice Date'])
                 lookupEntry['Last Used'] = invDate.strftime('%m/%d/%Y')
 
@@ -300,6 +300,8 @@ def main(runCom):
                         fixList.loc[row, 'CM Sales'] = ''
                         fixList.loc[row, 'Design Sales'] = ''
                     mastLook = mastLook.append(lookupEntry, ignore_index=True)
+                    # Drop old entries.
+                    mastLook.drop(custMatch.index, inplace=True)
 
             # Delete the fixed entry from the Needs Fixing file.
             fixList.drop(row, inplace=True)
