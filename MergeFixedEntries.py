@@ -111,7 +111,7 @@ def formDate(inputDate):
     try:
         outputDate = parse(str(inputDate)).date()
         return outputDate
-    except ValueError:
+    except (ValueError, OverflowError):
         return inputDate
 
 
@@ -260,7 +260,7 @@ def main(runCom):
                 # Replace the Running Commissions entry with the fixed one.
                 runningCom.loc[RCIndex, :] = fixed.loc[row, list(runningCom)]
             else:
-                print('Mismatch in commission dollars found in Entries'
+                print('Mismatch in commission dollars found in Entries '
                       'Need Fixing on row '
                       + str(row + 2)
                       + '\n***')
@@ -291,14 +291,17 @@ def main(runCom):
                 # If this is a new entry, just append it.
                 if len(custMatch) == 0:
                     lookupEntry['Date Added'] = datetime.datetime.now().date()
+                    lookupEntry['Last Used'] = datetime.datetime.now().date()
                     mastLook = mastLook.append(lookupEntry, ignore_index=True)
                 # If there's already an entry, update it.
                 elif len(custMatch) > 0:
                     lookupEntry['Date Added'] = custMatch.iloc[0]['Date Added']
+                    lookupEntry['Last Used'] = datetime.datetime.now().date()
                     # If a Misc or Unknown entry, don't copy salespeople.
                     if any(i in tName for i in ['MISC', 'UNKNOWN']):
                         fixList.loc[row, 'CM Sales'] = ''
                         fixList.loc[row, 'Design Sales'] = ''
+                        fixList.loc[row, 'CM Split'] = ''
                     mastLook = mastLook.append(lookupEntry, ignore_index=True)
                     # Drop old entries.
                     mastLook.drop(custMatch.index, inplace=True)
@@ -340,11 +343,10 @@ def main(runCom):
     try:
         lastUsed = mastLook['Last Used'].map(lambda x: pd.Timestamp(x))
         lastUsed = lastUsed.map(lambda x: x.strftime('%Y%m%d'))
-    except AttributeError:
+    except (AttributeError, ValueError):
         print('Error reading one or more dates in the Lookup Master!\n'
               'Make sure the Last Used column is all MM/DD/YYYY format.\n'
-              '***')
-        return
+              '---')
     dateCutoff = lastUsed < twoYearsAgo.strftime('%Y%m%d')
     oldEntries = mastLook[dateCutoff].reset_index(drop=True)
     mastLook = mastLook[~dateCutoff].reset_index(drop=True)

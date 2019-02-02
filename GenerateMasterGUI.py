@@ -3,8 +3,7 @@ import pandas as pd
 import os.path
 from PyQt5 import QtCore, QtGui
 from PyQt5.QtWidgets import QMainWindow, QPushButton, QApplication, \
-                            QFileDialog, QTextEdit, QTreeWidget, \
-                            QTreeWidgetItem, QInputDialog, QComboBox, QLabel
+                            QFileDialog, QTextEdit, QComboBox, QLabel
 from PyQt5.QtCore import pyqtSlot
 import GenerateMaster
 import MergeFixedEntries
@@ -116,12 +115,6 @@ class GenMast(QMainWindow):
         self.btnUploadMast.resize(150, 100)
         self.btnUploadMast.clicked.connect(self.uploadMastClicked)
 
-        # Button for editing column names/tags.
-        self.btnEditColumns = QPushButton('Edit Column Tags', self)
-        self.btnEditColumns.move(450, 30)
-        self.btnEditColumns.resize(150, 100)
-        self.btnEditColumns.clicked.connect(self.editColumnsClicked)
-
         # Button for writing fixed entries.
         self.btnFixEntries = QPushButton('Copy \n Fixed Entries', self)
         self.btnFixEntries.move(850, 200)
@@ -169,21 +162,6 @@ class GenMast(QMainWindow):
         self.setGeometry(300, 300, 1100, 600)
         self.setWindowTitle('Commissions Manager 2.0')
         self.show()
-
-    def editColumnsClicked(self):
-        """Opens new window for editing field mappings."""
-        # Open new window with data tree and editing processes.
-        if os.path.exists('fieldMappings.xlsx'):
-            global fieldMappings
-            fieldMappings = pd.read_excel('fieldMappings.xlsx',
-                                          index_col=False)
-            self.columnsWindow = ColumnEdit()
-            self.columnsWindow.show()
-            self.lockButtons()
-        else:
-            print('No field mappings file found!\n'
-                  'Please make sure fieldMappings.xlsx is in the directory.\n'
-                  '***')
 
     def genMastClicked(self):
         """Send the GenerateMaster execution to a worker thread."""
@@ -324,7 +302,6 @@ class GenMast(QMainWindow):
         self.btnGenMast.setEnabled(False)
         self.btnOpenFiles.setEnabled(False)
         self.btnUploadMast.setEnabled(False)
-        self.btnEditColumns.setEnabled(False)
         self.btnClearAll.setEnabled(False)
         self.princMenu.setEnabled(False)
         self.btnFixEntries.setEnabled(False)
@@ -334,7 +311,6 @@ class GenMast(QMainWindow):
         self.btnGenMast.setEnabled(True)
         self.btnOpenFiles.setEnabled(True)
         self.btnUploadMast.setEnabled(True)
-        self.btnEditColumns.setEnabled(True)
         self.btnClearAll.setEnabled(True)
         self.princMenu.setEnabled(True)
         self.btnFixEntries.setEnabled(True)
@@ -358,153 +334,6 @@ class Worker(QtCore.QRunnable):
     def run(self):
         """Initialise the runner function with passed args, kwargs."""
         self.fn(*self.args, **self.kwargs)
-
-
-class ColumnEdit(QMainWindow):
-    """Window for editing field mappings."""
-    def __init__(self, parent=None):
-        """Create UI for window on launch."""
-        super().__init__()
-
-        # Set window size and title.
-        self.setGeometry(200, 200, 800, 550)
-        self.setWindowTitle('Field Mappings')
-
-        # Create the tree widget with column names.
-        self.colTree = QTreeWidget(self)
-        self.colTree.resize(600, 500)
-        self.colTree.setColumnCount(1)
-        self.colTree.setHeaderLabels(['TCOM Column Names'])
-
-        # Create the button for adding data names.
-        btnAddName = QPushButton('Add Principal \n Field Name', self)
-        btnAddName.move(630, 10)
-        btnAddName.resize(150, 100)
-        btnAddName.clicked.connect(self.addNameClicked)
-
-        # Create the button for adding data names.
-        btnAddTCOM = QPushButton('Add TCOM Name', self)
-        btnAddTCOM.move(630, 120)
-        btnAddTCOM.resize(150, 100)
-        btnAddTCOM.clicked.connect(self.addTCOMClicked)
-
-        # Create the button for saving data names.
-        btnSaveExit = QPushButton('Save && Exit', self)
-        btnSaveExit.move(630, 230)
-        btnSaveExit.resize(150, 100)
-        btnSaveExit.clicked.connect(self.saveExit)
-
-        # Create the button for canceling changes.
-        btnCancelExit = QPushButton('Cancel && Exit', self)
-        btnCancelExit.move(630, 340)
-        btnCancelExit.resize(150, 100)
-        btnCancelExit.clicked.connect(self.cancelExit)
-
-        # Populate the tree via the existing field mappings.
-        # Lookup table loaded from .xlsx during initial GUI setup.
-        # Make the items editable via double-click.
-        for colName in list(fieldMappings):
-            dataCol = QTreeWidgetItem([colName])
-            self.colTree.addTopLevelItem(dataCol)
-            for rawName in fieldMappings[colName].dropna():
-                newChild = QTreeWidgetItem([rawName])
-                newChild.setFlags(newChild.flags() | QtCore.Qt.ItemIsEditable)
-                dataCol.addChild(newChild)
-        self.colTree.setCurrentItem(dataCol)
-
-    def addNameClicked(self):
-        """Add new tag to a TCOM master data column."""
-        # Check if we've selected a TCOM name to add tag to.
-        if not self.colTree.currentIndex().parent().isValid():
-            text, ok = QInputDialog.getText(self, 'Add Data Name',
-                                            'Enter new mapping for '
-                                            + self.colTree.currentItem().text(0)
-                                            + ':')
-            # Check to see if we've entered text.
-            if ok and text.strip() != '':
-                currentTCOM = self.colTree.currentItem()
-                newChild = QTreeWidgetItem([text])
-                newChild.setFlags(newChild.flags() | QtCore.Qt.ItemIsEditable)
-                currentTCOM.addChild(newChild)
-
-    def addTCOMClicked(self):
-        """Add new TCOM master column."""
-        text, ok = QInputDialog.getText(self, "Add TCOM Name",
-                                        "Enter new TCOM column name:")
-        # Check to see if we've entered text.
-        if ok and text.strip() != '':
-            newTCOM = QTreeWidgetItem([text])
-            self.colTree.addTopLevelItem(newTCOM)
-
-    def keyPressEvent(self, event):
-        """Wire delete key for expected functionality."""
-        # Allow delete key to remove items at all levels.
-        if event.key() == QtCore.Qt.Key_Delete:
-            root = self.colTree.invisibleRootItem()
-            for item in self.colTree.selectedItems():
-                (item.parent() or root).removeChild(item)
-
-    def saveExit(self):
-        """Save changes to field mappings and close window."""
-        global fieldMappings
-        fieldMappings = pd.DataFrame()
-
-        # Save tree to application space.
-        # Iterate over branches to rebuild field mappings.
-        root = self.colTree.invisibleRootItem()
-        for colNum in range(root.childCount()):
-            newCol = pd.DataFrame(columns=[root.child(colNum).text(0)])
-            for childNum in range(root.child(colNum).childCount()):
-                newCol = newCol.append(
-                        {root.child(colNum).text(0):
-                         root.child(colNum).child(childNum).text(0)},
-                        ignore_index=True)
-            fieldMappings = pd.concat([fieldMappings, newCol], axis=1)
-
-        # Save tree to .xlsx file.
-        writer = pd.ExcelWriter('fieldMappings.xlsx', engine='xlsxwriter')
-        fieldMappings.to_excel(writer, sheet_name='Lookup', index=False)
-        sheet = writer.sheets['Lookup']
-        # Format as table.
-        header = [{'header': val} for val in fieldMappings.columns.tolist()]
-        setStyle = {'header_row': True, 'style': 'TableStyleMedium5',
-                    'columns': header}
-        sheet.add_table(0, 0, len(fieldMappings.index),
-                        len(fieldMappings.columns)-1, setStyle)
-        # Fit to the column width.
-        i = 0
-        for col in sheet.columns:
-            maxWidth = max([len(str(val)) for val in sheet[col].values])
-            sheet.set_column(i, i, maxWidth+0.8)
-            i += 1
-
-        # Try saving the file, exit with error if file is currently open.
-        try:
-            writer.save()
-        except IOError:
-            print('Field mappings is open in Excel!\n'
-                  'Please close fieldMappings.xlsx and try again.\n'
-                  '***')
-            return
-
-        # Save and exit.
-        writer.save()
-        print('Changes saved to field mappings.\n'
-              '---')
-        # Close window.
-        self.close()
-
-    def cancelExit(self):
-        """Close the window without saving changes to field mappings."""
-        # Close window. Nothing gets saved.
-        print('Mapping changes canceled.\n'
-              '---')
-        self.close()
-
-    def closeEvent(self, event):
-        """Close event."""
-        # Restore buttons in main GUI on close.
-        gui.restoreButtons()
 
 
 if __name__ == '__main__':

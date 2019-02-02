@@ -1025,8 +1025,8 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
 
         # Find a corrected distributor match.
         # Strip extraneous characters and all spaces, and make lowercase.
-        distName = re.sub('[^a-zA-Z0-9]', '',
-                          str(finalData.loc[row, 'Reported Distributor'])).lower()
+        repDist = str(finalData.loc[row, 'Reported Distributor'])
+        distName = re.sub('[^a-zA-Z0-9]', '', repDist).lower()
 
         # Find matches for the distName in the Distributor Abbreviations.
         distMatches = [i for i in distMap['Search Abbreviation']
