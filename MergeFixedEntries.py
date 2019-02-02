@@ -195,13 +195,18 @@ def main(runCom):
               '***')
         return
 
-    # Grab the lines that have been fixed.
+    # Grab the lines that have an End Customer.
     endCustFixed = fixList[fixList['T-End Cust'] != '']
-    fixed = endCustFixed[endCustFixed['Invoice Date'] != '']
+    # Grab entries where salespeople are filled in.
+    CMSales = endCustFixed['CM Sales'] != ''
+    DesignSales = endCustFixed['Design Sales'] != ''
+    SalesFilled = endCustFixed[[x or y for x, y in zip(CMSales, DesignSales)]]
+    # Make sure there's an invoice date.
+    fixed = SalesFilled[SalesFilled['Invoice Date'] != '']
     # Return if there's nothing fixed.
     if fixed.shape[0] == 0:
         print('No new fixed entries detected.\n'
-              'Entries need a T-End Cust and an Invoice Date '
+              'Entries need a T-End Cust, Salespeople, and an Invoice Date '
               'in order to be eligible for migration to Running Commissions.\n'
               '***')
         return
