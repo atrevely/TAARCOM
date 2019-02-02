@@ -345,9 +345,9 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
             # US paid on resale.
             sheet['Comm Source'] = 'Resale'
         elif 'TW' in sheetName and invDol:
-            sheet['Commission Rate'] = 0.04
+            sheet['Commission Rate'] = 0.024
             sheet['Paid-On Revenue'] = sheet['Invoiced Dollars']
-            sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*0.04
+            sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*0.024
             print('Commission rate filled in for this tab: 4%\n'
                   '---')
             sheet['Reported Customer'].replace('', np.nan, inplace=True)
