@@ -170,23 +170,6 @@ def main(filepaths):
             # Grab next sheet in file.
             # Rework the index just in case it got read in wrong.
             sheet = newData[sheetName].reset_index(drop=True).fillna('')
-            sheet['Must Contact'] = ''
-            sheet['End Product'] = ''
-            sheet['How Contacted'] = ''
-            sheet['Information for Digikey'] = ''
-
-            # Calculate the Invoiced Dollars.
-            try:
-                qty = pd.to_numeric(sheet['Qty Shipped'], errors='coerce')
-                price = pd.to_numeric(sheet['Unit Price'], errors='coerce')
-                sheet['Invoiced Dollars'] = qty*price
-                sheet['Invoiced Dollars'].fillna('', inplace=True)
-            except KeyError:
-                print('Error calculating Invoiced Dollars.\n'
-                      'Please make sure Qty and Unit Price'
-                      'are in the report.\n'
-                      '***')
-                return
 
             # Check to see if column names match.
             noMatch = [val for val in list(insMast) if val not in list(sheet)]

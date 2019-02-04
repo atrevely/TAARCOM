@@ -200,9 +200,7 @@ def main(runCom):
     # Grab entries where salespeople are filled in.
     CMSales = endCustFixed['CM Sales'] != ''
     DesignSales = endCustFixed['Design Sales'] != ''
-    SalesFilled = endCustFixed[[x or y for x, y in zip(CMSales, DesignSales)]]
-    # Make sure there's an invoice date.
-    fixed = SalesFilled[SalesFilled['Invoice Date'] != '']
+    fixed = endCustFixed[[x or y for x, y in zip(CMSales, DesignSales)]]
     # Return if there's nothing fixed.
     if fixed.shape[0] == 0:
         print('No new fixed entries detected.\n'
