@@ -333,10 +333,10 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
             return
         # Fill in commission rates and commission paid.
         if 'US' in sheetName and invDol:
-            sheet['Commission Rate'] = 0.05
+            sheet['Commission Rate'] = 0.03
             sheet['Paid-On Revenue'] = sheet['Invoiced Dollars']
-            sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*0.05
-            print('Commission rate filled in for this tab: 5%\n'
+            sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*0.03
+            print('Commission rate filled in for this tab: 3%\n'
                   '---')
             sheet['Reported Customer'].replace('', np.nan, inplace=True)
             sheet['Reported Customer'].fillna(method='ffill', inplace=True)
@@ -348,7 +348,7 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
             sheet['Commission Rate'] = 0.024
             sheet['Paid-On Revenue'] = sheet['Invoiced Dollars']
             sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*0.024
-            print('Commission rate filled in for this tab: 4%\n'
+            print('Commission rate filled in for this tab: 2.4%\n'
                   '---')
             sheet['Reported Customer'].replace('', np.nan, inplace=True)
             sheet['Reported Customer'].fillna(method='ffill', inplace=True)
