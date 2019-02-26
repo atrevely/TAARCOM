@@ -286,9 +286,9 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
             dist = str(sheet.loc[row, 'Reported Distributor']).lower()
             # Digikey and Mouser are paid on cost, not resale.
             if 'digi' in dist or 'mous' in dist:
-                sheet['Comm Source'] = 'Cost'
+                sheet.loc[row, 'Comm Source'] = 'Cost'
             else:
-                sheet['Comm Source'] = 'Resale'
+                sheet.loc[row, 'Comm Source'] = 'Resale'
     # ATP special Processing.
     if princ == 'ATP':
         # Load up the customer lookup file.
