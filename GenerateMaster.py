@@ -284,11 +284,11 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
         sheet['Paid-On Revenue'] = sheet['Invoiced Dollars']
         for row in sheet.index:
             dist = str(sheet.loc[row, 'Reported Distributor']).lower()
-        # Digikey and Mouser are paid on cost, not resale.
-        if 'digi' in dist or 'mous' in dist:
-            sheet['Comm Source'] = 'Cost'
-        else:
-            sheet['Comm Source'] = 'Resale'
+            # Digikey and Mouser are paid on cost, not resale.
+            if 'digi' in dist or 'mous' in dist:
+                sheet['Comm Source'] = 'Cost'
+            else:
+                sheet['Comm Source'] = 'Resale'
     # ATP special Processing.
     if princ == 'ATP':
         # Load up the customer lookup file.
