@@ -148,7 +148,6 @@ def tailoredPreCalc(princ, sheet, sheetName):
         # Rename the Resale and Cost columns.
         sheet.rename(columns={'Resale': 'Extended Resale',
                               'Cost': 'Extended Cost'}, inplace=True)
-        print('Matching Paid-On Revenue to the distributor.')
     # ATP special processing.
     if princ == 'ATP':
         # Rename the 'Commissions Due' column.
@@ -238,7 +237,7 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
             sheet['Reported Distributor'].fillna(method='ffill', inplace=True)
             sheet['Reported Distributor'].fillna('', inplace=True)
             # Switch reported cost over to Invoiced Dollars for direct lines
-            for row in range(sheet.shape[0]):
+            for row in sheet.index:
                 cost = sheet.loc[row, 'Ext. Cost']
                 if sheet.loc[row, 'Reported Distributor'] == 'ABRACON DIRECT':
                     # Direct is paid on resale.
@@ -282,43 +281,14 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
         sheet['Comm Source'] = 'Resale'
     # ATS special Processing.
     if princ == 'ATS':
+        sheet['Paid-On Revenue'] = sheet['Invoiced Dollars']
+        for row in sheet.index:
+            dist = str(sheet.loc[row, 'Reported Distributor']).lower()
         # Digikey and Mouser are paid on cost, not resale.
-        if 'Digi' in sheetName:
-            sheet['Paid-On Revenue'] = sheet['Invoiced Dollars']
+        if 'digi' in dist or 'mous' in dist:
             sheet['Comm Source'] = 'Cost'
-            # Check for Commission Rate and fill it in if not found.
-            if 'Commission Rate' not in list(sheet):
-                sheet['Commission Rate'] = 0.02
-            # Check for Commission Paid and fill it in if not found.
-            if 'Actual Comm Paid' not in list(sheet):
-                rate = pd.to_numeric(sheet['Commission Rate'],
-                                     errors='coerce')
-                sheet['Actual Comm Paid'] = sheet['Paid-On Revenue']*rate
-            sheet['Reported Distributor'] = 'Digikey'
-        elif 'Mouser' in sheetName:
-            sheet['Paid-On Revenue'] = sheet['Invoiced Dollars']
-            sheet['Comm Source'] = 'Cost'
-            # Check for Commission Rate and fill it in if not found.
-            if 'Commission Rate' not in list(sheet):
-                sheet['Commission Rate'] = 0.02
-            # Check for Commission Paid and fill it in if not found.
-            if 'Actual Comm Paid' not in list(sheet):
-                rate = pd.to_numeric(sheet['Commission Rate'],
-                                     errors='coerce')
-                sheet['Actual Comm Paid'] = sheet['Paid-On Revenue']*rate
-                sheet['Reported Distributor'] = 'Mouser'
-        elif 'Arrow' in sheetName:
-            sheet['Paid-On Revenue'] = sheet['Invoiced Dollars']
+        else:
             sheet['Comm Source'] = 'Resale'
-            # Check for Commission Rate and fill it in if not found.
-            if 'Commission Rate' not in list(sheet):
-                sheet['Commission Rate'] = 0.035
-            # Check for Commission Paid and fill it in if not found.
-            if 'Actual Comm Paid' not in list(sheet):
-                rate = pd.to_numeric(sheet['Commission Rate'],
-                                     errors='coerce')
-                sheet['Actual Comm Paid'] = sheet['Paid-On Revenue']*rate
-            sheet['Reported Distributor'] = 'Arrow'
     # ATP special Processing.
     if princ == 'ATP':
         # Load up the customer lookup file.
@@ -378,7 +348,7 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
             print('No Reported Customer column found!\n'
                   '---')
             return
-        for row in range(sheet.shape[0]):
+        for row in sheet.index:
             custName = sheet.loc[row, 'Reported Customer']
             # Find matches for the distName in the Distributor Abbreviations.
             custMatches = [i for i in ATPCustLook['Name'] if i in custName]
