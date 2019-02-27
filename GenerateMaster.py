@@ -702,7 +702,8 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
     else:
         print('---\n'
               'No Lookup Master found!\n'
-              'Please make sure lookupMaster.xlsx is in the directory.\n'
+              'Please make sure Lookup Master - Current.xlsx is '
+              'in the directory.\n'
               '***')
         return
 
