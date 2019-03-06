@@ -7,6 +7,7 @@ import math
 import os.path
 from xlrd import XLRDError
 
+
 def tableFormat(sheetData, sheetName, wbook):
     """Formats the Excel output as a table with correct column formatting."""
     # Nothing to format, so return.
@@ -58,10 +59,10 @@ def tableFormat(sheetData, sheetName, wbook):
             # We're going to do some work in order to format the Invoice
             # Number as a number, yet keep leading zeros.
             for row in sheetData.index:
-                invLen = len(sheetData.loc[row, 'Invoice Number'])
+                invLen = len(sheetData.loc[row, col])
                 # Figure out how many places the number goes to.
                 numPadding = '0'*invLen
-                invNum = pd.to_numeric(sheetData.loc[row, 'Invoice Number'],
+                invNum = pd.to_numeric(sheetData.loc[row, col],
                                        errors='ignore')
                 invFormat = wbook.book.add_format({'font': 'Calibri',
                                                    'font_size': 11,
@@ -119,14 +120,42 @@ def main(filepath, masterCom):
     """Appends a finished monthly Running Commissions file to the Master.
 
     Arguments:
-    filepath -- path for opening Running Commissions(Excel file) to process.
+    filepath -- path for opening Running Commissions (Excel file) to process.
     masterCom -- the Commissions Master file that holds historical data.
     """
+    try:
+        runCom = pd.read_excel(filepath, 'Master', dtype=str)
+    except XLRDError:
+        print('Error reading sheet name in Running Commissions file!\n'
+              'Please make sure the main tab is named Master.\n'
+              '***')
+        return
+    try:
+        filesProcessed = pd.read_excel(filepath, 'Files Processed', dtype=str)
+    except XLRDError:
+        print('Error reading sheet name for  Running Commissions file!\n'
+              'Please make sure the second tab is named Files Processed.\n'
+              '***')
+        return
 
-
-
-
-
+    # Read in the Commissions Master. Exit if not found.
+    if os.path.exists('Commissions Master.xlsx'):
+        masterComm = pd.read_excel('Commissions Master.xlsx').fillna('')
+        missCols = [i for i in set(masterComm).union(runCom) if
+                    i not in list(masterComm) or i not in list(runCom)]
+        if missCols:
+            print('The following columns were not detected in one of the two '
+                  'files:\n%s' %
+                  ', '.join(map(str, missCols))
+                  + '\n***')
+            return
+    else:
+        print('---\n'
+              'No Commissions Master found!\n'
+              'Please make sure Commissions Master.xlsx is '
+              'in the directory.\n'
+              '***')
+        return
 
     # Read in the Master Lookup. Exit if not found.
     if os.path.exists('Lookup Master - Current.xlsx'):
@@ -150,3 +179,32 @@ def main(filepath, masterCom):
               'in the directory.\n'
               '***')
         return
+
+    # Go through each line of the finished Running Commissions and use them to
+    # update the Lookup Master.
+    for row in runCom.index:
+        # First match reported customer.
+        repCust = str(runCom.loc[row, 'Reported Customer']).lower()
+        POSCust = masterLookup['Reported Customer'].map(
+                lambda x: str(x).lower())
+        custMatches = masterLookup[repCust == POSCust]
+        # Now match part number.
+        partNum = str(runCom.loc[row, 'Part Number']).lower()
+        PPN = masterLookup['Part Number'].map(lambda x: str(x).lower())
+        # Reset index, but keep it around for updating usage below.
+        fullMatch = custMatches[partNum == PPN].reset_index()
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    

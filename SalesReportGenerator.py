@@ -252,6 +252,10 @@ def main(runCom):
             princTab.loc[row, 'Paid-On Revenue'] = princInv
             princTab.loc[row, 'Sales Commission'] = princComm
             row += 1
+        # Sort principals in descending order by Sales Commission
+        princTab.sort_values(by=['Sales Commission'], ascending=False,
+                             inplace=True)
+        princTab.reset_index(drop=True, inplace=True)
         # Fill in overall totals.
         princTab.loc[row, 'Principal'] = 'Grand Total'
         princTab.loc[row, 'Paid-On Revenue'] = totInv
@@ -261,6 +265,9 @@ def main(runCom):
         custTab = pd.DataFrame(columns=['Customer', 'Principal',
                                         'Paid-On Revenue',
                                         'Sales Commission'])
+        finalCusts = pd.DataFrame(columns=['Customer', 'Principal',
+                                           'Paid-On Revenue',
+                                           'Sales Commission'])
         row = 0
         for customer in finalReport['T-End Cust'].unique():
             custSales = finalReport[finalReport['T-End Cust'] == customer]
@@ -269,15 +276,23 @@ def main(runCom):
             custTab.loc[row, 'Customer'] = customer
             custTab.loc[row, 'Paid-On Revenue'] = custInv
             custTab.loc[row, 'Sales Commission'] = custComm
-            # Filter for each principal within a customer.
+            row += 1
+        # Sort customers in descending order by Sales Commission.
+        custTab.sort_values(by=['Sales Commission'], ascending=False,
+                            inplace=True)
+        # Add in subtotals by principal for each customer.
+        row = 0
+        for customer in custTab['Customer'].unique():
+            finalCusts.loc[row, :] = custTab[custTab['Customer'] == customer].iloc[0]
+            custSales = finalReport[finalReport['T-End Cust'] == customer]
             row += 1
             for principal in custSales['Principal'].unique():
                 custSub = custSales[custSales['Principal'] == principal]
                 subInv = sum(custSub['Paid-On Revenue'])
                 subComm = sum(custSub['Sales Commission'])
-                custTab.loc[row, 'Principal'] = principal
-                custTab.loc[row, 'Paid-On Revenue'] = subInv
-                custTab.loc[row, 'Sales Commission'] = subComm
+                finalCusts.loc[row, 'Principal'] = principal
+                finalCusts.loc[row, 'Paid-On Revenue'] = subInv
+                finalCusts.loc[row, 'Sales Commission'] = subComm
                 row += 1
 
         # Write report to file.
@@ -286,11 +301,11 @@ def main(runCom):
                                 + '.xlsx', engine='xlsxwriter',
                                 datetime_format='mm/dd/yyyy')
         princTab.to_excel(writer, sheet_name='Principals', index=False)
-        custTab.to_excel(writer, sheet_name='Customers', index=False)
+        finalCusts.to_excel(writer, sheet_name='Customers', index=False)
         finalReport.to_excel(writer, sheet_name='Report Data', index=False)
         # Format as table in Excel.
         tableFormat(princTab, 'Principals', writer)
-        tableFormat(custTab, 'Customers', writer)
+        tableFormat(finalCusts, 'Customers', writer)
         tableFormat(finalReport, 'Report Data', writer)
 
         # Try saving the file, exit with error if file is currently open.

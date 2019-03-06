@@ -61,10 +61,10 @@ def tableFormat(sheetData, sheetName, wbook):
             # We're going to do some work in order to format the
             # Invoice Number as a number, yet keep leading zeros.
             for row in sheetData.index:
-                invLen = len(sheetData.loc[row, 'Invoice Number'])
+                invLen = len(sheetData.loc[row, col])
                 # Figure out how many places the number goes to.
                 numPadding = '0'*invLen
-                invNum = pd.to_numeric(sheetData.loc[row, 'Invoice Number'],
+                invNum = pd.to_numeric(sheetData.loc[row, col],
                                        errors='ignore')
                 # Numerical format with forced leading digits.
                 # Total digits must equal length of numPadding.
