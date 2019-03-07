@@ -8,6 +8,7 @@ from PyQt5.QtCore import pyqtSlot
 import GenerateMaster
 import MergeFixedEntries
 import SalesReportGenerator
+import MigrateFinishedComm
 
 
 class Stream(QtCore.QObject):
@@ -101,12 +102,17 @@ class GenMast(QMainWindow):
         self.btnGenMast.move(650, 400)
         self.btnGenMast.resize(150, 150)
         self.btnGenMast.clicked.connect(self.genMastClicked)
+        self.btnGenMast.setToolTip('Process selected raw data files and '
+                                   'append them to the selected Running '
+                                   'Commissions.')
 
         # Button for selecting files to compile into master list.
         self.btnOpenFiles = QPushButton('Select \n Commission Files', self)
         self.btnOpenFiles.move(50, 30)
         self.btnOpenFiles.resize(150, 100)
         self.btnOpenFiles.clicked.connect(self.openFilesClicked)
+        self.btnOpenFiles.setToolTip('Open explorer tool for selecting raw '
+                                     'commission file(s) to process.')
 
         # Button for selecting a current master to append to.
         self.btnUploadMast = QPushButton('Select \n Running \n '
@@ -114,29 +120,49 @@ class GenMast(QMainWindow):
         self.btnUploadMast.move(250, 30)
         self.btnUploadMast.resize(150, 100)
         self.btnUploadMast.clicked.connect(self.uploadMastClicked)
+        self.btnUploadMast.setToolTip('Open explorer tool for selecting a '
+                                      'Running Commissions to use.')
 
         # Button for writing fixed entries.
         self.btnFixEntries = QPushButton('Copy \n Fixed Entries', self)
         self.btnFixEntries.move(850, 200)
         self.btnFixEntries.resize(150, 150)
         self.btnFixEntries.clicked.connect(self.fixEntriesClicked)
+        self.btnFixEntries.setToolTip('Migrate finished lines in the Entries '
+                                      'Need Fixing file over to the '
+                                      'associated Running Commissions.\n'
+                                      'A Running Commissions needs to be '
+                                      'selected and will be matched to '
+                                      'the Entries Needs Fixing by the '
+                                      'date at the end of the filename.')
 
         # Button for generating sales reports.
         self.btnGenReports = QPushButton('Generate \n Sales Reports', self)
         self.btnGenReports.move(850, 400)
         self.btnGenReports.resize(150, 150)
         self.btnGenReports.clicked.connect(self.genReportsClicked)
+        self.btnGenReports.setToolTip('Generate sales reports from a finished '
+                                      'Running Commissions file.')
+
+        # Button for migrated Running Commission to master.
+        self.btnMigrateMaster = QPushButton('Migrate \n to Master', self)
+        self.btnMigrateMaster.move(850, 20)
+        self.btnMigrateMaster.resize(150, 150)
+        self.btnMigrateMaster.clicked.connect(self.migrateMasterClicked)
+        self.btnMigrateMaster.setToolTip('Migrate a finished Running '
+                                         'Commissions file to Commissions '
+                                         'Master.')
 
         # Button for clearing filename and master choices.
         self.btnClearAll = QPushButton('Clear Filename(s) \n and Running \n'
-                                       'Commissions \n Selection', self)
+                                       'Commissions \n Selections', self)
         self.btnClearAll.move(650, 200)
         self.btnClearAll.resize(150, 150)
         self.btnClearAll.clicked.connect(self.clearAllClicked)
 
         # Dropdown menu for selecting principal.
         self.princMenu = QComboBox(self)
-        self.princMenu.resize(200, 30)
+        self.princMenu.resize(150, 30)
         self.princMenu.move(650, 100)
         # Fill in principals, if file is found.
         if princList is not None:
@@ -178,6 +204,11 @@ class GenMast(QMainWindow):
         worker = Worker(self.fixEntriesExecute)
         self.threadpool.start(worker)
 
+    def migrateMasterClicked(self):
+        """Migrate a finished Running Commissions to Commissions Master."""
+        worker = Worker(self.migrateMasterExecute)
+        self.threadpool.start(worker)
+
     def clearAllClicked(self):
         """Clear the filenames and master variables."""
         self.filenames = []
@@ -217,6 +248,28 @@ class GenMast(QMainWindow):
 
         elif princ == '(No Selection)':
             print('Please select a principal from the dropdown menu!\n'
+                  '---')
+
+    def migrateMasterExecute(self):
+        """Runs function for appending Running Commissions to master."""
+        # Check to see if we're ready to process.
+        if self.master:
+            # Turn buttons off.
+            self.lockButtons()
+            # Run the GenerateMaster.py file.
+            try:
+                MigrateFinishedComm.main(self.master)
+            except Exception as error:
+                print('Unexpected Python error:\n'
+                      + str(error)
+                      + '\nPlease contact your local coder.')
+            # Clear the filename selections.
+            self.filenames = []
+            # Turn buttons back on.
+            self.restoreButtons()
+        elif not self.master:
+            print('No Running Commissions file selected!\n'
+                  'Use the Select Commission Files button to select files.\n'
                   '---')
 
     def genReportsExecute(self):
@@ -306,6 +359,7 @@ class GenMast(QMainWindow):
         self.princMenu.setEnabled(False)
         self.btnFixEntries.setEnabled(False)
         self.btnGenReports.setEnabled(False)
+        self.btnMigrateMaster.setEnabled(False)
 
     def restoreButtons(self):
         self.btnGenMast.setEnabled(True)
@@ -315,6 +369,7 @@ class GenMast(QMainWindow):
         self.princMenu.setEnabled(True)
         self.btnFixEntries.setEnabled(True)
         self.btnGenReports.setEnabled(True)
+        self.btnMigrateMaster.setEnabled(False)
 
 
 class Worker(QtCore.QRunnable):

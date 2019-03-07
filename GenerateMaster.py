@@ -935,7 +935,7 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
 
         # Record number of Lookup Master matches.
         lookMatches = len(fullMatch)
-        # Make sure we found exactly one match.
+        # If we found one match we're good, so copy it over.
         if lookMatches == 1:
             fullMatch = fullMatch.iloc[0]
             # If there are no salespeople, it means we found a "soft match."
@@ -957,6 +957,13 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
             if fullMatch['T-Name'][0:3] == 'OOT' and not fullMatch['City']:
                 masterLookup.loc[fullMatch['index'],
                                  'City'] = finalData.loc[row, 'City']
+        # If we found multiple matches, then fill in all the options.
+        elif lookMatches > 1:
+            lookCols = ['CM Sales', 'Design Sales', 'T-Name', 'CM',
+                        'T-End Cust', 'CM Split']
+            # Write list of all unique entries for each column.
+            for col in lookCols:
+                finalData.loc[row, col] = lookMatches[col].unique()
 
         # Try parsing the date.
         dateError = False

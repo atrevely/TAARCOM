@@ -113,7 +113,7 @@ def formDate(inputDate):
 
 
 # %% Main function.
-def main(filepath, masterCom):
+def main(filepath):
     """Appends a finished monthly Running Commissions file to the Master.
 
     Arguments:
@@ -213,9 +213,9 @@ def main(filepath, masterCom):
             masterLookup = masterLookup.append(newLookup, ignore_index=True)
 
     # Append the new Running Commissions.
-    masterCom = masterCom.append(runCom, ignore_index=True)
+    masterComm = masterComm.append(runCom, ignore_index=True)
     masterFiles = masterFiles.append(filesProcessed, ignore_index=True)
-    masterCom = masterCom.loc[:, masterCols]
+    masterComm = masterComm.loc[:, masterCols]
     masterFiles = masterFiles.loc[:, fileCols]
 
     # %% Get ready to save files.
@@ -233,10 +233,10 @@ def main(filepath, masterCom):
     # Write the Commissions Master file.
     writer1 = pd.ExcelWriter(fname1, engine='xlsxwriter',
                              datetime_format='mm/dd/yyyy')
-    masterCom.to_excel(writer1, sheet_name='Master', index=False)
+    masterComm.to_excel(writer1, sheet_name='Master', index=False)
     masterFiles.to_excel(writer1, sheet_name='Files Processed', index=False)
     # Format everything in Excel.
-    tableFormat(masterCom, 'Master', writer1)
+    tableFormat(masterComm, 'Master', writer1)
     tableFormat(masterFiles, 'Files Processed', writer1)
 
     # Write the Lookup Master.
