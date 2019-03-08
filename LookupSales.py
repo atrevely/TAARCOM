@@ -212,7 +212,7 @@ def main(filepath):
             acctCity = acctMatch['CITY'].iloc[0].upper().split(", ")
             if insFile.loc[row, 'Customer City'].upper() not in acctCity:
                 if len(acctCity) > 1:
-                    acctCity = ", ".join(acctCity)
+                    acctCity = ', '.join(acctCity)
                 insFile.loc[row, 'City on Acct List'] = acctCity
             # Copy over salesperson.
             insFile.loc[row, 'Sales'] = acctMatch['SLS'].iloc[0]

@@ -151,7 +151,8 @@ def tailoredPreCalc(princ, sheet, sheetName):
     # ATP special processing.
     if princ == 'ATP':
         # Rename the 'Commissions Due' column.
-        sheet.rename(columns={'Customer': 'Unmapped'}, inplace=True)
+        sheet.rename(columns={'Customer': 'Unmapped',
+                              'Address': 'Unmapped 2'}, inplace=True)
         print('Ignoring the Customer column.')
     # QRF special processing.
     if princ == 'QRF':
@@ -735,6 +736,12 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
             sheet.replace('nan', '', inplace=True)
             # Make sure index is an integer, not a string.
             sheet.index = sheet.index.map(int)
+            # Create a duplicate of the sheet that stays unchanged aside
+            # from recording matches.
+            rawSheet = sheet.copy(deep=True)
+            # Figure out if we've already added in the matches row.
+            if filename.split('.')[0][-7:] != 'Matched':
+                rawSheet.index += 1
             # Strip whitespace from column names.
             sheet.rename(columns=lambda x: str(x).strip(), inplace=True)
             # Clear out unnamed columns. Attribute error means it's an empty
@@ -748,7 +755,6 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
             totalRows = sheet.shape[0]
             print('Found ' + str(totalRows) + ' entries in the tab '
                   + sheetName + '\n----------------------------------')
-
             # Iterate over each column of data that we want to append.
             missingCols = []
             for dataName in list(fieldMappings):
@@ -757,7 +763,6 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
                 # Look for a match in the sheet column names.
                 sheetColumns = list(sheet)
                 columnName = [val for val in sheetColumns if val in nameList]
-
                 # Let us know if we didn't find a column that matches,
                 # or if we found too many columns that match,
                 # then rename the column in the sheet to the master name.
@@ -771,8 +776,13 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
                           '***')
                     return
                 else:
+                    rawSheet.loc[0, columnName[0]] = dataName
                     sheet.rename(columns={columnName[0]: dataName},
                                  inplace=True)
+
+            # Replace the old raw data sheet with the new one.
+            rawSheet.sort_index(inplace=True)
+            newData[sheetName] = rawSheet
 
             # Convert applicable columns to numeric.
             numCols = ['Quantity', 'Ext. Cost', 'Invoiced Dollars',
@@ -885,6 +895,21 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
                                     'Date Added': [currentDate],
                                     'Paid Date': ['']})
             filesProcessed = filesProcessed.append(newFile, ignore_index=True)
+            # Save the matched raw data file.
+            fname = filename[:-5] + ' Matched.xlsx'
+            if saveError(fname):
+                print('---\n'
+                      'One or more of the raw data files are open in Excel.\n'
+                      'Please close these files and try again.\n'
+                      '***')
+                return
+            # Write the raw data file with matches.
+            writer = pd.ExcelWriter(fname, engine='xlsxwriter',
+                                    datetime_format='mm/dd/yyyy')
+            for tab in list(newData):
+                newData[tab].to_excel(writer, sheet_name=tab, index=False)
+            # Save the file.
+            writer.save()
         else:
             print('No new data found in this file.\n'
                   'Moving on without adding file.')
