@@ -225,6 +225,7 @@ class GenMast(QMainWindow):
             print('File selected: ' + self.filename + '\n---')
             # Turn off/on the correct buttons.
             self.btnAddIns.setEnabled(False)
+            self.btnAddComments.setEnabled(False)
             self.btnLookSales.setEnabled(True)
 
     def openFinishedClicked(self):
@@ -253,6 +254,7 @@ class GenMast(QMainWindow):
             print('---')
             # Turn off/on the correct buttons.
             self.btnAddIns.setEnabled(True)
+            self.btnAddComments.setEnabled(True)
             self.btnLookSales.setEnabled(False)
 
     def lockButtons(self):

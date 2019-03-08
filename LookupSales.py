@@ -5,13 +5,10 @@ from xlrd import XLRDError
 
 def tableFormat(sheetData, sheetName, wbook):
     """Formats the Excel output as a table with correct column formatting."""
-    # Create the table.
+    # Nothing to format, so return.
+    if sheetData.shape[0] == 0:
+        return
     sheet = wbook.sheets[sheetName]
-    header = [{'header': val} for val in sheetData.columns.tolist()]
-    setStyle = {'header_row': True, 'style': 'TableStyleLight1',
-                'columns': header}
-    sheet.add_table(0, 0, len(sheetData.index),
-                    len(sheetData.columns)-1, setStyle)
     # Set document formatting.
     docFormat = wbook.book.add_format({'font': 'Calibri',
                                        'font_size': 11})
@@ -56,11 +53,15 @@ def tableFormat(sheetData, sheetName, wbook):
         i += 1
     # Highlight new root customer and moved city rows.
     try:
-        for row in range(len(sheetData)):
+        for row in sheetData.index:
             if sheetData.loc[row, 'Not In Acct List'] == 'Y':
-                sheet.set_row(row+1, None, newFormat)
-            elif sheetData.loc[row, 'City Moved'] == 'Y':
-                sheet.set_row(row+1, None, movedFormat)
+                sheet.write(row+1, 4, sheetData.loc[row, 'Root Customer..'],
+                            newFormat)
+            elif sheetData.loc[row, 'City on Acct List']:
+                sheet.write(row+1, 4, sheetData.loc[row, 'Root Customer..'],
+                            movedFormat)
+                sheet.write(row+1, 24, sheetData.loc[row, 'City on Acct List'],
+                            movedFormat)
     except KeyError:
         pass
 
@@ -160,8 +161,10 @@ def main(filepath):
     # Get the column list and input new columns.
     colNames = list(insFile)
     colNames[4:4] = ['Sales']
-    colNames[5:5] = ['Must Contact', 'End Product', 'How Contacted',
+    colNames[6:6] = ['Must Contact', 'End Product', 'How Contacted',
                      'Information for Digikey']
+    colNames[19:19] = ['Invoiced Dollars']
+    colNames[25:25] = ['City on Acct List']
     colNames.extend(['TAARCOM Comments'])
 
     # Calculate the Invoiced Dollars.
@@ -190,10 +193,9 @@ def main(filepath):
               '\n***')
         return
 
-    # Add the 'City Moved' column.
-    insFile['City Moved'] = ''
+    # Add the 'Not In Acct List' column.
     insFile['Not In Acct List'] = ''
-    colNames.extend(['City Moved', 'Not In Acct List'])
+    colNames.extend(['Not In Acct List'])
 
     # Go through each entry in the Insight file and look for a sales match.
     for row in insFile.index:
@@ -207,8 +209,11 @@ def main(filepath):
         acctMatch = mastAcct[mastAcct['ProperName'] == cust]
         if cust and len(acctMatch) == 1:
             # Check if the city is different from our account list.
-            if insFile.loc[row, 'Customer City'] != acctMatch['CITY'].iloc[0]:
-                insFile.loc[row, 'City Moved'] = 'Y'
+            acctCity = acctMatch['CITY'].iloc[0].upper().split(", ")
+            if insFile.loc[row, 'Customer City'].upper() not in acctCity:
+                if len(acctCity) > 1:
+                    acctCity = ", ".join(acctCity)
+                insFile.loc[row, 'City on Acct List'] = acctCity
             # Copy over salesperson.
             insFile.loc[row, 'Sales'] = acctMatch['SLS'].iloc[0]
         else:
@@ -226,8 +231,8 @@ def main(filepath):
             insFile.loc[row, col] = pd.to_numeric(insFile.loc[row, col],
                                                   errors='ignore')
 
-    # Reorder columns.
-    insFile = insFile.loc[:, colNames]
+    # Reorder columns and fill NaNs.
+    insFile = insFile.loc[:, colNames].fillna('')
 
     # Try saving the files, exit with error if any file is currently open.
     fname1 = filename[:-5] + ' With Salespeople.xlsx'
