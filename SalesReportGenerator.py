@@ -46,15 +46,17 @@ def tableFormat(sheetData, sheetName, wbook):
             formatting = dateFormat
         elif col == 'Quantity':
             formatting = commaFormat
-        elif col == 'Invoice Number':
-            # We're going to do some work in order to format the Invoice
-            # Number as a number, yet keep leading zeros.
+        elif col in ['Invoice Number', 'Part Number']:
+            # We're going to do some work in order to format the
+            # Invoice/Part Number as a number, yet keep leading zeros.
             for row in sheetData.index:
-                invLen = len(sheetData.loc[row, 'Invoice Number'])
+                invLen = len(sheetData.loc[row, col])
                 # Figure out how many places the number goes to.
                 numPadding = '0'*invLen
-                invNum = pd.to_numeric(sheetData.loc[row, 'Invoice Number'],
+                invNum = pd.to_numeric(sheetData.loc[row, col],
                                        errors='ignore')
+                # Numerical format with forced leading digits.
+                # Total digits must equal length of numPadding.
                 invFormat = wbook.book.add_format({'font': 'Calibri',
                                                    'font_size': 11,
                                                    'num_format': numPadding})
@@ -96,15 +98,13 @@ def formDate(inputDate):
 
 # The main function.
 def main(runCom):
-    """Generates sales reports for each salesperson.
+    """Generates sales reports.
 
-    Finds entries in Running Commissions that are marked as currently
-    unreported and filters them into reports for each salesperson. Entries are
-    marked as reported in Running Commissions after being assigned to a report
-    by this function.
+    Finds entries in Running Commissions filters them into reports for each
+    salesperson, as well as an overall report.
     """
     # Load up the current Running Commissions file.
-    runningCom = pd.read_excel(runCom, 'Master', dtype=str).fillna('')
+    runningCom = pd.read_excel(runCom, 'Master', dtype=str)
     filesProcessed = pd.read_excel(runCom, 'Files Processed').fillna('')
 
     # Convert applicable columns to numeric.
@@ -121,8 +121,9 @@ def main(runCom):
             pass
     # Convert individual numbers to numeric in rest of columns.
     mixedCols = [col for col in list(runningCom) if col not in numCols]
-    # Invoice number sometimes has leading zeros we'd like to keep.
+    # Invoice/part numbers sometimes has leading zeros we'd like to keep.
     mixedCols.remove('Invoice Number')
+    mixedCols.remove('Part Number')
     # The INF gets read in as infinity, so skip the principal column.
     mixedCols.remove('Principal')
     for col in mixedCols:
@@ -140,12 +141,9 @@ def main(runCom):
                                    runningCom['Design Sales'].unique()))
     del salespeople[salespeople == '']
 
-    # Select data that has not been reported yet.
-    unrepComms = runningCom[runningCom['Sales Report Date'] == '']
-
-    # Create the dataframe with the Sales Totals information.
-    salesTot = pd.DataFrame(columns=['Salesperson', 'Paid-On Revenue',
-                                     'Sales Commission'])
+    # Create the dataframe with the commission information by salesperson.
+    salesTot = pd.DataFrame(columns=['Salesperson', 'Principal',
+                                     'Paid-On Revenue', 'Sales Commission'])
 
     # Set report columns.
     reportCols = ['Salesperson', 'Sales Percent', 'Reported Customer',
@@ -157,17 +155,17 @@ def main(runCom):
                   'Actual Comm Paid', 'Sales Commission', 'Comm Source',
                   'Quarter Shipped', 'Invoice Date', 'On/Offshore', 'City']
     # Columns appended from Running Commissions.
-    colAppend = [val for val in reportCols if val in list(unrepComms)]
+    colAppend = [val for val in reportCols if val in list(runningCom)]
     # %%
     # Go through each salesperson and pull their data.
     print('Running reports...')
     for person in salespeople:
         # Find sales entries for the salesperson.
-        CM = unrepComms['CM Sales'] == person
-        Design = unrepComms['Design Sales'] == person
+        CM = runningCom['CM Sales'] == person
+        Design = runningCom['Design Sales'] == person
 
         # Grab entries that are CM Sales for this salesperson.
-        CMSales = unrepComms[[x and not y for x, y in zip(CM, Design)]]
+        CMSales = runningCom[[x and not y for x, y in zip(CM, Design)]]
         if CMSales.shape[0]:
             # Determine share of sales.
             CMOnly = CMSales[CMSales['Design Sales'] == '']
@@ -176,15 +174,15 @@ def main(runCom):
             try:
                 split = CMWithDesign['CM Split']/100
             except TypeError:
-                split = 0.8
+                split = 0.2
             CMWithDesign['Sales Percent'] = split*100
-            CMWithDesign['Sales Commission'] = split*CMWithDesign['Sales Commission']
+            CMWithDesign['Sales Commission'] *= split
         else:
             CMOnly = pd.DataFrame(columns=colAppend)
             CMWithDesign = pd.DataFrame(columns=colAppend)
 
         # Grab entries that are Design Sales only.
-        designSales = unrepComms[[not x and y for x, y in zip(CM, Design)]]
+        designSales = runningCom[[not x and y for x, y in zip(CM, Design)]]
         if designSales.shape[0]:
             # Determine share of sales.
             designOnly = designSales[designSales['CM Sales'] == '']
@@ -193,15 +191,15 @@ def main(runCom):
             try:
                 split = (100 - designWithCM['CM Split'])/100
             except TypeError:
-                split = 0.2
+                split = 0.8
             designWithCM['Sales Percent'] = split*100
-            designWithCM['Sales Commission'] = split*designWithCM['Sales Commission']
+            designWithCM['Sales Commission'] *= split
         else:
             designOnly = pd.DataFrame(columns=colAppend)
             designWithCM = pd.DataFrame(columns=colAppend)
 
         # Grab CM + Design Sales entries.
-        dualSales = unrepComms[[x and y for x, y in zip(CM, Design)]]
+        dualSales = runningCom[[x and y for x, y in zip(CM, Design)]]
         if dualSales.shape[0]:
             dualSales['Sales Percent'] = 100
         else:
@@ -229,10 +227,11 @@ def main(runCom):
         reportTot = pd.DataFrame(columns=['Salesperson', 'Paid-On Revenue',
                                           'Sales Commission'], index=[0])
         reportTot['Salesperson'] = person
+        reportTot['Principal'] = ''
         reportTot['Paid-On Revenue'] = sum(finalReport['Paid-On Revenue'])
         reportTot['Sales Commission'] = sum(finalReport['Sales Commission'])
         # Append to Sales Totals.
-        salesTot = salesTot.append(reportTot, ignore_index=True)
+        salesTot = salesTot.append(reportTot, ignore_index=True, sort=False)
 
         # Build table of sales by principal.
         princTab = pd.DataFrame(columns=['Principal', 'Paid-On Revenue',
@@ -252,7 +251,14 @@ def main(runCom):
             princTab.loc[row, 'Paid-On Revenue'] = princInv
             princTab.loc[row, 'Sales Commission'] = princComm
             row += 1
-        # Sort principals in descending order by Sales Commission
+
+        # Sort principals in descending order alphabetically.
+        princTab.sort_values(by=['Principal'], inplace=True)
+        princTab.reset_index(drop=True, inplace=True)
+        # Append to Salesperson Totals tab.
+        salesTot = salesTot.append(princTab, ignore_index=True, sort=False)
+
+        # Sort principals in descending order by Sales Commission.
         princTab.sort_values(by=['Sales Commission'], ascending=False,
                              inplace=True)
         princTab.reset_index(drop=True, inplace=True)
@@ -329,8 +335,8 @@ def main(runCom):
     princTab = pd.DataFrame(columns=['Principal', 'Paid-On Revenue',
                             'Sales Commission'])
     row = 0
-    for principal in unrepComms['Principal'].unique():
-        princSales = unrepComms[unrepComms['Principal'] == principal]
+    for principal in runningCom['Principal'].unique():
+        princSales = runningCom[runningCom['Principal'] == principal]
         revenue = pd.to_numeric(princSales['Paid-On Revenue'],
                                 errors='coerce').fillna(0)
         comm = pd.to_numeric(princSales['Sales Commission'],
@@ -357,14 +363,14 @@ def main(runCom):
     runningCom.to_excel(writer1, sheet_name='Master', index=False)
     filesProcessed.to_excel(writer1, sheet_name='Files Processed',
                             index=False)
-    salesTot.to_excel(writer1, sheet_name='Sales Totals',
+    salesTot.to_excel(writer1, sheet_name='Salesperson Totals',
                       index=False)
     princTab.to_excel(writer1, sheet_name='Principal Totals',
                       index=False)
     # Format as table in Excel.
     tableFormat(runningCom, 'Master', writer1)
     tableFormat(filesProcessed, 'Files Processed', writer1)
-    tableFormat(salesTot, 'Sales Totals', writer1)
+    tableFormat(salesTot, 'Salesperson Totals', writer1)
     tableFormat(princTab, 'Principal Totals', writer1)
 
     # Try saving the file, exit with error if file is currently open.

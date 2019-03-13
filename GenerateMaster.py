@@ -57,9 +57,9 @@ def tableFormat(sheetData, sheetName, wbook):
             formatting = dateFormat
         elif col == 'Quantity':
             formatting = commaFormat
-        elif col == 'Invoice Number':
+        elif col in ['Invoice Number', 'Part Number']:
             # We're going to do some work in order to format the
-            # Invoice Number as a number, yet keep leading zeros.
+            # Invoice/Part Number as a number, yet keep leading zeros.
             for row in sheetData.index:
                 invLen = len(sheetData.loc[row, col])
                 # Figure out how many places the number goes to.
@@ -556,8 +556,9 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
                 pass
         # Convert individual numbers to numeric in rest of columns.
         mixedCols = [col for col in list(finalData) if col not in numCols]
-        # Invoice number sometimes has leading zeros we'd like to keep.
+        # Invoice/part numbers sometimes has leading zeros we'd like to keep.
         mixedCols.remove('Invoice Number')
+        mixedCols.remove('Part Number')
         # The INF gets read in as infinity, so skip the principal column.
         mixedCols.remove('Principal')
         for col in mixedCols:
@@ -879,7 +880,7 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
                     # Append matching columns of data.
                     appCols = matchingColumns + ['From File', 'Principal']
                     finalData = finalData.append(sheet[appCols],
-                                                 ignore_index=True)
+                                                 ignore_index=True, sort=False)
                 else:
                     print('Found no data on this tab. Moving on.\n'
                           '-')
@@ -894,7 +895,8 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
                                     'Total Commissions': [totalComm],
                                     'Date Added': [currentDate],
                                     'Paid Date': ['']})
-            filesProcessed = filesProcessed.append(newFile, ignore_index=True)
+            filesProcessed = filesProcessed.append(newFile, ignore_index=True,
+                                                   sort=False)
             # Save the matched raw data file.
             fname = filename[:-5] + ' Matched.xlsx'
             if saveError(fname):
@@ -1058,7 +1060,7 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
 
         # If any data isn't found/parsed, copy entry to Fix Entries.
         if lookMatches != 1 or len(distMatches) != 1 or dateError:
-            fixList = fixList.append(finalData.loc[row, :])
+            fixList = fixList.append(finalData.loc[row, :], sort=False)
             fixList.loc[row, 'Running Com Index'] = row
             fixList.loc[row, 'Distributor Matches'] = len(distMatches)
             fixList.loc[row, 'Lookup Master Matches'] = lookMatches
