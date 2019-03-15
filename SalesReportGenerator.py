@@ -33,7 +33,8 @@ def tableFormat(sheetData, sheetName, wbook):
                     'Ext. Cost', 'Unit Cost', 'Total Commissions',
                     'Sales Commission', 'Invoiced Dollars']
         pctCols = ['Split Percentage', 'Commission Rate',
-                   'Gross Rev Reduction', 'Shared Rev Tier Rate']
+                   'Gross Rev Reduction', 'Shared Rev Tier Rate',
+                   'True Comm %']
         coreCols = ['CM Sales', 'Design Sales', 'T-End Cust', 'T-Name',
                     'CM', 'Invoice Date']
         dateCols = ['Invoice Date', 'Paid Date', 'Sales Report Date',
@@ -140,6 +141,7 @@ def main(runCom):
     salespeople = list(set().union(runningCom['CM Sales'].unique(),
                                    runningCom['Design Sales'].unique()))
     del salespeople[salespeople == '']
+    salespeople.sort()
 
     # Create the dataframe with the commission information by salesperson.
     salesTot = pd.DataFrame(columns=['Salesperson', 'Principal',
@@ -333,26 +335,40 @@ def main(runCom):
 
     # Generate the table for sales numbers by principal.
     princTab = pd.DataFrame(columns=['Principal', 'Paid-On Revenue',
-                            'Sales Commission'])
+                                     'Actual Comm Paid', 'Sales Commission'])
     row = 0
     for principal in runningCom['Principal'].unique():
         princSales = runningCom[runningCom['Principal'] == principal]
         revenue = pd.to_numeric(princSales['Paid-On Revenue'],
                                 errors='coerce').fillna(0)
-        comm = pd.to_numeric(princSales['Sales Commission'],
+        comm = pd.to_numeric(princSales['Actual Comm Paid'],
                              errors='coerce').fillna(0)
+        salesComm = pd.to_numeric(princSales['Sales Commission'],
+                                  errors='coerce').fillna(0)
         princInv = sum(revenue)
-        princComm = sum(comm)
+        actComm = sum(comm)
+        salesComm = sum(salesComm)
+        try:
+            trueCommPct = actComm/princInv
+        except ZeroDivisionError:
+            trueCommPct = ''
         # Fill in table with principal's totals.
         princTab.loc[row, 'Principal'] = principal
         princTab.loc[row, 'Paid-On Revenue'] = princInv
-        princTab.loc[row, 'Sales Commission'] = princComm
+        princTab.loc[row, 'Actual Comm Paid'] = actComm
+        princTab.loc[row, 'True Comm %'] = trueCommPct
+        princTab.loc[row, 'Sales Commission'] = salesComm
         row += 1
+    # Sort principals in descending order alphabetically.
+    princTab.sort_values(by=['Principal'], inplace=True)
+    princTab.reset_index(drop=True, inplace=True)
     # Fill in overall totals.
     totRev = sum(princTab['Paid-On Revenue'])
-    totComm = sum(princTab['Sales Commission'])
+    totSalesComm = sum(princTab['Sales Commission'])
+    totComm = sum(princTab['Actual Comm Paid'])
     princTab.loc[row, 'Paid-On Revenue'] = totRev
-    princTab.loc[row, 'Sales Commission'] = totComm
+    princTab.loc[row, 'Sales Commission'] = totSalesComm
+    princTab.loc[row, 'Actual Comm Paid'] = totComm
     princTab.loc[row, 'Principal'] = 'Grand Total'
 
     # Save the Running Commissions with entered report date.

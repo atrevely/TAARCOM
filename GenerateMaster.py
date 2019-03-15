@@ -990,7 +990,8 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
                         'T-End Cust', 'CM Split']
             # Write list of all unique entries for each column.
             for col in lookCols:
-                finalData.loc[row, col] = lookMatches[col].unique()
+                finalData.loc[row, col] = ', '.join(
+                        list(fullMatch[col].unique()))
 
         # Try parsing the date.
         dateError = False
