@@ -13,14 +13,15 @@ from RCExcelTools import tableFormat, saveError, formDate
 
 def tailoredPreCalc(princ, sheet, sheetName):
     """Do special pre-processing tailored to the principal input."""
+    # Initialize the renameDict in case it doesn't get set later.
+    renameDict = {}
     # Osram special processing.
     if princ == 'OSR':
         # Get rid of the bad columns.
-        sheet.rename(columns={'Item': 'Unmapped',
-                              'Material Number': 'Unmapped 2',
-                              'Customer Name': 'Unmapped 3',
-                              'Sales Date': 'Unmapped 4'},
-                     inplace=True)
+        renameDict = {'Item': 'Unmapped', 'Material Number': 'Unmapped 2',
+                      'Customer Name': 'Unmapped 3',
+                      'Sales Date': 'Unmapped 4'}
+        sheet.rename(columns=renameDict, inplace=True)
         # Combine Rep 1 % and Rep 2 %.
         if 'Rep 1 %' in list(sheet) and 'Rep 2 %' in list(sheet):
             print('Copying Rep 2 % into empty Rep 1 % lines.\n'
@@ -32,41 +33,36 @@ def tailoredPreCalc(princ, sheet, sheetName):
     # ISSI special processing.
     if princ == 'ISS':
         # Rename the Commissions Due and Name columns.
-        sheet.rename(columns={'Commission Due': 'Unmapped',
-                              'Name': 'OEM/POS'}, inplace=True)
-        print('Ignoring the Commissions Due column.')
+        renameDict = {'Commission Due': 'Unmapped', 'Name': 'OEM/POS'}
+        sheet.rename(columns=renameDict, inplace=True)
     # ATS special processing.
     if princ == 'ATS':
         # Rename the Resale and Cost columns.
-        sheet.rename(columns={'Resale': 'Extended Resale',
-                              'Cost': 'Extended Cost'}, inplace=True)
+        renameDict = {'Resale': 'Extended Resale', 'Cost': 'Extended Cost'}
+        sheet.rename(columns=renameDict, inplace=True)
     # ATP special processing.
     if princ == 'ATP':
         # Rename the 'Commissions Due' column.
-        sheet.rename(columns={'Customer': 'Unmapped',
-                              'Address': 'Unmapped 2'}, inplace=True)
-        print('Ignoring the Customer column.')
+        renameDict = {'Customer': 'Unmapped', 'Address': 'Unmapped 2'}
+        sheet.rename(columns=renameDict, inplace=True)
     # QRF special processing.
     if princ == 'QRF':
         if sheetName in ['OEM', 'OFF']:
             # The column Name 11 needs to be deleted.
-            sheet.rename(columns={'Name 11': 'Unmapped',
-                                  'End Customer': 'Unmapped 2',
-                                  'Item': 'Unmapped 3'},
-                         inplace=True)
+            renameDict = {'Name 11': 'Unmapped', 'End Customer': 'Unmapped 2',
+                          'Item': 'Unmapped 3'}
+            sheet.rename(columns=renameDict, inplace=True)
         elif sheetName == 'POS':
             # The column Customer is actually the Distributor.
-            sheet.rename(columns={'Company': 'Distributor',
-                                  'BillDocNo': 'Unmapped',
-                                  'End Customer': 'Unmapped 2',
-                                  'Item': 'Unmapped 3'},
-                         inplace=True)
+            renameDict = {'Company': 'Distributor', 'BillDocNo': 'Unmapped',
+                          'End Customer': 'Unmapped 2', 'Item': 'Unmapped 3'}
+            sheet.rename(columns=renameDict, inplace=True)
     # INF special processing.
     if princ == 'INF':
         if 'Rep Group' in list(sheet):
             # Material Number is bad on this sheet.
-            sheet.rename(columns={'Material Number': 'Unmapped'},
-                         inplace=True)
+            renameDict = {'Material Number': 'Unmapped'}
+            sheet.rename(columns=renameDict, inplace=True)
             # Drop the RunRate row(s) on this sheet.
             try:
                 ID = sheet[sheet['Comm Type'] == 'OffShoreRunRate'].index
@@ -78,17 +74,18 @@ def tailoredPreCalc(princ, sheet, sheetName):
                       '-')
         else:
             # A bunch of things are bad on this sheet.
-            sheet.rename(columns={'Material Description': 'Unmapped1',
-                                  'Sold To Name': 'Unmapped2',
-                                  'Ship To Name': 'Unmapped3',
-                                  'Item': 'Unmapped4',
-                                  'End Name': 'Customer Name'},
-                         inplace=True)
+            renameDict = {'Material Description': 'Unmapped1',
+                          'Sold To Name': 'Unmapped2',
+                          'Ship To Name': 'Unmapped3', 'Item': 'Unmapped4',
+                          'End Name': 'Customer Name'}
+            sheet.rename(columns=renameDict, inplace=True)
     # XMO special processing.
     if princ == 'XMO':
         # The Amount column is Actual Comm Paid.
-        sheet.rename(columns={'Amount': 'Commission',
-                              'Commission Due': 'Unmapped'}, inplace=True)
+        renameDict = {'Amount': 'Commission', 'Commission Due': 'Unmapped'}
+        sheet.rename(columns=renameDict, inplace=True)
+    # Return the renameDict for future use.
+    return renameDict
 
 
 def tailoredCalc(princ, sheet, sheetName, distMap):
@@ -369,35 +366,36 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
             pass
         # XMO is paid on resale.
         sheet['Comm Source'] = 'Resale'
-    # Test the Commission Dollars to make sure they're correct.
-    if 'Paid-On Revenue' in list(sheet):
-        paidDol = sheet['Paid-On Revenue']
-        if 'Shared Rev Tier Rate' in list(sheet):
-            paidDol = paidDol*sheet['Shared Rev Tier Rate']
-    elif not invDol and extCost:
-        paidDol = sheet['Ext. Cost']
-    elif invDol:
-        paidDol = sheet['Invoiced Dollars']
-    try:
-        # Find percent error in Commission Dollars.
-        realCom = paidDol*sheet['Commission Rate']
-        realCom = realCom[realCom > 1]
-        # Find commissions paid.
-        if princ == 'ISS':
-            # ISSI holds back 10% in Actual Comm Due.
-            paidCom = sheet['Commission Due']
-        else:
-            paidCom = sheet['Actual Comm Paid']
-        absError = abs(realCom - paidCom)
-        if any(absError > 1):
-            print('Greater than $1 error in Commission Dollars detected '
-                  'in the following rows:')
-            errLocs = absError[absError > 1].index.tolist()
-            errLocs = [i+2 for i in errLocs]
-            print(', '.join(map(str, errLocs))
-                  + '\n---')
-    except (KeyError, NameError, TypeError):
-        pass
+#    # Test the Commission Dollars to make sure they're correct.
+#    if 'Paid-On Revenue' in list(sheet):
+#        paidDol = pd.to_numeric(sheet['Paid-On Revenue'],
+#                                errors='coerce').fillna(0)
+#        if 'Shared Rev Tier Rate' in list(sheet):
+#            paidDol = paidDol*sheet['Shared Rev Tier Rate']
+#    elif not invDol and extCost:
+#        paidDol = sheet['Ext. Cost']
+#    elif invDol:
+#        paidDol = sheet['Invoiced Dollars']
+#    try:
+#        # Find percent error in Commission Dollars.
+#        realCom = paidDol*sheet['Commission Rate']
+#        realCom = realCom[realCom > 1]
+#        # Find commissions paid.
+#        if princ == 'ISS':
+#            # ISSI holds back 10% in Actual Comm Due.
+#            paidCom = sheet['Commission Due']
+#        else:
+#            paidCom = sheet['Actual Comm Paid']
+#        absError = abs(realCom - paidCom)
+#        if any(absError > 1):
+#            print('Greater than $1 error in Commission Dollars detected '
+#                  'in the following rows:')
+#            errLocs = absError[absError > 1].index.tolist()
+#            errLocs = [i+2 for i in errLocs]
+#            print(', '.join(map(str, errLocs))
+#                  + '\n---')
+#    except (KeyError, NameError, TypeError):
+#        pass
 
 
 # %% Main function.
@@ -647,34 +645,33 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
             except AttributeError:
                 pass
             # Do specialized pre-processing tailored to principlal.
-            tailoredPreCalc(principal, sheet, sheetName)
+            renameDict = tailoredPreCalc(principal, sheet, sheetName)
             totalRows = sheet.shape[0]
             print('Found ' + str(totalRows) + ' entries in the tab '
                   + sheetName + '\n----------------------------------')
             # Iterate over each column of data that we want to append.
-            missingCols = []
             for dataName in list(fieldMappings):
                 # Grab list of names that the data could potentially be under.
                 nameList = fieldMappings[dataName].dropna().tolist()
                 # Look for a match in the sheet column names.
                 sheetColumns = list(sheet)
                 columnName = [val for val in sheetColumns if val in nameList]
-                # Let us know if we didn't find a column that matches,
-                # or if we found too many columns that match,
+                # If we found too many columns that match,
                 # then rename the column in the sheet to the master name.
-                if not columnName:
-                    missingCols.append(dataName)
-                elif len(columnName) > 1:
+                if len(columnName) > 1:
                     print('Found multiple matches for ' + dataName
                           + '\nMatching columns: %s' %
                           ', '.join(map(str, columnName))
                           + '\nPlease fix column names and try again.\n'
                           '***')
                     return
-                else:
-                    rawSheet.loc[0, columnName[0]] = dataName
+                elif len(columnName) == 1:
                     sheet.rename(columns={columnName[0]: dataName},
                                  inplace=True)
+                    if columnName[0] in renameDict.values():
+                        columnName[0] = [i for i in renameDict.keys()
+                                         if renameDict[i] == columnName[0]]
+                    rawSheet.loc[0, columnName[0]] = dataName
 
             # Replace the old raw data sheet with the new one.
             rawSheet.sort_index(inplace=True)
@@ -793,7 +790,11 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
             filesProcessed = filesProcessed.append(newFile, ignore_index=True,
                                                    sort=False)
             # Save the matched raw data file.
-            fname = filename[:-5] + ' Matched.xlsx'
+            fname = filename[:-5]
+            if filename[-12:] != 'Matched.xlsx':
+                fname += ' Matched.xlsx'
+            else:
+                fname += '.xlsx'
             if saveError(fname):
                 print('---\n'
                       'One or more of the raw data files are open in Excel.\n'
@@ -815,6 +816,7 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
                                        in newData[tab][col].values)
                     except ValueError:
                         maxWidth = 0
+                    maxWidth = max(10, maxWidth)
                     sheet.set_column(index, index, maxWidth+0.8)
                     index += 1
             # Save the file.
