@@ -805,6 +805,18 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
                                     datetime_format='mm/dd/yyyy')
             for tab in list(newData):
                 newData[tab].to_excel(writer, sheet_name=tab, index=False)
+                # Format and fit each column.
+                sheet = writer.sheets[tab]
+                index = 0
+                for col in newData[tab].columns:
+                    # Set column width and formatting.
+                    try:
+                        maxWidth = max(len(str(val)) for val
+                                       in newData[tab][col].values)
+                    except ValueError:
+                        maxWidth = 0
+                    sheet.set_column(index, index, maxWidth+0.8)
+                    index += 1
             # Save the file.
             writer.save()
         else:
