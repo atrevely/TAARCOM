@@ -135,6 +135,9 @@ def main(runCom):
     filesProcessed = pd.read_excel(runCom, 'Files Processed').fillna('')
     comDate = runCom[-20:]
 
+    # Set the directory for saving output files.
+    outDir = 'Z:/MK Working Commissions/'
+
     # Track commission dollars.
     try:
         comm = pd.to_numeric(runningCom['Actual Comm Paid'],
@@ -365,8 +368,8 @@ def main(runCom):
               '---')
 
     # Check if the files we're going to save are open already.
-    fname1 = 'Running Commissions ' + comDate
-    fname2 = 'Entries Need Fixing ' + comDate
+    fname1 = outDir + 'Running Commissions ' + comDate
+    fname2 = outDir + 'Entries Need Fixing ' + comDate
     fname3 = 'Lookup Master - Current.xlsx'
     fname4 = 'Quarantined Lookups.xlsx'
     if saveError(fname1, fname2, fname3, fname4):
