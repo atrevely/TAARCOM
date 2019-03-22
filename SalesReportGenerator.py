@@ -1,6 +1,7 @@
 import pandas as pd
 import time
 from RCExcelTools import tableFormat, formDate
+from xlrd import XLRDError
 
 
 # The main function.
@@ -10,9 +11,22 @@ def main(runCom):
     Finds entries in Running Commissions filters them into reports for each
     salesperson, as well as an overall report.
     """
+    # ----------------------------------------------
+    # Load and prepare the Running Commissions file.
+    # ----------------------------------------------
     # Load up the current Running Commissions file.
-    runningCom = pd.read_excel(runCom, 'Master', dtype=str)
-    filesProcessed = pd.read_excel(runCom, 'Files Processed').fillna('')
+    try:
+        runningCom = pd.read_excel(runCom, 'Master', dtype=str)
+        filesProcessed = pd.read_excel(runCom, 'Files Processed').fillna('')
+    except FileNotFoundError:
+        print('No Running Commissions file found!\n'
+              '***')
+        return
+    except XLRDError:
+        print('Running Commissions tab names incorrect!\n'
+              'Make sure the tabs are named Master and Files Processed.\n'
+              '***')
+        return
 
     # Convert applicable columns to numeric.
     numCols = ['Quantity', 'Ext. Cost', 'Invoiced Dollars', 'Paid-On Revenue',
@@ -43,6 +57,57 @@ def main(runCom):
     runningCom['Invoice Date'] = runningCom['Invoice Date'].map(
             lambda x: formDate(x))
 
+    # ---------------------------------------------
+    # Load and prepare the Commissions Master file.
+    # ---------------------------------------------
+    # Load up the current Commissions Master file.
+    try:
+        comMast = pd.read_excel('Commissions Master.xlsx', 'Master', dtype=str)
+    except FileNotFoundError:
+        print('No Commissions Master file found!\n'
+              '***')
+        return
+    except XLRDError:
+        print('Commissions Master tab names incorrect!\n'
+              'Make sure the tabs are named Master and Files Processed.\n'
+              '***')
+        return
+    # Convert applicable columns to numeric.
+    for col in numCols:
+        try:
+            comMast[col] = pd.to_numeric(comMast[col],
+                                         errors='coerce').fillna('')
+        except KeyError:
+            pass
+    for col in mixedCols:
+        comMast[col] = comMast[col].map(
+                lambda x: pd.to_numeric(x, errors='ignore'))
+    # Now remove the nans.
+    comMast.replace('nan', '', inplace=True)
+
+    # Make sure all the dates are formatted correctly.
+    comMast['Invoice Date'] = comMast['Invoice Date'].map(
+            lambda x: formDate(x))
+
+    # ---------------------------------------
+    # Load and prepare the Account List file.
+    # ---------------------------------------
+    # Load up the Account List.
+    try:
+        acctList = pd.read_excel('Master Account List.xlsx', 'Allacct')
+    except FileNotFoundError:
+        print('No Account List file found!\n'
+              '***')
+        return
+    except XLRDError:
+        print('Account List tab names incorrect!\n'
+              'Make sure the main tab is named Allacct.\n'
+              '***')
+        return
+
+    # --------------------------------------
+    # Get the salespeople information ready.
+    # --------------------------------------
     # Grab all of the salespeople initials.
     salespeople = list(set().union(runningCom['CM Sales'].unique(),
                                    runningCom['Design Sales'].unique()))
@@ -55,6 +120,22 @@ def main(runCom):
 
     # Columns appended from Running Commissions.
     colAppend = list(runningCom)
+
+    # ------------------------------------------------------------
+    # Combine data for the quarters that we're going to report on.
+    # ------------------------------------------------------------
+    # Grab the quarters in Commission Master and Running Commissions.
+    comMastQuarters = comMast['Quarter Shipped'].unique()
+    runComQuarters = runningCom['Quarter Shipped'].unique()
+    quarters = list(set().union(comMastQuarters, runComQuarters))
+    quarters.sort()
+    # Use the most recent four quarters of data.
+    quarters = quarters[-4:]
+    # Get the revenue report data ready.
+    revDat = comMast[[i in quarters for i in comMast['Quarter Shipped']]]
+    revDat.reset_index(drop=True, inplace=True)
+    revDat = revDat.append(runningCom, ignore_index=True, sort=False)
+
     # %%
     # Go through each salesperson and pull their data.
     print('Running reports...')
@@ -63,6 +144,20 @@ def main(runCom):
         CM = runningCom['CM Sales'] == person
         Design = runningCom['Design Sales'] == person
 
+        # ----------------------------------------------------
+        # Do the revenue report, using only Design Sales data.
+        # ----------------------------------------------------
+        # Grab the end customers for the salesperson on the Account List.
+        endCusts = acctList[acctList['SLS'] == person]['ProperName']
+
+        
+        
+
+
+
+        # -----------------------------------------------
+        # Do the sales report, using all commission data.
+        # -----------------------------------------------
         # Grab entries that are CM Sales for this salesperson.
         CMSales = runningCom[[x and not y for x, y in zip(CM, Design)]]
         if CMSales.shape[0]:
@@ -105,18 +200,14 @@ def main(runCom):
             dualSales = pd.DataFrame(columns=colAppend)
 
         # Start creating report.
-        finalReport = pd.DataFrame(columns=reportCols)
+        finalReport = pd.DataFrame(columns=colAppend)
         # Append the data.
         finalReport = finalReport.append([CMOnly[colAppend],
                                           CMWithDesign[colAppend],
                                           designOnly[colAppend],
                                           designWithCM[colAppend],
                                           dualSales[colAppend]],
-                                         ignore_index=True)
-        # Fill in salesperson initials.
-        finalReport['Salesperson'] = person
-        # Reorder columns.
-        finalReport = finalReport.loc[:, reportCols]
+                                         ignore_index=True, sort=False)
         # Make sure columns are numeric.
         finalReport['Paid-On Revenue'] = pd.to_numeric(
                 finalReport['Paid-On Revenue'], errors='coerce').fillna(0)

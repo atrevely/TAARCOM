@@ -151,7 +151,8 @@ def main(filepaths):
             return
 
     newFiles = pd.DataFrame({'Filename': filenames})
-    filesProcessed = filesProcessed.append(newFiles, ignore_index=True)
+    filesProcessed = filesProcessed.append(newFiles, ignore_index=True,
+                                           sort=False)
     # Load the Insight files.
     inputData = [pd.read_excel(filepath, None) for filepath in filepaths]
 
@@ -201,7 +202,8 @@ def main(filepaths):
                         newCust = pd.DataFrame({'Root Customer': [cust],
                                                 'Salesperson': [salesperson]})
                         rootCustMap = rootCustMap.append(newCust,
-                                                         ignore_index=True)
+                                                         ignore_index=True,
+                                                         sort=False)
                     else:
                         print('There appears to be a duplicate customer in'
                               ' rootCustomerMappings:\n'
@@ -210,8 +212,8 @@ def main(filepaths):
                         return
 
             # Append the sheet to the combined dataframe.
-            newDatComb = newDatComb.append(sheet, ignore_index=True)
-            newDatComb = newDatComb.loc[:, colNames]
+            newDatComb = newDatComb.append(sheet, ignore_index=True,
+                                           sort=False)
 
     # Go through the combined insights and prepare sales reports.
     salespeople = newDatComb['Sales'].unique()
@@ -239,8 +241,7 @@ def main(filepaths):
         writer.save()
 
     # Append the new data to the Insight Master.
-    insMast = insMast.append(newDatComb, ignore_index=True)
-    insMast = insMast.loc[:, colNames]
+    insMast = insMast.append(newDatComb, ignore_index=True, sort=False)
 
     # Try saving the files, exit with error if any file is currently open.
     fname1 = 'Digikey Insight Master.xlsx'

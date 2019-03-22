@@ -49,11 +49,11 @@ def main(filepaths):
 
     # Load the Insight files.
     try:
-        inputData = [pd.read_excel(i, 'Full Data') for i in filepaths]
+        inputData = [pd.read_excel(i, 'Data') for i in filepaths]
     except XLRDError:
         print('---\n'
               'Error reading sheet name(s) for Digikey Reports!\n'
-              'Please make sure the report tabs are named Full Data in '
+              'Please make sure the report tabs are named Data in '
               'each file.\n'
               '***')
 
@@ -81,7 +81,7 @@ def main(filepaths):
         sales = filenames[fileNum][0:2]
         sheetData = sheet[sheet['Sales'] == sales]
         # Append data to the output dataframe.
-        finalData = finalData.append(sheetData, ignore_index=True)
+        finalData = finalData.append(sheetData, ignore_index=True, sort=False)
         # Next file.
         fileNum += 1
 

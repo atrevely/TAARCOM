@@ -61,7 +61,7 @@ def tableFormat(sheetData, sheetName, wbook):
                 # The only way to coninually preserve leading zeros is by
                 # adding the apostrophe label tag in front.
                 if len(numPadding) > len(str(invNum)):
-                    invNum = "'" + invNum
+                    invNum = "'" + str(invNum)
                 invFormat = wbook.book.add_format({'font': 'Calibri',
                                                    'font_size': 11,
                                                    'num_format': numPadding})

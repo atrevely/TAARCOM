@@ -2,7 +2,7 @@ import pandas as pd
 import datetime
 import os.path
 from xlrd import XLRDError
-from RCExcelTools import tableFormat, saveError
+from RCExcelTools import tableFormat, saveError, formDate
 
 
 # Main function.
@@ -15,6 +15,7 @@ def main(filepath):
     """
     try:
         runCom = pd.read_excel(filepath, 'Master', dtype=str)
+        runCom.replace('nan', '', inplace=True)
     except XLRDError:
         print('Error reading sheet name in Running Commissions file!\n'
               'Please make sure the main tab is named Master.\n'
@@ -22,6 +23,7 @@ def main(filepath):
         return
     try:
         filesProcessed = pd.read_excel(filepath, 'Files Processed', dtype=str)
+        filesProcessed.replace('nan', '', inplace=True)
     except XLRDError:
         print('Error reading sheet name for  Running Commissions file!\n'
               'Please make sure the second tab is named Files Processed.\n'
@@ -34,10 +36,10 @@ def main(filepath):
                                    'Master', dtype=str)
         masterFiles = pd.read_excel('Commissions Master.xlsx',
                                     'Files Processed', dtype=str)
+        masterComm.replace('nan', '', inplace=True)
+        masterFiles.replace('nan', '', inplace=True)
         missCols = [i for i in set(masterComm).union(runCom) if
                     i not in list(masterComm) or i not in list(runCom)]
-        masterCols = list(masterComm)
-        fileCols = list(masterFiles)
         if missCols:
             print('The following columns were not detected in one of the two '
                   'files:\n%s' %
@@ -77,7 +79,12 @@ def main(filepath):
 
     # Go through each line of the finished Running Commissions and use them to
     # update the Lookup Master.
-    for row in runCom.index:
+    # Don't copy over INDIVIDUAL, MISC, or ALLOWANCE.
+    noCopy = ['INDIVIDUAL', 'UNKNOWN', 'ALLOWANCE']
+    paredID = [i for i in runCom.index
+               if not any(j in runCom.loc[i, 'T-End Cust'].upper()
+                          for j in noCopy)]
+    for row in paredID:
         # First match reported customer.
         repCust = str(runCom.loc[row, 'Reported Customer']).lower()
         POSCust = masterLookup['Reported Customer'].map(
@@ -106,11 +113,42 @@ def main(filepath):
             masterLookup = masterLookup.append(newLookup, ignore_index=True)
 
     # Append the new Running Commissions.
-    masterComm = masterComm.append(runCom, ignore_index=True)
-    masterFiles = masterFiles.append(filesProcessed, ignore_index=True)
-    masterComm = masterComm.loc[:, masterCols]
-    masterFiles = masterFiles.loc[:, fileCols]
+    masterComm = masterComm.append(runCom, ignore_index=True, sort=False)
+    masterFiles = masterFiles.append(filesProcessed, ignore_index=True,
+                                     sort=False)
 
+    # Make sure all the dates are formatted correctly.
+    masterComm['Invoice Date'] = masterComm['Invoice Date'].map(
+            lambda x: formDate(x))
+    masterFiles['Date Added'] = masterFiles['Date Added'].map(
+            lambda x: formDate(x))
+    masterFiles['Paid Date'] = masterFiles['Paid Date'].map(
+            lambda x: formDate(x))
+    # Convert commission dollars to numeric.
+    masterFiles['Total Commissions'] = pd.to_numeric(
+            masterFiles['Total Commissions'], errors='coerce').fillna('')
+    # Convert applicable columns to numeric.
+    numCols = ['Quantity', 'Ext. Cost', 'Invoiced Dollars',
+               'Paid-On Revenue', 'Actual Comm Paid', 'Unit Cost',
+               'Unit Price', 'CM Split', 'Year', 'Sales Commission',
+               'Split Percentage', 'Commission Rate',
+               'Gross Rev Reduction', 'Shared Rev Tier Rate']
+    for col in numCols:
+        try:
+            masterComm[col] = pd.to_numeric(masterComm[col],
+                                            errors='coerce').fillna('')
+        except KeyError:
+            pass
+    # Convert individual numbers to numeric in rest of columns.
+    mixedCols = [col for col in list(masterComm) if col not in numCols]
+    # Invoice/part numbers sometimes has leading zeros we'd like to keep.
+    mixedCols.remove('Invoice Number')
+    mixedCols.remove('Part Number')
+    # The INF gets read in as infinity, so skip the principal column.
+    mixedCols.remove('Principal')
+    for col in mixedCols:
+        masterComm[col] = masterComm[col].map(
+                lambda x: pd.to_numeric(x, errors='ignore'))
     # %% Get ready to save files.
     fname1 = 'Commissions Master.xlsx'
     fname2 = 'Lookup Master - Current.xlsx'

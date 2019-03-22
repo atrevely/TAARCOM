@@ -929,7 +929,7 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
             date = parse(dateGiven).date()
             # Make sure the date actually makes sense.
             currentYear = int(time.strftime('%Y'))
-            if currentYear - date.year not in [0, 1]:
+            if currentYear - date.year not in [0, 1] or date > currentDate:
                 dateError = True
             else:
                 # Cast date format into mm/dd/yyyy.
