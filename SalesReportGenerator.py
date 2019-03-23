@@ -105,6 +105,7 @@ def main(runCom):
               '***')
         return
 
+    print('Preparing report data...')
     # --------------------------------------
     # Get the salespeople information ready.
     # --------------------------------------
@@ -121,9 +122,9 @@ def main(runCom):
     # Columns appended from Running Commissions.
     colAppend = list(runningCom)
 
-    # ------------------------------------------------------------
-    # Combine data for the quarters that we're going to report on.
-    # ------------------------------------------------------------
+    # --------------------------------------------------------------------
+    # Combine and tag data for the quarters that we're going to report on.
+    # --------------------------------------------------------------------
     # Grab the quarters in Commission Master and Running Commissions.
     comMastQuarters = comMast['Quarter Shipped'].unique()
     runComQuarters = runningCom['Quarter Shipped'].unique()
@@ -135,6 +136,17 @@ def main(runCom):
     revDat = comMast[[i in quarters for i in comMast['Quarter Shipped']]]
     revDat.reset_index(drop=True, inplace=True)
     revDat = revDat.append(runningCom, ignore_index=True, sort=False)
+    # Tag the data by current Design Sales.
+    for cust in revDat['T-End Cust'].unique():
+        # Check for a single match in Account List.
+        if sum(acctList['ProperName'] == cust) == 1:
+            sales = acctList[acctList['ProperName'] == cust]['SLS'].iloc[0]
+            custID = revDat[revDat['T-End Cust'] == cust].index
+            revDat.loc[custID, 'CDS'] = sales
+    # Fill in the CDS (current design sales) for missing entries as simply the
+    # Design Sales for that line.
+    for row in revDat[pd.isna(revDat['CDS'])].index:
+        revDat.loc[row, 'CDS'] = revDat.loc[row, 'Design Sales']
 
     # %%
     # Go through each salesperson and pull their data.
@@ -147,13 +159,91 @@ def main(runCom):
         # ----------------------------------------------------
         # Do the revenue report, using only Design Sales data.
         # ----------------------------------------------------
-        # Grab the end customers for the salesperson on the Account List.
-        endCusts = acctList[acctList['SLS'] == person]['ProperName']
+        # Initialize the report tabs.
+        revReport = pd.DataFrame(columns=['Customer', 'Principal', quarters[0],
+                                          quarters[1], quarters[2],
+                                          quarters[3]])
+        partReport = pd.DataFrame(columns=['Customer', 'Principal',
+                                           'Part Number', quarters[0],
+                                           quarters[1], quarters[2],
+                                           quarters[3]])
+        # Grab the salesperson's data.
+        designDat = revDat[revDat['CDS'] == person]
+        # Sort the customers by Paid-On Revenue.
+        custs = designDat['T-End Cust'].unique()
+        totCusts = [sum(designDat[designDat['T-End Cust'] == i]['Paid-On Revenue'])
+                    for i in custs]
+        custs = [i for _, i in sorted(zip(totCusts, custs), reverse=True)]
+        # Fill in the customers, then principals, then data by quarter.
+        for cust in custs:
+            custFrame = pd.DataFrame(data={'Customer': [cust]})
+            revReport = revReport.append(custFrame, ignore_index=True,
+                                         sort=False)
+            partReport = partReport.append(custFrame, ignore_index=True,
+                                           sort=False)
+            # Grab the data for this customer.
+            custDat = designDat[designDat['T-End Cust'] == cust]
+            for princ in custDat['Principal'].unique():
+                # Grab the data for each principal.
+                princDat = custDat[custDat['Principal'] == princ]
+                princFrame = pd.DataFrame(data={'Principal': [princ]})
+                # Part report goes in and waits for part numbers.
+                partReport = partReport.append(princFrame, ignore_index=True,
+                                               sort=False)
+                # Find each quarter's Paid-On Revenue.
+                for qtr in quarters:
+                    rev = sum(princDat.loc[i, 'Paid-On Revenue']
+                              for i in princDat.index
+                              if princDat.loc[i, 'Quarter Shipped'] == qtr)
+                    princFrame[qtr] = rev
+                # Principal report gets filled in by quarter.
+                revReport = revReport.append(princFrame, ignore_index=True,
+                                             sort=False)
+                for part in princDat['Part Number'].unique():
+                    # Grab the data for each part number.
+                    partDat = princDat[princDat['Part Number'] == part]
+                    partFrame = pd.DataFrame(data={'Part Number': [part]})
+                    # Find each quarter's Paid-On Revenue.
+                    for qtr in quarters:
+                        rev = sum(partDat.loc[i, 'Paid-On Revenue']
+                                  for i in partDat.index
+                                  if princDat.loc[i, 'Quarter Shipped'] == qtr)
+                        partFrame[qtr] = rev
+                    # Fill in part number report totals.
+                    partReport = partReport.append(partFrame,
+                                                   ignore_index=True,
+                                                   sort=False)
+        # Now that we've finished making the report tabs, write to file.
+        writer = pd.ExcelWriter(person + ' Revenue Report - '
+                                + time.strftime('%Y-%m-%d')
+                                + '.xlsx', engine='xlsxwriter',
+                                datetime_format='mm/dd/yyyy')
+        revReport.to_excel(writer, sheet_name='Principals', index=False)
+        partReport.to_excel(writer, sheet_name='Part Numbers', index=False)
+        tableFormat(revReport, 'Principals', writer)
+        tableFormat(partReport, 'Part Numbers', writer)
+        # Set the format for the quarters column.
+        # Accounting format ($ XX.XX).
+        acctFormat = writer.book.add_format({'font': 'Calibri',
+                                             'font_size': 11,
+                                             'num_format': 44})
+        index = 2
+        for qtr in quarters:
+            writer.sheets['Principals'].set_column(index, index, 25,
+                                                   acctFormat)
+            writer.sheets['Part Numbers'].set_column(index+1, index+1, 25,
+                                                     acctFormat)
+            index += 1
 
-        
-        
-
-
+        # Try saving the file, exit with error if file is currently open.
+        try:
+            writer.save()
+        except IOError:
+            print('---\n'
+                  'A salesperson report file is open in Excel!\n'
+                  'Please close the file(s) and try again.\n'
+                  '***')
+            return
 
         # -----------------------------------------------
         # Do the sales report, using all commission data.
@@ -293,7 +383,7 @@ def main(runCom):
 
         # Write report to file.
         writer = pd.ExcelWriter(person + ' Sales Report - '
-                                + time.strftime(' %Y-%m-%d')
+                                + time.strftime('%Y-%m-%d')
                                 + '.xlsx', engine='xlsxwriter',
                                 datetime_format='mm/dd/yyyy')
         princTab.to_excel(writer, sheet_name='Principals', index=False)
@@ -313,8 +403,6 @@ def main(runCom):
                   'Please close the file(s) and try again.\n'
                   '***')
             return
-        # No errors, so save the file.
-        writer.save()
 
     # %%
     # Fill in the Sales Report Date in Running Commissions.
@@ -386,8 +474,6 @@ def main(runCom):
               'Please close the file and try again.\n'
               '***')
         return
-    # No errors, so save the file.
-    writer1.save()
     print('---\n'
           'Reports completed successfully!\n'
           '+++')
