@@ -900,7 +900,7 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
             # Write list of all unique entries for each column.
             for col in lookCols:
                 finalData.loc[row, col] = ', '.join(
-                        list(fullMatch[col].unique()))
+                        fullMatch[col].map(lambda x: str(x)).unique())
 
         # Try parsing the date.
         dateError = False

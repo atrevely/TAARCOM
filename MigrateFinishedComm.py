@@ -30,11 +30,13 @@ def main(filepath):
               '***')
         return
 
+    # Set the directory for the data input/output.
+    dataDir = 'Z:/MK Working Commissions/'
     # Read in the Commissions Master. Exit if not found.
-    if os.path.exists('Commissions Master.xlsx'):
-        masterComm = pd.read_excel('Commissions Master.xlsx',
+    if os.path.exists(dataDir + 'Commissions Master.xlsx'):
+        masterComm = pd.read_excel(dataDir + 'Commissions Master.xlsx',
                                    'Master', dtype=str)
-        masterFiles = pd.read_excel('Commissions Master.xlsx',
+        masterFiles = pd.read_excel(dataDir + 'Commissions Master.xlsx',
                                     'Files Processed', dtype=str)
         masterComm.replace('nan', '', inplace=True)
         masterFiles.replace('nan', '', inplace=True)
@@ -150,8 +152,8 @@ def main(filepath):
         masterComm[col] = masterComm[col].map(
                 lambda x: pd.to_numeric(x, errors='ignore'))
     # %% Get ready to save files.
-    fname1 = 'Commissions Master.xlsx'
-    fname2 = 'Lookup Master - Current.xlsx'
+    fname1 = dataDir + 'Commissions Master.xlsx'
+    fname2 = dataDir + 'Lookup Master - Current.xlsx'
 
     if saveError(fname1, fname2):
         print('---\n'
