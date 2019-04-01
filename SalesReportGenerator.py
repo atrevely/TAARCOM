@@ -37,7 +37,7 @@ def main(runCom):
     for col in numCols:
         try:
             runningCom[col] = pd.to_numeric(runningCom[col],
-                                            errors='coerce').fillna('')
+                                            errors='coerce').fillna(0)
         except KeyError:
             pass
     # Convert individual numbers to numeric in rest of columns.
@@ -76,7 +76,7 @@ def main(runCom):
     for col in numCols:
         try:
             comMast[col] = pd.to_numeric(comMast[col],
-                                         errors='coerce').fillna('')
+                                         errors='coerce').fillna(0)
         except KeyError:
             pass
     for col in mixedCols:

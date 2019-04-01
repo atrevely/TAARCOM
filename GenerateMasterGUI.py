@@ -278,12 +278,12 @@ class GenMast(QMainWindow):
             # Turn buttons off.
             self.lockButtons()
             # Run the SalesReportGenerator.py file.
-            try:
-                SalesReportGenerator.main(self.master)
-            except Exception as error:
-                print('Unexpected Python error:\n'
-                      + str(error)
-                      + '\nPlease contact your local coder.')
+#            try:
+            SalesReportGenerator.main(self.master)
+#            except Exception as error:
+#                print('Unexpected Python error:\n'
+#                      + str(error)
+#                      + '\nPlease contact your local coder.')
             # Clear the master selection.
             self.master = []
             # Turn buttons back on.
