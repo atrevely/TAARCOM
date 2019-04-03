@@ -2,6 +2,8 @@ import pandas as pd
 import time
 from RCExcelTools import tableFormat, formDate
 from xlrd import XLRDError
+import win32com.client
+import os
 
 
 # The main function.
@@ -130,8 +132,8 @@ def main(runCom):
     runComQuarters = runningCom['Quarter Shipped'].unique()
     quarters = list(set().union(comMastQuarters, runComQuarters))
     quarters.sort()
-    # Use the most recent four quarters of data.
-    quarters = quarters[-4:]
+    # Use the most recent five quarters of data.
+    quarters = quarters[-5:]
     # Get the revenue report data ready.
     revDat = comMast[[i in quarters for i in comMast['Quarter Shipped']]]
     revDat.reset_index(drop=True, inplace=True)
@@ -148,94 +150,31 @@ def main(runCom):
     for row in revDat[pd.isna(revDat['CDS'])].index:
         revDat.loc[row, 'CDS'] = revDat.loc[row, 'Design Sales']
 
+    # ----------------------------------
+    # Open Excel using the win32c tools.
+    # ----------------------------------
+    Excel = win32com.client.gencache.EnsureDispatch('Excel.Application')
+    win32c = win32com.client.constants
+
     # %%
-    # Go through each salesperson and pull their data.
+    # Go through each salesperson and prepare their reports.
     print('Running reports...')
     for person in salespeople:
-        # Find sales entries for the salesperson.
-        CM = runningCom['CM Sales'] == person
-        Design = runningCom['Design Sales'] == person
-
-        # ----------------------------------------------------
-        # Do the revenue report, using only Design Sales data.
-        # ----------------------------------------------------
-        # Initialize the report tabs.
-        revReport = pd.DataFrame(columns=['Customer', 'Principal', quarters[0],
-                                          quarters[1], quarters[2],
-                                          quarters[3]])
-        partReport = pd.DataFrame(columns=['Customer', 'Principal',
-                                           'Part Number', quarters[0],
-                                           quarters[1], quarters[2],
-                                           quarters[3]])
-        # Grab the salesperson's data.
+        # -----------------------------------------------------------
+        # Create the revenue reports for each salesperson, using only
+        # design data.
+        # -----------------------------------------------------------
+        # Grab the raw data for this salesperson's design sales.
         designDat = revDat[revDat['CDS'] == person]
-        # Sort the customers by Paid-On Revenue.
-        custs = designDat['T-End Cust'].unique()
-        totCusts = [sum(designDat[designDat['T-End Cust'] == i]['Paid-On Revenue'])
-                    for i in custs]
-        custs = [i for _, i in sorted(zip(totCusts, custs), reverse=True)]
-        # Fill in the customers, then principals, then data by quarter.
-        for cust in custs:
-            custFrame = pd.DataFrame(data={'Customer': [cust]})
-            revReport = revReport.append(custFrame, ignore_index=True,
-                                         sort=False)
-            partReport = partReport.append(custFrame, ignore_index=True,
-                                           sort=False)
-            # Grab the data for this customer.
-            custDat = designDat[designDat['T-End Cust'] == cust]
-            for princ in custDat['Principal'].unique():
-                # Grab the data for each principal.
-                princDat = custDat[custDat['Principal'] == princ]
-                princFrame = pd.DataFrame(data={'Principal': [princ]})
-                # Part report goes in and waits for part numbers.
-                partReport = partReport.append(princFrame, ignore_index=True,
-                                               sort=False)
-                # Find each quarter's Paid-On Revenue.
-                for qtr in quarters:
-                    rev = sum(princDat.loc[i, 'Paid-On Revenue']
-                              for i in princDat.index
-                              if princDat.loc[i, 'Quarter Shipped'] == qtr)
-                    princFrame[qtr] = rev
-                # Principal report gets filled in by quarter.
-                revReport = revReport.append(princFrame, ignore_index=True,
-                                             sort=False)
-                for part in princDat['Part Number'].unique():
-                    # Grab the data for each part number.
-                    partDat = princDat[princDat['Part Number'] == part]
-                    partFrame = pd.DataFrame(data={'Part Number': [part]})
-                    # Find each quarter's Paid-On Revenue.
-                    for qtr in quarters:
-                        rev = sum(partDat.loc[i, 'Paid-On Revenue']
-                                  for i in partDat.index
-                                  if princDat.loc[i, 'Quarter Shipped'] == qtr)
-                        partFrame[qtr] = rev
-                    # Fill in part number report totals.
-                    partReport = partReport.append(partFrame,
-                                                   ignore_index=True,
-                                                   sort=False)
-        # Now that we've finished making the report tabs, write to file.
-        writer = pd.ExcelWriter(person + ' Revenue Report - '
-                                + time.strftime('%Y-%m-%d')
-                                + '.xlsx', engine='xlsxwriter',
+        designDat.reset_index(drop=True, inplace=True)
+        # Write the raw data to a file.
+        filename = (person + ' Revenue Report - ' + time.strftime('%Y-%m-%d')
+                    + '.xlsx')
+        writer = pd.ExcelWriter(filename, engine='xlsxwriter',
                                 datetime_format='mm/dd/yyyy')
-        revReport.to_excel(writer, sheet_name='Principals', index=False)
-        partReport.to_excel(writer, sheet_name='Part Numbers', index=False)
-        tableFormat(revReport, 'Principals', writer)
-        tableFormat(partReport, 'Part Numbers', writer)
-        # Set the format for the quarters column.
-        # Accounting format ($ XX.XX).
-        acctFormat = writer.book.add_format({'font': 'Calibri',
-                                             'font_size': 11,
-                                             'num_format': 44})
-        index = 2
-        for qtr in quarters:
-            writer.sheets['Principals'].set_column(index, index, 25,
-                                                   acctFormat)
-            writer.sheets['Part Numbers'].set_column(index+1, index+1, 25,
-                                                     acctFormat)
-            index += 1
-
-        # Try saving the file, exit with error if file is currently open.
+        designDat.to_excel(writer, sheet_name='Raw Data', index=False)
+        tableFormat(designDat, 'Raw Data', writer)
+        # Try saving the report.
         try:
             writer.save()
         except IOError:
@@ -244,10 +183,43 @@ def main(runCom):
                   'Please close the file(s) and try again.\n'
                   '***')
             return
+        # Create the workbook and add the report sheet.
+        wb = Excel.Workbooks.Open(os.getcwd() + '\\' + filename)
+        wb.Sheets.Add()
+        pivotSheet = wb.Worksheets(1)
+        pivotSheet.Name = 'Revenue Report'
+        dataSheet = wb.Worksheets('Raw Data')
+        # Grab the report data by selecting the current region.
+        dataRange = dataSheet.Range('A1').CurrentRegion
+        pivotRange = pivotSheet.Range('A1')
+        # Create the pivot table and deploy it on the sheet.
+        PivotCache = wb.PivotCaches().Create(SourceType=win32c.xlDatabase,
+                                             SourceData=dataRange,
+                                             Version=win32c.xlPivotTableVersion14)
+        PivotTable = PivotCache.CreatePivotTable(TableDestination=pivotRange,
+                                                 TableName='Revenue Data',
+                                                 DefaultVersion=win32c.xlPivotTableVersion14)
+        # Drop the data fields into the pivot table.
+        PivotTable.PivotFields('T-End Cust').Orientation = win32c.xlRowField
+        PivotTable.PivotFields('T-End Cust').Position = 1
+        PivotTable.PivotFields('CM').Orientation = win32c.xlRowField
+        PivotTable.PivotFields('CM').Position = 2
+        PivotTable.PivotFields('Part Number').Orientation = win32c.xlRowField
+        PivotTable.PivotFields('Part Number').Position = 3
+        PivotTable.PivotFields('Quarter Shipped').Orientation = win32c.xlColumnField
+        PivotTable.PivotFields('Principal').Orientation = win32c.xlPageField
+        # Add the sum of Paid-On Revenue as the data field.
+        dataField = PivotTable.AddDataField(PivotTable.PivotFields('Paid-On Revenue'),
+                                            'Revenue', win32c.xlSum)
+        dataField.NumberFormat = '$#,##0'
+        wb.Close(SaveChanges=1)
 
-        # -----------------------------------------------
-        # Do the sales report, using all commission data.
-        # -----------------------------------------------
+        # --------------------------------------------------------------
+        # Create the sales reports for each salesperson, using all data.
+        # --------------------------------------------------------------
+        # Find sales entries for the salesperson.
+        CM = runningCom['CM Sales'] == person
+        Design = runningCom['Design Sales'] == person
         # Grab entries that are CM Sales for this salesperson.
         CMSales = runningCom[[x and not y for x, y in zip(CM, Design)]]
         if CMSales.shape[0]:
@@ -409,6 +381,9 @@ def main(runCom):
     runningCom.loc[runningCom['Sales Report Date'] == '',
                    'Sales Report Date'] = time.strftime('%m/%d/%Y')
 
+    # -----------------------------------------------------
+    # Create the tabs for the reported Running Commissions.
+    # -----------------------------------------------------
     # Generate the table for sales numbers by principal.
     princTab = pd.DataFrame(columns=['Principal', 'Paid-On Revenue',
                                      'Actual Comm Paid', 'Sales Commission'])
@@ -447,6 +422,12 @@ def main(runCom):
     princTab.loc[row, 'Actual Comm Paid'] = totComm
     princTab.loc[row, 'Principal'] = 'Grand Total'
 
+    # -----------------------------------------------
+    # Create the tabs for the overall Revenue Report.
+    # -----------------------------------------------
+
+
+
     # Save the Running Commissions with entered report date.
     writer1 = pd.ExcelWriter('Running Commissions '
                              + time.strftime('%Y-%m-%d') + ' Reported'
@@ -477,3 +458,5 @@ def main(runCom):
     print('---\n'
           'Reports completed successfully!\n'
           '+++')
+    # Close the Excel instance.
+    Excel.Application.Quit()
