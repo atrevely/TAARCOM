@@ -430,7 +430,7 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
                         'Sales Report Date'])
 
     # Set the directory for saving output files.
-    outDir = ''#'Z:/MK Working Commissions/'
+    outDir = 'Z:/MK Working Commissions/'
 
     # Check to see if there's an existing Running Commissions to append to.
     if runningCom:
@@ -802,7 +802,8 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
                       '***')
                 return
             # Write the raw data file with matches.
-            writer = pd.ExcelWriter(fname, engine='xlsxwriter',
+            matchDir = 'Z:/Matched Raw Data Files/'
+            writer = pd.ExcelWriter(matchDir + fname, engine='xlsxwriter',
                                     datetime_format='mm/dd/yyyy')
             for tab in list(newData):
                 newData[tab].to_excel(writer, sheet_name=tab, index=False)
