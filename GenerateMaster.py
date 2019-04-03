@@ -430,7 +430,7 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
                         'Sales Report Date'])
 
     # Set the directory for saving output files.
-    outDir = 'Z:/MK Working Commissions/'
+    outDir = ''#'Z:/MK Working Commissions/'
 
     # Check to see if there's an existing Running Commissions to append to.
     if runningCom:
