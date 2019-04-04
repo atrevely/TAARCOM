@@ -114,7 +114,7 @@ def main(filepath):
         return
 
     # Load the Master Account List file.
-    if os.path.exists('Master Account List 11-27-2018.xlsx'):
+    if os.path.exists('Master Account List.xlsx'):
         try:
             mastAcct = pd.read_excel('Master Account List 11-27-2018.xlsx',
                                      'Allacct').fillna('')
