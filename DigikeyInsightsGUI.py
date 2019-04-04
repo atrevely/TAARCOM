@@ -150,7 +150,12 @@ class GenMast(QMainWindow):
             # Turn buttons off.
             self.lockButtons()
             # Run the GenerateMaster.py file.
-            AppendInsights.main(self.filenames)
+            try:
+                AppendInsights.main(self.filenames)
+            except Exception as error:
+                print('Unexpected Python error:\n'
+                      + str(error)
+                      + '\nPlease contact your local coder.')
             # Clear files.
             self.filenames = []
             # Turn buttons back on.
@@ -168,7 +173,12 @@ class GenMast(QMainWindow):
             # Turn buttons off.
             self.lockButtons()
             # Run the GenerateMaster.py file.
-            WriteComments.main(self.filenames)
+            try:
+                WriteComments.main(self.filenames)
+            except Exception as error:
+                print('Unexpected Python error:\n'
+                      + str(error)
+                      + '\nPlease contact your local coder.')
             # Clear files.
             self.filenames = []
             # Turn buttons back on.
@@ -187,7 +197,12 @@ class GenMast(QMainWindow):
             # Turn buttons off.
             self.lockButtons()
             # Run the GenerateMaster.py file.
-            LookupSales.main(self.filename)
+            try:
+                LookupSales.main(self.filename)
+            except Exception as error:
+                print('Unexpected Python error:\n'
+                      + str(error)
+                      + '\nPlease contact your local coder.')
             # Clear file.
             self.filename = []
             # Turn buttons back on.
