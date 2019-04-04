@@ -478,7 +478,7 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
             return
         # Load in the matching Entries Need Fixing file.
         comDate = runningCom[-20:]
-        fixName = 'Entries Need Fixing ' + comDate
+        fixName = outDir + 'Entries Need Fixing ' + comDate
         try:
             fixList = pd.read_excel(fixName, 'Data', dtype=str)
             # Convert applicable columns to numeric.
