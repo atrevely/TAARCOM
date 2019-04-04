@@ -166,6 +166,8 @@ def main(runCom):
         # -----------------------------------------------------------
         # Grab the raw data for this salesperson's design sales.
         designDat = revDat[revDat['CDS'] == person]
+        # Get rid of empty Quarter Shipped lines.
+        designDat = designDat[designDat['Quarter Shipped'] != '']
         designDat.reset_index(drop=True, inplace=True)
         # Write the raw data to a file.
         filename = (person + ' Revenue Report - ' + time.strftime('%Y-%m-%d')
@@ -193,23 +195,23 @@ def main(runCom):
         dataRange = dataSheet.Range('A1').CurrentRegion
         pivotRange = pivotSheet.Range('A1')
         # Create the pivot table and deploy it on the sheet.
-        PivotCache = wb.PivotCaches().Create(SourceType=win32c.xlDatabase,
-                                             SourceData=dataRange,
-                                             Version=win32c.xlPivotTableVersion14)
-        PivotTable = PivotCache.CreatePivotTable(TableDestination=pivotRange,
-                                                 TableName='Revenue Data',
-                                                 DefaultVersion=win32c.xlPivotTableVersion14)
+        pivCache = wb.PivotCaches().Create(SourceType=win32c.xlDatabase,
+                                           SourceData=dataRange,
+                                           Version=win32c.xlPivotTableVersion14)
+        pivTable = pivCache.CreatePivotTable(TableDestination=pivotRange,
+                                             TableName='Revenue Data',
+                                             DefaultVersion=win32c.xlPivotTableVersion14)
         # Drop the data fields into the pivot table.
-        PivotTable.PivotFields('T-End Cust').Orientation = win32c.xlRowField
-        PivotTable.PivotFields('T-End Cust').Position = 1
-        PivotTable.PivotFields('CM').Orientation = win32c.xlRowField
-        PivotTable.PivotFields('CM').Position = 2
-        PivotTable.PivotFields('Part Number').Orientation = win32c.xlRowField
-        PivotTable.PivotFields('Part Number').Position = 3
-        PivotTable.PivotFields('Quarter Shipped').Orientation = win32c.xlColumnField
-        PivotTable.PivotFields('Principal').Orientation = win32c.xlPageField
+        pivTable.PivotFields('T-End Cust').Orientation = win32c.xlRowField
+        pivTable.PivotFields('T-End Cust').Position = 1
+        pivTable.PivotFields('CM').Orientation = win32c.xlRowField
+        pivTable.PivotFields('CM').Position = 2
+        pivTable.PivotFields('Part Number').Orientation = win32c.xlRowField
+        pivTable.PivotFields('Part Number').Position = 3
+        pivTable.PivotFields('Quarter Shipped').Orientation = win32c.xlColumnField
+        pivTable.PivotFields('Principal').Orientation = win32c.xlPageField
         # Add the sum of Paid-On Revenue as the data field.
-        dataField = PivotTable.AddDataField(PivotTable.PivotFields('Paid-On Revenue'),
+        dataField = pivTable.AddDataField(pivTable.PivotFields('Paid-On Revenue'),
                                             'Revenue', win32c.xlSum)
         dataField.NumberFormat = '$#,##0'
         wb.Close(SaveChanges=1)
@@ -422,13 +424,58 @@ def main(runCom):
     princTab.loc[row, 'Actual Comm Paid'] = totComm
     princTab.loc[row, 'Principal'] = 'Grand Total'
 
-    # -----------------------------------------------
-    # Create the tabs for the overall Revenue Report.
-    # -----------------------------------------------
+    # -----------------------------------
+    # Create the overall Revenue Report.
+    # -----------------------------------
+    # Write the raw data to a file.
+    filename = ('Revenue Report - ' + time.strftime('%Y-%m-%d') + '.xlsx')
+    writer = pd.ExcelWriter(filename, engine='xlsxwriter',
+                            datetime_format='mm/dd/yyyy')
+    revDat.to_excel(writer, sheet_name='Raw Data', index=False)
+    tableFormat(designDat, 'Raw Data', writer)
+    # Try saving the report.
+    try:
+        writer.save()
+    except IOError:
+        print('---\n'
+              'Revenue report file is open in Excel!\n'
+              'Please close the file(s) and try again.\n'
+              '***')
+        return
+    # Create the workbook and add the report sheet.
+    wb = Excel.Workbooks.Open(os.getcwd() + '\\' + filename)
+    wb.Sheets.Add()
+    pivotSheet = wb.Worksheets(1)
+    pivotSheet.Name = 'Revenue Report'
+    dataSheet = wb.Worksheets('Raw Data')
+    # Grab the report data by selecting the current region.
+    dataRange = dataSheet.Range('A1').CurrentRegion
+    pivotRange = pivotSheet.Range('A1')
+    # Create the pivot table and deploy it on the sheet.
+    pivCache = wb.PivotCaches().Create(SourceType=win32c.xlDatabase,
+                                       SourceData=dataRange,
+                                       Version=win32c.xlPivotTableVersion14)
+    pivTable = pivCache.CreatePivotTable(TableDestination=pivotRange,
+                                         TableName='Revenue Data',
+                                         DefaultVersion=win32c.xlPivotTableVersion14)
+    # Drop the data fields into the pivot table.
+    pivTable.PivotFields('T-End Cust').Orientation = win32c.xlRowField
+    pivTable.PivotFields('T-End Cust').Position = 1
+    pivTable.PivotFields('CM').Orientation = win32c.xlRowField
+    pivTable.PivotFields('CM').Position = 2
+    pivTable.PivotFields('Part Number').Orientation = win32c.xlRowField
+    pivTable.PivotFields('Part Number').Position = 3
+    pivTable.PivotFields('Quarter Shipped').Orientation = win32c.xlColumnField
+    pivTable.PivotFields('Principal').Orientation = win32c.xlPageField
+    # Add the sum of Paid-On Revenue as the data field.
+    dataField = pivTable.AddDataField(pivTable.PivotFields('Paid-On Revenue'),
+                                      'Revenue', win32c.xlSum)
+    dataField.NumberFormat = '$#,##0'
+    wb.Close(SaveChanges=1)
 
-
-
+    # ------------------------------------------------------
     # Save the Running Commissions with entered report date.
+    # ------------------------------------------------------
     writer1 = pd.ExcelWriter('Running Commissions '
                              + time.strftime('%Y-%m-%d') + ' Reported'
                              + '.xlsx', engine='xlsxwriter',
