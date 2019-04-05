@@ -54,7 +54,7 @@ def tableFormat(sheetData, sheetName, wbook):
     # Highlight new root customer and moved city rows.
     try:
         for row in sheetData.index:
-            if sheetData.loc[row, 'Not In Acct List'] == 'Y':
+            if sheetData.loc[row, 'Sales'] == '':
                 sheet.write(row+1, 4, sheetData.loc[row, 'Root Customer..'],
                             newFormat)
             elif sheetData.loc[row, 'City on Acct List']:
@@ -63,7 +63,9 @@ def tableFormat(sheetData, sheetName, wbook):
                 sheet.write(row+1, 24, sheetData.loc[row, 'City on Acct List'],
                             movedFormat)
     except KeyError:
-        pass
+        print('Error locating Sales and/or City on Acct List columns.\n'
+              'Unable to highlight without these columns.\n'
+              '---')
 
 
 def saveError(*excelFiles):
@@ -78,13 +80,16 @@ def saveError(*excelFiles):
     return False
 
 
-# The main function.
+# %% The main function.
 def main(filepath):
     """Looks up the salespeople for a Digikey Local Insight file.
 
     Arguments:
     filepath -- The filepath to the new Digikey Insight file.
     """
+    # ----------------------------
+    # Load in the necessary files.
+    # ----------------------------
     # Load the Root Customer Mappings file.
     if os.path.exists('rootCustomerMappings.xlsx'):
         try:
@@ -151,6 +156,9 @@ def main(filepath):
     insFile = pd.read_excel(filepath, None)
     insFile = insFile[list(insFile)[0]].fillna('')
 
+    # -------------------------------------------
+    # Clean up and match the new Digikey LI file.
+    # -------------------------------------------
     # Switch the datetime objects over to strings.
     for col in list(insFile):
         try:
@@ -165,7 +173,7 @@ def main(filepath):
                      'Information for Digikey']
     colNames[19:19] = ['Invoiced Dollars']
     colNames[25:25] = ['City on Acct List']
-    colNames.extend(['TAARCOM Comments'])
+    colNames.extend(['TAARCOM Comments', 'New T-Cust'])
 
     # Calculate the Invoiced Dollars.
     try:
@@ -177,6 +185,8 @@ def main(filepath):
         print('Error calculating Invoiced Dollars.\n'
               'Please make sure Qty Shipped and Unit Price columns '
               'are in the report.\n'
+              '(Also check that the top line of the file contains '
+              'the column names).\n'
               '***')
         return
 
@@ -192,10 +202,6 @@ def main(filepath):
               'Note: also check that row 1 of the file is the column headers.'
               '\n***')
         return
-
-    # Add the 'Not In Acct List' column.
-    insFile['Not In Acct List'] = ''
-    colNames.extend(['Not In Acct List'])
 
     # Go through each entry in the Insight file and look for a sales match.
     for row in insFile.index:
@@ -223,9 +229,9 @@ def main(filepath):
             if cust and len(match) == 1:
                 # Match to salesperson if exactly one match is found.
                 insFile.loc[row, 'Sales'] = match['Salesperson'].iloc[0]
-                # Mark as not in Master Account List.
-                insFile.loc[row, 'Not In Acct List'] = 'Y'
-
+            else:
+                # Record that the customer is new.
+                insFile.loc[row, 'New T-Cust'] = 'Y' 
         # Convert applicable entries to numeric.
         for col in list(insFile):
             insFile.loc[row, col] = pd.to_numeric(insFile.loc[row, col],

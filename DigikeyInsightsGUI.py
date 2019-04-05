@@ -6,7 +6,7 @@ from PyQt5.QtWidgets import QMainWindow, QPushButton, QApplication, \
 from PyQt5.QtCore import pyqtSlot
 import LookupSales
 import AppendInsights
-import WriteComments
+import CompileFeedback
 
 
 class Stream(QtCore.QObject):
@@ -71,19 +71,18 @@ class GenMast(QMainWindow):
         self.btnLookSales.move(650, 430)
         self.btnLookSales.resize(150, 150)
         self.btnLookSales.clicked.connect(self.lookSalesClicked)
-
-        # Button for appending the Insight to the Insight Master.
-        self.btnAddIns = QPushButton('Generate Reports \n and Append \n to '
-                                     'Insight \n Master', self)
-        self.btnAddIns.move(650, 230)
-        self.btnAddIns.resize(150, 150)
-        self.btnAddIns.clicked.connect(self.addInsClicked)
+        self.btnLookSales.setToolTip('Returns a Digikey LI file with '
+                                     'salespeople looked up from Account List '
+                                     'and rootCustomerMappings.')
 
         # Button for copying over comments.
         self.btnAddComments = QPushButton('Compile \n Feedback', self)
-        self.btnAddComments.move(650, 30)
+        self.btnAddComments.move(650, 230)
         self.btnAddComments.resize(150, 150)
-        self.btnAddComments.clicked.connect(self.addCommentsClicked)
+        self.btnAddComments.clicked.connect(self.compileFeedbackClicked)
+        self.btnAddComments.setToolTip('Combine individual reports with '
+                                       'feedback into one file, and append '
+                                       'that file to Digikey Insight Master.')
 
         # Button for clearing selections.
         self.btnClearAll = QPushButton('Clear \n File Selections', self)
@@ -98,6 +97,7 @@ class GenMast(QMainWindow):
         self.btnOpenInsight.move(50, 30)
         self.btnOpenInsight.resize(150, 100)
         self.btnOpenInsight.clicked.connect(self.openInsightClicked)
+        self.btnOpenInsight.setToolTip('Select a brand new Digikey LI file')
 
         # Button for selecting files to append to master.
         self.btnOpenFinished = QPushButton('Select Files \n with Salespeople',
@@ -120,19 +120,14 @@ class GenMast(QMainWindow):
         self.setWindowTitle('Digikey Insights Manager 2.0')
         self.show()
 
-    def addInsClicked(self):
-        """Send the AppendInsights execution to a worker thread."""
-        worker = Worker(self.addInsExecute)
-        self.threadpool.start(worker)
-
     def lookSalesClicked(self):
         """Send the LookupSales execution to a worker thread."""
         worker = Worker(self.lookSalesExecute)
         self.threadpool.start(worker)
 
-    def addCommentsClicked(self):
+    def compileFeedbackClicked(self):
         """Send the WriteComments execution to a worker thread."""
-        worker = Worker(self.addCommentsExecute)
+        worker = Worker(self.compileFeedbackExecute)
         self.threadpool.start(worker)
 
     def clearAllClicked(self):
@@ -143,38 +138,15 @@ class GenMast(QMainWindow):
               '---')
         self.restoreButtons()
 
-    def addInsExecute(self):
-        """Runs function for processing new files to master."""
+    def compileFeedbackExecute(self):
+        """Runs function for compiling feedback and appending to Master."""
         # Check to make sure we've selected files.
         if self.filenames:
             # Turn buttons off.
             self.lockButtons()
             # Run the GenerateMaster.py file.
             try:
-                AppendInsights.main(self.filenames)
-            except Exception as error:
-                print('Unexpected Python error:\n'
-                      + str(error)
-                      + '\nPlease contact your local coder.')
-            # Clear files.
-            self.filenames = []
-            # Turn buttons back on.
-            self.restoreButtons()
-
-        elif not self.filename:
-            print('No finished Insight files selected!\n'
-                  'Use the Select Commission Files button to select files.\n'
-                  '---')
-
-    def addCommentsExecute(self):
-        """Runs function for copying over comments to Master."""
-        # Check to make sure we've selected files.
-        if self.filenames:
-            # Turn buttons off.
-            self.lockButtons()
-            # Run the GenerateMaster.py file.
-            try:
-                WriteComments.main(self.filenames)
+                CompileFeedback.main(self.filenames)
             except Exception as error:
                 print('Unexpected Python error:\n'
                       + str(error)

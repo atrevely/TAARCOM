@@ -366,36 +366,6 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
             pass
         # XMO is paid on resale.
         sheet['Comm Source'] = 'Resale'
-#    # Test the Commission Dollars to make sure they're correct.
-#    if 'Paid-On Revenue' in list(sheet):
-#        paidDol = pd.to_numeric(sheet['Paid-On Revenue'],
-#                                errors='coerce').fillna(0)
-#        if 'Shared Rev Tier Rate' in list(sheet):
-#            paidDol = paidDol*sheet['Shared Rev Tier Rate']
-#    elif not invDol and extCost:
-#        paidDol = sheet['Ext. Cost']
-#    elif invDol:
-#        paidDol = sheet['Invoiced Dollars']
-#    try:
-#        # Find percent error in Commission Dollars.
-#        realCom = paidDol*sheet['Commission Rate']
-#        realCom = realCom[realCom > 1]
-#        # Find commissions paid.
-#        if princ == 'ISS':
-#            # ISSI holds back 10% in Actual Comm Due.
-#            paidCom = sheet['Commission Due']
-#        else:
-#            paidCom = sheet['Actual Comm Paid']
-#        absError = abs(realCom - paidCom)
-#        if any(absError > 1):
-#            print('Greater than $1 error in Commission Dollars detected '
-#                  'in the following rows:')
-#            errLocs = absError[absError > 1].index.tolist()
-#            errLocs = [i+2 for i in errLocs]
-#            print(', '.join(map(str, errLocs))
-#                  + '\n---')
-#    except (KeyError, NameError, TypeError):
-#        pass
 
 
 # %% Main function.
