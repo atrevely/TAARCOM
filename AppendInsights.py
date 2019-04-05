@@ -6,13 +6,10 @@ from xlrd import XLRDError
 
 def tableFormat(sheetData, sheetName, wbook):
     """Formats the Excel output as a table with correct column formatting."""
-    # Create the table.
+    # Nothing to format, so return.
+    if sheetData.shape[0] == 0:
+        return
     sheet = wbook.sheets[sheetName]
-    header = [{'header': val} for val in sheetData.columns.tolist()]
-    setStyle = {'header_row': True, 'style': 'TableStyleLight1',
-                'columns': header}
-    sheet.add_table(0, 0, len(sheetData.index),
-                    len(sheetData.columns)-1, setStyle)
     # Set document formatting.
     docFormat = wbook.book.add_format({'font': 'Calibri',
                                        'font_size': 11})
@@ -57,13 +54,19 @@ def tableFormat(sheetData, sheetName, wbook):
         i += 1
     # Highlight new root customer and moved city rows.
     try:
-        for row in range(len(sheetData)):
-            if sheetData.loc[row, 'Not In Acct List'] == 'Y':
-                sheet.set_row(row+1, None, newFormat)
-            elif sheetData.loc[row, 'City Moved'] == 'Y':
-                sheet.set_row(row+1, None, movedFormat)
+        for row in sheetData.index:
+            if sheetData.loc[row, 'Sales'] == '':
+                sheet.write(row+1, 4, sheetData.loc[row, 'Root Customer..'],
+                            newFormat)
+            elif sheetData.loc[row, 'City on Acct List']:
+                sheet.write(row+1, 4, sheetData.loc[row, 'Root Customer..'],
+                            movedFormat)
+                sheet.write(row+1, 24, sheetData.loc[row, 'City on Acct List'],
+                            movedFormat)
     except KeyError:
-        pass
+        print('Error locating Sales and/or City on Acct List columns.\n'
+              'Unable to highlight without these columns.\n'
+              '---')
 
 
 def saveError(*excelFiles):
@@ -78,6 +81,7 @@ def saveError(*excelFiles):
     return False
 
 
+# %% The main function.
 def main(filepaths):
     """Appends new Digikey Insight file to the Digikey Insight Master.
 

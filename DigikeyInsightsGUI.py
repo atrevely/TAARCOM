@@ -71,6 +71,9 @@ class GenMast(QMainWindow):
         self.btnLookSales.move(650, 430)
         self.btnLookSales.resize(150, 150)
         self.btnLookSales.clicked.connect(self.lookSalesClicked)
+        self.btnLookSales.setToolTip('Returns a Digikey LI file with '
+                                     'salespeople looked up from Account List '
+                                     'and rootCustomerMappings.')
 
         # Button for appending the Insight to the Insight Master.
         self.btnAddIns = QPushButton('Generate Reports \n and Append \n to '
@@ -98,6 +101,7 @@ class GenMast(QMainWindow):
         self.btnOpenInsight.move(50, 30)
         self.btnOpenInsight.resize(150, 100)
         self.btnOpenInsight.clicked.connect(self.openInsightClicked)
+        self.btnOpenInsight.setToolTip('Select a brand new Digikey LI file')
 
         # Button for selecting files to append to master.
         self.btnOpenFinished = QPushButton('Select Files \n with Salespeople',

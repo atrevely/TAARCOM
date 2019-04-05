@@ -204,10 +204,10 @@ def main(runCom):
         # Drop the data fields into the pivot table.
         pivTable.PivotFields('T-End Cust').Orientation = win32c.xlRowField
         pivTable.PivotFields('T-End Cust').Position = 1
-        pivTable.PivotFields('CM').Orientation = win32c.xlRowField
-        pivTable.PivotFields('CM').Position = 2
         pivTable.PivotFields('Part Number').Orientation = win32c.xlRowField
-        pivTable.PivotFields('Part Number').Position = 3
+        pivTable.PivotFields('Part Number').Position = 2        
+        pivTable.PivotFields('CM').Orientation = win32c.xlRowField
+        pivTable.PivotFields('CM').Position = 3
         pivTable.PivotFields('Quarter Shipped').Orientation = win32c.xlColumnField
         pivTable.PivotFields('Principal').Orientation = win32c.xlPageField
         # Add the sum of Paid-On Revenue as the data field.
