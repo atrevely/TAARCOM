@@ -24,7 +24,7 @@ def tableFormat(sheetData, sheetName, wbook):
                                        'bg_color': 'yellow'})
     movedFormat = wbook.book.add_format({'font': 'Calibri',
                                          'font_size': 11,
-                                         'bg_color': 'orange'})
+                                         'bg_color': '#FFCC99'})
     # Format and fit each column.
     i = 0
     # Columns which get shrunk down in reports.

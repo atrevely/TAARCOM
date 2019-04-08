@@ -5,7 +5,6 @@ from PyQt5.QtWidgets import QMainWindow, QPushButton, QApplication, \
                             QFileDialog, QTextEdit
 from PyQt5.QtCore import pyqtSlot
 import LookupSales
-import AppendInsights
 import CompileFeedback
 
 
@@ -68,7 +67,7 @@ class GenMast(QMainWindow):
         # Button for looking up salespeople in Insight Report.
         self.btnLookSales = QPushButton('Lookup \n Salespeople \n'
                                         'for \n Insight File', self)
-        self.btnLookSales.move(650, 430)
+        self.btnLookSales.move(650, 400)
         self.btnLookSales.resize(150, 150)
         self.btnLookSales.clicked.connect(self.lookSalesClicked)
         self.btnLookSales.setToolTip('Returns a Digikey LI file with '
@@ -76,11 +75,11 @@ class GenMast(QMainWindow):
                                      'and rootCustomerMappings.')
 
         # Button for copying over comments.
-        self.btnAddComments = QPushButton('Compile \n Feedback', self)
-        self.btnAddComments.move(650, 230)
-        self.btnAddComments.resize(150, 150)
-        self.btnAddComments.clicked.connect(self.compileFeedbackClicked)
-        self.btnAddComments.setToolTip('Combine individual reports with '
+        self.btnCompileFeedback = QPushButton('Compile \n Feedback', self)
+        self.btnCompileFeedback.move(650, 200)
+        self.btnCompileFeedback.resize(150, 150)
+        self.btnCompileFeedback.clicked.connect(self.compileFeedbackClicked)
+        self.btnCompileFeedback.setToolTip('Combine individual reports with '
                                        'feedback into one file, and append '
                                        'that file to Digikey Insight Master.')
 
@@ -97,14 +96,16 @@ class GenMast(QMainWindow):
         self.btnOpenInsight.move(50, 30)
         self.btnOpenInsight.resize(150, 100)
         self.btnOpenInsight.clicked.connect(self.openInsightClicked)
-        self.btnOpenInsight.setToolTip('Select a brand new Digikey LI file')
+        self.btnOpenInsight.setToolTip('Select a brand new Digikey LI file.')
 
         # Button for selecting files to append to master.
-        self.btnOpenFinished = QPushButton('Select Files \n with Salespeople',
+        self.btnOpenFinished = QPushButton('Select Files \n with Feedback',
                                            self)
         self.btnOpenFinished.move(250, 30)
         self.btnOpenFinished.resize(150, 100)
         self.btnOpenFinished.clicked.connect(self.openFinishedClicked)
+        self.btnOpenFinished.setToolTip('Select a batch of finished files '
+                                        'that have feedback from salespeople.')
 
         # Create the text output widget.
         self.textBox = QTextEdit(self, readOnly=True)
@@ -211,8 +212,7 @@ class GenMast(QMainWindow):
         if self.filename:
             print('File selected: ' + self.filename + '\n---')
             # Turn off/on the correct buttons.
-            self.btnAddIns.setEnabled(False)
-            self.btnAddComments.setEnabled(False)
+            self.btnCompileFeedback.setEnabled(False)
             self.btnLookSales.setEnabled(True)
 
     def openFinishedClicked(self):
@@ -240,25 +240,22 @@ class GenMast(QMainWindow):
                 print(file)
             print('---')
             # Turn off/on the correct buttons.
-            self.btnAddIns.setEnabled(True)
-            self.btnAddComments.setEnabled(True)
+            self.btnCompileFeedback.setEnabled(True)
             self.btnLookSales.setEnabled(False)
 
     def lockButtons(self):
-        self.btnAddIns.setEnabled(False)
         self.btnOpenInsight.setEnabled(False)
         self.btnLookSales.setEnabled(False)
         self.btnOpenFinished.setEnabled(False)
         self.btnClearAll.setEnabled(False)
-        self.btnAddComments.setEnabled(False)
+        self.btnCompileFeedback.setEnabled(False)
 
     def restoreButtons(self):
-        self.btnAddIns.setEnabled(True)
         self.btnOpenInsight.setEnabled(True)
         self.btnLookSales.setEnabled(True)
         self.btnOpenFinished.setEnabled(True)
         self.btnClearAll.setEnabled(True)
-        self.btnAddComments.setEnabled(True)
+        self.btnCompileFeedback.setEnabled(True)
 
 
 class Worker(QtCore.QRunnable):
