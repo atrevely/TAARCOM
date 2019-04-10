@@ -149,9 +149,9 @@ def main(runCom):
         return
 
     # Load up the Entries Need Fixing file.
-    if os.path.exists('Entries Need Fixing ' + comDate):
+    if os.path.exists(outDir + 'Entries Need Fixing ' + comDate):
         try:
-            fixList = pd.read_excel('Entries Need Fixing ' + comDate,
+            fixList = pd.read_excel(outDir + 'Entries Need Fixing ' + comDate,
                                     'Data', dtype=str)
             fixList.replace('nan', '', inplace=True)
         except XLRDError:

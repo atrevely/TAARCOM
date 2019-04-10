@@ -149,6 +149,8 @@ def main(runCom):
     # Design Sales for that line.
     for row in revDat[pd.isna(revDat['CDS'])].index:
         revDat.loc[row, 'CDS'] = revDat.loc[row, 'Design Sales']
+    # Also grab the section of the data that aren't 80/20 splits.
+    splitDat = revDat[revDat['CM Split'] > 20]
 
     # ----------------------------------
     # Open Excel using the win32c tools.
@@ -166,6 +168,10 @@ def main(runCom):
         # -----------------------------------------------------------
         # Grab the raw data for this salesperson's design sales.
         designDat = revDat[revDat['CDS'] == person]
+        # Also grab any nonstandard splits.
+        cmDat = splitDat[splitDat['CM Sales'] == person]
+        cmDat = cmDat[cmDat['CDS'] != person]
+        designDat = designDat.append(cmDat, ignore_index=True, sort=False)
         # Get rid of empty Quarter Shipped lines.
         designDat = designDat[designDat['Quarter Shipped'] != '']
         designDat.reset_index(drop=True, inplace=True)
