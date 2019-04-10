@@ -60,7 +60,7 @@ def main(runCom):
     else:
         print('No Entries Need Fixing file found!\n'
               'Please make sure Entries Need Fixing ' + comDate
-              + ' is in the directory.\n'
+              + ' is in the directory ' + outDir + '.\n'
               '***')
         return
 
@@ -224,8 +224,8 @@ def main(runCom):
         # Record the date we quarantined the entries.
         oldEntries.loc[:, 'Date Quarantined'] = datetime.datetime.now().date()
         # Add deprecated entries to the quarantine.
-        quarantined = quarantined.append(oldEntries,
-                                         ignore_index=True)
+        quarantined = quarantined.append(oldEntries,  ignore_index=True,
+                                         sort=False)
         # Notify us of changes.
         print(str(len(oldEntries))
               + ' entries quarantied for being more than 2 years old.\n'
