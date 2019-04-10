@@ -33,7 +33,7 @@ def main(runCom):
     comDate = runCom[-20:]
 
     # Set the directory for saving output files.
-    outDir = ''#'Z:/MK Working Commissions/'
+    outDir = 'Z:/MK Working Commissions/'
 
     # Track commission dollars.
     try:
