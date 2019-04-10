@@ -10,5 +10,6 @@ __pycache__/
 !principalList.xlsx
 !rootCustomerMappings.xlsx
 !Master Account List.xlsx
+!Quarantined Lookups.xlsx
 LookupMasterIntegrator2.py
 RevReportTester.py
