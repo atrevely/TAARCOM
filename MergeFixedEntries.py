@@ -6,113 +6,7 @@ import calendar
 import math
 import os.path
 from xlrd import XLRDError
-
-
-def tableFormat(sheetData, sheetName, wbook):
-    """Formats the Excel output as a table with correct column formatting."""
-    # Nothing to format, so return.
-    if sheetData.shape[0] == 0:
-        return
-    sheet = wbook.sheets[sheetName]
-    # Set default document format.
-    docFormat = wbook.book.add_format({'font': 'Calibri',
-                                       'font_size': 11})
-    # Accounting format ($ XX.XX).
-    acctFormat = wbook.book.add_format({'font': 'Calibri',
-                                        'font_size': 11,
-                                        'num_format': 44})
-    # Comma format (XX,XXX).
-    commaFormat = wbook.book.add_format({'font': 'Calibri',
-                                         'font_size': 11,
-                                         'num_format': 3})
-    # Percent format, one decimal (XX.X%).
-    pctFormat = wbook.book.add_format({'font': 'Calibri',
-                                       'font_size': 11,
-                                       'num_format': '0.0%'})
-    # Date format (YYYY-MM-DD).
-    dateFormat = wbook.book.add_format({'font': 'Calibri',
-                                        'font_size': 11,
-                                        'num_format': 14})
-    # Format and fit each column.
-    index = 0
-    for col in sheetData.columns:
-        # Match the correct formatting to each column.
-        acctCols = ['Unit Price', 'Paid-On Revenue', 'Actual Comm Paid',
-                    'Total NDS', 'Post-Split NDS', 'Cust Revenue YTD',
-                    'Ext. Cost', 'Unit Cost', 'Total Commissions',
-                    'Sales Commission', 'Invoiced Dollars']
-        pctCols = ['Split Percentage', 'Commission Rate',
-                   'Gross Rev Reduction', 'Shared Rev Tier Rate']
-        coreCols = ['CM Sales', 'Design Sales', 'T-End Cust', 'T-Name',
-                    'CM', 'Invoice Date']
-        dateCols = ['Invoice Date', 'Paid Date', 'Sales Report Date',
-                    'Date Added']
-        if col in acctCols:
-            formatting = acctFormat
-        elif col in pctCols:
-            formatting = pctFormat
-        elif col in dateCols:
-            formatting = dateFormat
-        elif col == 'Quantity':
-            formatting = commaFormat
-        elif col == 'Invoice Number':
-            # We're going to do some work in order to format the Invoice
-            # Number as a number, yet keep leading zeros.
-            for row in sheetData.index:
-                invLen = len(sheetData.loc[row, col])
-                # Figure out how many places the number goes to.
-                numPadding = '0'*invLen
-                invNum = pd.to_numeric(sheetData.loc[row, col],
-                                       errors='ignore')
-                invFormat = wbook.book.add_format({'font': 'Calibri',
-                                                   'font_size': 11,
-                                                   'num_format': numPadding})
-                try:
-                    sheet.write_number(row+1, index, invNum, invFormat)
-                except TypeError:
-                    pass
-            # Move to the next column, as we're now done formatting
-            # the Invoice Numbers.
-            index += 1
-            continue
-        else:
-            formatting = docFormat
-        # Set column width and formatting.
-        try:
-            maxWidth = max(len(str(val)) for val in sheetData[col].values)
-        except ValueError:
-            maxWidth = 0
-        # If column is one that always gets filled in, then keep it expanded.
-        if col in coreCols:
-            maxWidth = max(maxWidth, len(col), 10)
-        # Don't let the columns get too wide.
-        maxWidth = min(maxWidth, 50)
-        # Extra space for '$'/'%' in accounting/percent format.
-        if col in acctCols or col in pctCols:
-            maxWidth += 2
-        sheet.set_column(index, index, maxWidth+0.8, formatting)
-        index += 1
-
-
-def saveError(*excelFiles):
-    """Check Excel files and return True if any file is open."""
-    for file in excelFiles:
-        try:
-            open(file, 'r+')
-        except FileNotFoundError:
-            pass
-        except PermissionError:
-            return True
-    return False
-
-
-def formDate(inputDate):
-    """Attemps to format a string as a date, otherwise ignores it."""
-    try:
-        outputDate = parse(str(inputDate)).date()
-        return outputDate
-    except (ValueError, OverflowError):
-        return inputDate
+from RCExcelTools import tableFormat, saveError, formDate
 
 
 # %% The main function.
@@ -129,6 +23,9 @@ def main(runCom):
     entries when needed, and quarantining old entries that have not been
     used in 2+ years.
     """
+    # -------------------------
+    # Load in all of the files.
+    # -------------------------
     # Load up the current Running Commissions file.
     runningCom = pd.read_excel(runCom, 'Master', dtype=str)
     runningCom.replace('nan', '', inplace=True)
@@ -136,7 +33,7 @@ def main(runCom):
     comDate = runCom[-20:]
 
     # Set the directory for saving output files.
-    outDir = 'Z:/MK Working Commissions/'
+    outDir = ''#'Z:/MK Working Commissions/'
 
     # Track commission dollars.
     try:
@@ -144,7 +41,8 @@ def main(runCom):
                              errors='raise').fillna(0)
         totComm = sum(comm)
     except ValueError:
-        print('Non-numeric entry detected in Actual Comm Paid.\n'
+        print('Non-numeric entry detected in Actual Comm Paid!\n'
+              'Check the Actual Comm Paid column for bad data and try again.\n'
               '***')
         return
 
@@ -198,6 +96,9 @@ def main(runCom):
               '***')
         return
 
+    # -----------------------------------------
+    # Get the data that's ready to be migrated.
+    # -----------------------------------------
     # Grab the lines that have an End Customer.
     endCustFixed = fixList[fixList['T-End Cust'] != '']
     # Grab entries where salespeople are filled in.
@@ -216,6 +117,9 @@ def main(runCom):
     print('Writing fixed entries...')
     # Go through each entry that's fixed and replace it in Running Commissions.
     for row in fixed.index:
+        # -------------------------------
+        # Make sure the date makes sense.
+        # -------------------------------
         dateError = False
         dateGiven = fixed.loc[row, 'Invoice Date']
         # Check if the date is read in as a float/int, and convert to string.
@@ -236,7 +140,9 @@ def main(runCom):
                   'Note: Spelling, whitespace, and capitalization matter.\n'
                   '---')
             dateError = True
+        # --------------------------------------------------------------
         # If no error found in date, finish filling out the fixed entry.
+        # --------------------------------------------------------------
         if not dateError:
             date = parse(dateGiven).date()
             # Make sure the date actually makes sense.
@@ -271,47 +177,6 @@ def main(runCom):
                       + str(row + 2)
                       + '\n***')
                 return
-
-            # Append entry to Lookup Master, if applicable.
-            # Check if entry is individual, misc, or unknown.
-            tName = fixed.loc[row, 'T-Name'].upper()
-            if 'INDIVIDUAL' not in tName:
-                # Match the part number.
-                ppn = fixed.loc[row, 'Part Number']
-                ppnMatch = mastLook[mastLook['Part Number'] == ppn]
-
-                # Match the reported customer.
-                repCust = fixed.loc[row, 'Reported Customer']
-                custMatch = ppnMatch[ppnMatch['Reported Customer'] == repCust]
-
-                # Create the Lookup Master entry.
-                lookupEntry = fixList.loc[row, ['CM Sales', 'Design Sales',
-                                                'Reported Customer',
-                                                'T-End Cust', 'T-Name',
-                                                'CM', 'Principal',
-                                                'CM Split', 'Part Number',
-                                                'City']]
-                invDate = pd.Timestamp(fixList.loc[row, 'Invoice Date'])
-                lookupEntry['Last Used'] = invDate.strftime('%m/%d/%Y')
-
-                # If this is a new entry, just append it.
-                if len(custMatch) == 0:
-                    lookupEntry['Date Added'] = datetime.datetime.now().date()
-                    lookupEntry['Last Used'] = datetime.datetime.now().date()
-                    mastLook = mastLook.append(lookupEntry, ignore_index=True)
-                # If there's already an entry, update it.
-                elif len(custMatch) > 0:
-                    lookupEntry['Date Added'] = custMatch.iloc[0]['Date Added']
-                    lookupEntry['Last Used'] = datetime.datetime.now().date()
-                    # If a Misc or Unknown entry, don't copy salespeople.
-                    if any(i in tName for i in ['MISC', 'UNKNOWN']):
-                        fixList.loc[row, 'CM Sales'] = ''
-                        fixList.loc[row, 'Design Sales'] = ''
-                        fixList.loc[row, 'CM Split'] = ''
-                    mastLook = mastLook.append(lookupEntry, ignore_index=True)
-                    # Drop old entries.
-                    mastLook.drop(custMatch.index, inplace=True)
-
             # Delete the fixed entry from the Needs Fixing file.
             fixList.drop(row, inplace=True)
 
@@ -319,7 +184,6 @@ def main(runCom):
     # Make sure all the dates are formatted correctly.
     runningCom['Invoice Date'] = runningCom['Invoice Date'].map(
             lambda x: formDate(x))
-    mastLook.reset_index(drop=True, inplace=True)
     mastLook['Last Used'] = mastLook['Last Used'].map(lambda x: formDate(x))
     mastLook['Date Added'] = mastLook['Date Added'].map(lambda x: formDate(x))
     # Go through each column and convert applicable entries to numeric.
