@@ -63,8 +63,10 @@ def main(runCom):
     # Load and prepare the Commissions Master file.
     # ---------------------------------------------
     # Load up the current Commissions Master file.
+    outDir = 'Z:/MK Working Commissions/'
     try:
-        comMast = pd.read_excel('Commissions Master.xlsx', 'Master', dtype=str)
+        comMast = pd.read_excel(outDir + 'Commissions Master.xlsx', 'Master',
+                                dtype=str)
     except FileNotFoundError:
         print('No Commissions Master file found!\n'
               '***')
