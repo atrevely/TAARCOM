@@ -155,7 +155,7 @@ def main(runCom):
     # ----------------------------------
     # Open Excel using the win32c tools.
     # ----------------------------------
-    Excel = win32com.client.gencache.EnsureDispatch('Excel.Application')
+    excel = win32com.client.gencache.EnsureDispatch('Excel.Application')
     win32c = win32com.client.constants
 
     # %%
@@ -192,7 +192,7 @@ def main(runCom):
                   '***')
             return
         # Create the workbook and add the report sheet.
-        wb = Excel.Workbooks.Open(os.getcwd() + '\\' + filename)
+        wb = excel.Workbooks.Open(os.getcwd() + '\\' + filename)
         wb.Sheets.Add()
         pivotSheet = wb.Worksheets(1)
         pivotSheet.Name = 'Revenue Report'
@@ -327,53 +327,16 @@ def main(runCom):
         princTab.loc[row, 'Paid-On Revenue'] = totInv
         princTab.loc[row, 'Sales Commission'] = totComm
 
-        # Build table of sales by customer.
-        custTab = pd.DataFrame(columns=['Customer', 'Principal',
-                                        'Paid-On Revenue',
-                                        'Sales Commission'])
-        finalCusts = pd.DataFrame(columns=['Customer', 'Principal',
-                                           'Paid-On Revenue',
-                                           'Sales Commission'])
-        row = 0
-        for customer in finalReport['T-End Cust'].unique():
-            custSales = finalReport[finalReport['T-End Cust'] == customer]
-            custInv = sum(custSales['Paid-On Revenue'])
-            custComm = sum(custSales['Sales Commission'])
-            custTab.loc[row, 'Customer'] = customer
-            custTab.loc[row, 'Paid-On Revenue'] = custInv
-            custTab.loc[row, 'Sales Commission'] = custComm
-            row += 1
-        # Sort customers in descending order by Sales Commission.
-        custTab.sort_values(by=['Sales Commission'], ascending=False,
-                            inplace=True)
-        # Add in subtotals by principal for each customer.
-        row = 0
-        for customer in custTab['Customer'].unique():
-            finalCusts.loc[row, :] = custTab[custTab['Customer'] == customer].iloc[0]
-            custSales = finalReport[finalReport['T-End Cust'] == customer]
-            row += 1
-            for principal in custSales['Principal'].unique():
-                custSub = custSales[custSales['Principal'] == principal]
-                subInv = sum(custSub['Paid-On Revenue'])
-                subComm = sum(custSub['Sales Commission'])
-                finalCusts.loc[row, 'Principal'] = principal
-                finalCusts.loc[row, 'Paid-On Revenue'] = subInv
-                finalCusts.loc[row, 'Sales Commission'] = subComm
-                row += 1
-
         # Write report to file.
-        writer = pd.ExcelWriter(person + ' Sales Report - '
-                                + time.strftime('%Y-%m-%d')
-                                + '.xlsx', engine='xlsxwriter',
+        filename = (person + ' Sales Report - ' + time.strftime('%Y-%m-%d')
+                    + '.xlsx')
+        writer = pd.ExcelWriter(filename, engine='xlsxwriter',
                                 datetime_format='mm/dd/yyyy')
         princTab.to_excel(writer, sheet_name='Principals', index=False)
-        finalCusts.to_excel(writer, sheet_name='Customers', index=False)
-        finalReport.to_excel(writer, sheet_name='Report Data', index=False)
+        finalReport.to_excel(writer, sheet_name='Raw Data', index=False)
         # Format as table in Excel.
         tableFormat(princTab, 'Principals', writer)
-        tableFormat(finalCusts, 'Customers', writer)
-        tableFormat(finalReport, 'Report Data', writer)
-
+        tableFormat(finalReport, 'Raw Data', writer)
         # Try saving the file, exit with error if file is currently open.
         try:
             writer.save()
@@ -383,7 +346,33 @@ def main(runCom):
                   'Please close the file(s) and try again.\n'
                   '***')
             return
-
+        # Create the workbook and add the report sheet.
+        wb = excel.Workbooks.Open(os.getcwd() + '\\' + filename)
+        Principals = wb.Worksheets(1)
+        wb.Sheets.Add(After=Principals)
+        pivotSheet = wb.Worksheets(2)
+        pivotSheet.Name = 'Commission Report'
+        dataSheet = wb.Worksheets('Raw Data')
+        # Grab the report data by selecting the current region.
+        dataRange = dataSheet.Range('A1').CurrentRegion
+        pivotRange = pivotSheet.Range('A1')
+        # Create the pivot table and deploy it on the sheet.
+        pivCache = wb.PivotCaches().Create(SourceType=win32c.xlDatabase,
+                                           SourceData=dataRange,
+                                           Version=win32c.xlPivotTableVersion14)
+        pivTable = pivCache.CreatePivotTable(TableDestination=pivotRange,
+                                             TableName='Commission Data',
+                                             DefaultVersion=win32c.xlPivotTableVersion14)
+        # Drop the data fields into the pivot table.
+        pivTable.PivotFields('T-End Cust').Orientation = win32c.xlRowField
+        pivTable.PivotFields('T-End Cust').Position = 1
+        pivTable.PivotFields('Principal').Orientation = win32c.xlRowField
+        pivTable.PivotFields('Principal').Position = 2        
+        # Add the sum of Paid-On Revenue as the data field.
+        dataField = pivTable.AddDataField(pivTable.PivotFields('Sales Commission'),
+                                            'Sales Comm', win32c.xlSum)
+        dataField.NumberFormat = '$#,##0'
+        wb.Close(SaveChanges=1)
     # %%
     # Fill in the Sales Report Date in Running Commissions.
     runningCom.loc[runningCom['Sales Report Date'] == '',
@@ -449,7 +438,7 @@ def main(runCom):
               '***')
         return
     # Create the workbook and add the report sheet.
-    wb = Excel.Workbooks.Open(os.getcwd() + '\\' + filename)
+    wb = excel.Workbooks.Open(os.getcwd() + '\\' + filename)
     wb.Sheets.Add()
     pivotSheet = wb.Worksheets(1)
     pivotSheet.Name = 'Revenue Report'
@@ -512,4 +501,4 @@ def main(runCom):
           'Reports completed successfully!\n'
           '+++')
     # Close the Excel instance.
-    Excel.Application.Quit()
+    excel.Application.Quit()
