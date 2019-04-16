@@ -97,6 +97,7 @@ def main(filepath):
         PPN = masterLookup['Part Number'].map(lambda x: str(x).lower())
         fullMatches = custMatches[PPN == partNum]
         # Figure out if this entry is a duplicate of any existing entry.
+        duplicate = False
         for matchID in fullMatches.index:
             matchCols = ['CM Sales', 'Design Sales', 'CM', 'T-Name',
                          'T-End Cust']

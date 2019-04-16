@@ -36,7 +36,8 @@ def tableFormat(sheetData, sheetName, wbook):
                     'Ext. Cost', 'Unit Cost', 'Total Commissions',
                     'Sales Commission', 'Invoiced Dollars']
         pctCols = ['Split Percentage', 'Commission Rate',
-                   'Gross Rev Reduction', 'Shared Rev Tier Rate']
+                   'Gross Rev Reduction', 'Shared Rev Tier Rate',
+                   'True Comm %']
         coreCols = ['CM Sales', 'Design Sales', 'T-End Cust', 'T-Name',
                     'CM', 'Invoice Date']
         dateCols = ['Invoice Date', 'Paid Date', 'Sales Report Date',
