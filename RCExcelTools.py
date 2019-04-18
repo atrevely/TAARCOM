@@ -50,11 +50,11 @@ def tableFormat(sheetData, sheetName, wbook):
             formatting = dateFormat
         elif col == 'Quantity':
             formatting = commaFormat
-        elif col == 'Invoice Number':
+        elif col in ['Invoice Number', 'Part Number']:
             # We're going to do some work in order to format the Invoice
             # Number as a number, yet keep leading zeros.
             for row in sheetData.index:
-                invLen = len(sheetData.loc[row, col])
+                invLen = len(str(sheetData.loc[row, col]))
                 # Figure out how many places the number goes to.
                 numPadding = '0'*invLen
                 invNum = pd.to_numeric(sheetData.loc[row, col],
@@ -71,7 +71,7 @@ def tableFormat(sheetData, sheetName, wbook):
                 except TypeError:
                     pass
             # Move to the next column, as we're now done formatting
-            # the Invoice Numbers.
+            # the Invoice/Part Numbers.
             index += 1
             continue
         else:

@@ -330,7 +330,7 @@ def main(runCom):
         princTab.loc[row, 'Sales Commission'] = totComm
 
         # Write report to file.
-        filename = (person + ' Sales Report - ' + time.strftime('%Y-%m-%d')
+        filename = (person + ' Commission Report - ' + time.strftime('%Y-%m-%d')
                     + '.xlsx')
         writer = pd.ExcelWriter(filename, engine='xlsxwriter',
                                 datetime_format='mm/dd/yyyy')
