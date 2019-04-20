@@ -8,7 +8,6 @@ from PyQt5.QtCore import pyqtSlot
 import GenerateMaster
 import MergeFixedEntries
 import SalesReportGenerator
-import MigrateFinishedComm
 
 
 class Stream(QtCore.QObject):
@@ -97,8 +96,8 @@ class GenMast(QMainWindow):
             princList = pd.read_excel('principalList.xlsx', index_col=False)
 
         # Button for generating the master list.
-        self.btnGenMast = QPushButton('Process Files \n to '
-                                      'Running \n Commissions', self)
+        self.btnGenMast = QPushButton('Process Raw Files\nto '
+                                      'Running\nCommissions', self)
         self.btnGenMast.move(650, 400)
         self.btnGenMast.resize(150, 150)
         self.btnGenMast.clicked.connect(self.genMastClicked)
@@ -107,7 +106,7 @@ class GenMast(QMainWindow):
                                    'Commissions.')
 
         # Button for selecting files to compile into master list.
-        self.btnOpenFiles = QPushButton('Select \n Commission Files', self)
+        self.btnOpenFiles = QPushButton('Select Raw\n Commission Files', self)
         self.btnOpenFiles.move(50, 30)
         self.btnOpenFiles.resize(150, 100)
         self.btnOpenFiles.clicked.connect(self.openFilesClicked)
@@ -115,8 +114,8 @@ class GenMast(QMainWindow):
                                      'commission file(s) to process.')
 
         # Button for selecting a current master to append to.
-        self.btnUploadMast = QPushButton('Select \n Running \n '
-                                         'Commissions', self)
+        self.btnUploadMast = QPushButton('Select Running\n'
+                                         'Commissions\nFile', self)
         self.btnUploadMast.move(250, 30)
         self.btnUploadMast.resize(150, 100)
         self.btnUploadMast.clicked.connect(self.uploadMastClicked)
@@ -124,7 +123,8 @@ class GenMast(QMainWindow):
                                       'Running Commissions to use.')
 
         # Button for writing fixed entries.
-        self.btnFixEntries = QPushButton('Copy \n Fixed Entries', self)
+        self.btnFixEntries = QPushButton('Copy Fixed ENF\nEntries to\n'
+                                         'Running\nCommissions', self)
         self.btnFixEntries.move(850, 200)
         self.btnFixEntries.resize(150, 150)
         self.btnFixEntries.clicked.connect(self.fixEntriesClicked)
@@ -137,25 +137,19 @@ class GenMast(QMainWindow):
                                       'date at the end of the filename.')
 
         # Button for generating sales reports.
-        self.btnGenReports = QPushButton('Generate \n Sales Reports', self)
+        self.btnGenReports = QPushButton('Generate Reports\nand Migrate Data\n'
+                                         'to Comm Master', self)
         self.btnGenReports.move(850, 400)
         self.btnGenReports.resize(150, 150)
         self.btnGenReports.clicked.connect(self.genReportsClicked)
         self.btnGenReports.setToolTip('Generate sales reports from a finished '
-                                      'Running Commissions file.')
-
-        # Button for migrated Running Commission to master.
-        self.btnMigrateMaster = QPushButton('Migrate \n to Master', self)
-        self.btnMigrateMaster.move(850, 20)
-        self.btnMigrateMaster.resize(150, 150)
-        self.btnMigrateMaster.clicked.connect(self.migrateMasterClicked)
-        self.btnMigrateMaster.setToolTip('Migrate a finished Running '
-                                         'Commissions file to Commissions '
-                                         'Master.')
+                                      'Running Commissions file,\nthen '
+                                      'migrate the Running Commissions data '
+                                      'over to the Commissions Master.')
 
         # Button for clearing filename and master choices.
-        self.btnClearAll = QPushButton('Clear Filename(s) \n and Running \n'
-                                       'Commissions \n Selections', self)
+        self.btnClearAll = QPushButton('Clear Filename(s)\nand Running\n'
+                                       'Commissions\nSelections', self)
         self.btnClearAll.move(650, 200)
         self.btnClearAll.resize(150, 150)
         self.btnClearAll.clicked.connect(self.clearAllClicked)
@@ -204,11 +198,6 @@ class GenMast(QMainWindow):
         worker = Worker(self.fixEntriesExecute)
         self.threadpool.start(worker)
 
-    def migrateMasterClicked(self):
-        """Migrate a finished Running Commissions to Commissions Master."""
-        worker = Worker(self.migrateMasterExecute)
-        self.threadpool.start(worker)
-
     def clearAllClicked(self):
         """Clear the filenames and master variables."""
         self.filenames = []
@@ -248,28 +237,6 @@ class GenMast(QMainWindow):
 
         elif princ == '(No Selection)':
             print('Please select a principal from the dropdown menu!\n'
-                  '---')
-
-    def migrateMasterExecute(self):
-        """Runs function for appending Running Commissions to master."""
-        # Check to see if we're ready to process.
-        if self.master:
-            # Turn buttons off.
-            self.lockButtons()
-            # Run the GenerateMaster.py file.
-            try:
-                MigrateFinishedComm.main(self.master)
-            except Exception as error:
-                print('Unexpected Python error:\n'
-                      + str(error)
-                      + '\nPlease contact your local coder.')
-            # Clear the filename selections.
-            self.filenames = []
-            # Turn buttons back on.
-            self.restoreButtons()
-        elif not self.master:
-            print('No Running Commissions file selected!\n'
-                  'Use the Select Commission Files button to select files.\n'
                   '---')
 
     def genReportsExecute(self):
@@ -359,7 +326,6 @@ class GenMast(QMainWindow):
         self.princMenu.setEnabled(False)
         self.btnFixEntries.setEnabled(False)
         self.btnGenReports.setEnabled(False)
-        self.btnMigrateMaster.setEnabled(False)
 
     def restoreButtons(self):
         self.btnGenMast.setEnabled(True)
@@ -369,7 +335,6 @@ class GenMast(QMainWindow):
         self.princMenu.setEnabled(True)
         self.btnFixEntries.setEnabled(True)
         self.btnGenReports.setEnabled(True)
-        self.btnMigrateMaster.setEnabled(True)
 
 
 class Worker(QtCore.QRunnable):

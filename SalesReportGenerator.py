@@ -1,6 +1,8 @@
 import pandas as pd
 import time
-from RCExcelTools import tableFormat, formDate
+import datetime
+from dateutil.parser import parse
+from RCExcelTools import tableFormat, formDate, saveError
 from xlrd import XLRDError
 import win32com.client
 import os
@@ -8,11 +10,12 @@ import os
 
 # The main function.
 def main(runCom):
-    """Generates sales reports.
-
-    Finds entries in Running Commissions filters them into reports for each
-    salesperson, as well as an overall report.
+    """Generates sales reports, the appends the Running Commissions data to the
+    Commissions Master.
     """
+    # Set the directory for the data input/output.
+    dataDir = 'Z:/MK Working Commissions/'
+    print('Loading the data from Commissions Master...')
     # ----------------------------------------------
     # Load and prepare the Running Commissions file.
     # ----------------------------------------------
@@ -63,10 +66,11 @@ def main(runCom):
     # Load and prepare the Commissions Master file.
     # ---------------------------------------------
     # Load up the current Commissions Master file.
-    outDir = 'Z:/MK Working Commissions/'
     try:
-        comMast = pd.read_excel(outDir + 'Commissions Master.xlsx', 'Master',
+        comMast = pd.read_excel(dataDir + 'Commissions Master.xlsx', 'Master',
                                 dtype=str)
+        masterFiles = pd.read_excel(dataDir + 'Commissions Master.xlsx',
+                                    'Files Processed').fillna('')
     except FileNotFoundError:
         print('No Commissions Master file found!\n'
               '***')
@@ -93,6 +97,27 @@ def main(runCom):
     comMast['Invoice Date'] = comMast['Invoice Date'].map(
             lambda x: formDate(x))
 
+    # Determine the commissions months that are currently in the Master.
+    commMonths = comMast['Comm Month'].unique()
+    try:
+        commMonths = [parse(i) for i in commMonths]
+    except ValueError:
+        print('Error parsing dates in Comm Month column of Commissions Master!'
+              '\nPlease check that all dates are in standard formatting and '
+              'try again.\n***')
+        return
+    # Grab the most recent month in Commissions Master
+    lastMonth = max(commMonths)
+    # Increment the month.
+    currentMonth = lastMonth.month + 1
+    currentYear = lastMonth.year
+    # If current month is over 12, then it's time to go to January.
+    if currentMonth > 12:
+        currentMonth = 1
+        currentYear += 1
+    # Tag the new data as the current month/year.
+    runningCom['Comm Month'] = str(currentYear) + '-' + str(currentMonth)
+
     # ---------------------------------------
     # Load and prepare the Account List file.
     # ---------------------------------------
@@ -107,6 +132,45 @@ def main(runCom):
         print('Account List tab names incorrect!\n'
               'Make sure the main tab is named Allacct.\n'
               '***')
+        return
+    # -----------------------------------
+    # Load and prepare the Master Lookup.
+    # -----------------------------------
+    if os.path.exists('Lookup Master - Current.xlsx'):
+        masterLookup = pd.read_excel('Lookup Master - Current.xlsx').fillna('')
+        # Check the column names.
+        lookupCols = ['CM Sales', 'Design Sales', 'CM Split',
+                      'Reported Customer', 'CM', 'Part Number', 'T-Name',
+                      'T-End Cust', 'Last Used', 'Principal', 'City',
+                      'Date Added']
+        missCols = [i for i in lookupCols if i not in list(masterLookup)]
+        if missCols:
+            print('The following columns were not detected in '
+                  'Lookup Master.xlsx:\n%s' %
+                  ', '.join(map(str, missCols))
+                  + '\n***')
+            return
+    else:
+        print('---\n'
+              'No Lookup Master found!\n'
+              'Please make sure Lookup Master - Current.xlsx is '
+              'in the directory.\n'
+              '***')
+        return
+
+    # ------------------------------------------------------------------
+    # Check to make sure new files aren't already in Commissions Master.
+    # ------------------------------------------------------------------
+    # Check if we've duplicated any files.
+    filenames = masterFiles['Filename']
+    duplicates = list(set(filenames).intersection(filesProcessed['Filename']))
+    # Don't let duplicate files get processed.
+    if duplicates:
+        # Let us know we found duplictes and removed them.
+        print('---\n'
+              'The following files are already in Commissions Master:\n%s' %
+              ', '.join(map(str, duplicates)) + '\nPlease check the files and '
+              'try again.\n***')
         return
 
     print('Preparing report data...')
@@ -330,8 +394,8 @@ def main(runCom):
         princTab.loc[row, 'Sales Commission'] = totComm
 
         # Write report to file.
-        filename = (person + ' Commission Report - ' + time.strftime('%Y-%m-%d')
-                    + '.xlsx')
+        filename = (person + ' Commission Report - '
+                    + time.strftime('%Y-%m-%d') + '.xlsx')
         writer = pd.ExcelWriter(filename, engine='xlsxwriter',
                                 datetime_format='mm/dd/yyyy')
         princTab.to_excel(writer, sheet_name='Principals', index=False)
@@ -439,6 +503,9 @@ def main(runCom):
               'Please close the file(s) and try again.\n'
               '***')
         return
+    # -------------------------------------------
+    # Add the pivot table for revenue by quarter.
+    # -------------------------------------------
     # Create the workbook and add the report sheet.
     wb = excel.Workbooks.Open(os.getcwd() + '\\' + filename)
     wb.Sheets.Add()
@@ -470,12 +537,104 @@ def main(runCom):
     dataField.NumberFormat = '$#,##0'
     wb.Close(SaveChanges=1)
 
-    # ------------------------------------------------------
-    # Save the Running Commissions with entered report date.
-    # ------------------------------------------------------
-    writer1 = pd.ExcelWriter('Running Commissions '
-                             + time.strftime('%Y-%m-%d') + ' Reported'
-                             + '.xlsx', engine='xlsxwriter',
+    # ------------------------------------------------------------------------
+    # Go through each line of the finished Running Commissions and use them to
+    # update the Lookup Master.
+    # ------------------------------------------------------------------------
+    # Don't copy over INDIVIDUAL, MISC, or ALLOWANCE.
+    noCopy = ['INDIVIDUAL', 'UNKNOWN', 'ALLOWANCE']
+    paredID = [i for i in runCom.index
+               if not any(j in runCom.loc[i, 'T-End Cust'].upper()
+                          for j in noCopy)]
+    for row in paredID:
+        # First match reported customer.
+        repCust = str(runCom.loc[row, 'Reported Customer']).lower()
+        POSCust = masterLookup['Reported Customer'].map(
+                lambda x: str(x).lower())
+        custMatches = masterLookup[repCust == POSCust]
+        # Now match part number.
+        partNum = str(runCom.loc[row, 'Part Number']).lower()
+        PPN = masterLookup['Part Number'].map(lambda x: str(x).lower())
+        fullMatches = custMatches[PPN == partNum]
+        # Figure out if this entry is a duplicate of any existing entry.
+        duplicate = False
+        for matchID in fullMatches.index:
+            matchCols = ['CM Sales', 'Design Sales', 'CM', 'T-Name',
+                         'T-End Cust']
+            duplicate = all(fullMatches.loc[matchID, i] == runCom.loc[row, i]
+                            for i in matchCols)
+            if duplicate:
+                break
+        # If it's not an exact duplicate, add it to the Lookup Master.
+        if not duplicate:
+            lookupCols = ['CM Sales', 'Design Sales', 'CM', 'T-Name',
+                          'T-End Cust', 'Reported Customer', 'Principal',
+                          'Part Number', 'City']
+            newLookup = runCom.loc[row, lookupCols]
+            newLookup['Date Added'] = datetime.datetime.now().date()
+            newLookup['Last Used'] = datetime.datetime.now().date()
+            masterLookup = masterLookup.append(newLookup, ignore_index=True)
+
+    # Append the new Running Commissions.
+    comMast = comMast.append(runCom, ignore_index=True, sort=False)
+    masterFiles = masterFiles.append(filesProcessed, ignore_index=True,
+                                     sort=False)
+
+    # Make sure all the dates are formatted correctly.
+    comMast['Invoice Date'] = comMast['Invoice Date'].map(
+            lambda x: formDate(x))
+    masterFiles['Date Added'] = masterFiles['Date Added'].map(
+            lambda x: formDate(x))
+    masterFiles['Paid Date'] = masterFiles['Paid Date'].map(
+            lambda x: formDate(x))
+    # Convert commission dollars to numeric.
+    masterFiles['Total Commissions'] = pd.to_numeric(
+            masterFiles['Total Commissions'], errors='coerce').fillna('')
+    # Convert applicable columns to numeric.
+    numCols = ['Quantity', 'Ext. Cost', 'Invoiced Dollars',
+               'Paid-On Revenue', 'Actual Comm Paid', 'Unit Cost',
+               'Unit Price', 'CM Split', 'Year', 'Sales Commission',
+               'Split Percentage', 'Commission Rate',
+               'Gross Rev Reduction', 'Shared Rev Tier Rate']
+    for col in numCols:
+        try:
+            comMast[col] = pd.to_numeric(comMast[col],
+                                         errors='coerce').fillna('')
+        except KeyError:
+            pass
+    # Convert individual numbers to numeric in rest of columns.
+    mixedCols = [col for col in list(comMast) if col not in numCols]
+    # Invoice/part numbers sometimes has leading zeros we'd like to keep.
+    mixedCols.remove('Invoice Number')
+    mixedCols.remove('Part Number')
+    # The INF gets read in as infinity, so skip the principal column.
+    mixedCols.remove('Principal')
+    for col in mixedCols:
+        comMast[col] = comMast[col].map(
+                lambda x: pd.to_numeric(x, errors='ignore'))
+
+    # %%
+    # Save the files.
+    fname1 = dataDir + 'Commissions Master.xlsx'
+    fname2 = 'Lookup Master - Current.xlsx'
+
+    if saveError(fname1, fname2):
+        print('---\n'
+              'One or more of these files are currently open in Excel:\n'
+              'Running Commissions, Entries Need Fixing, Lookup Master.\n'
+              'Please close these files and try again.\n'
+              '***')
+        return
+    # Write the Commissions Master file.
+    writer = pd.ExcelWriter(fname1, engine='xlsxwriter',
+                            datetime_format='mm/dd/yyyy')
+    comMast.to_excel(writer, sheet_name='Master', index=False)
+    masterFiles.to_excel(writer, sheet_name='Files Processed', index=False)
+    # Format everything in Excel.
+    tableFormat(comMast, 'Master', writer)
+    tableFormat(masterFiles, 'Files Processed', writer)
+
+    writer1 = pd.ExcelWriter(fname2, engine='xlsxwriter',
                              datetime_format='mm/dd/yyyy')
     runningCom.to_excel(writer1, sheet_name='Master', index=False)
     filesProcessed.to_excel(writer1, sheet_name='Files Processed',
@@ -490,17 +649,14 @@ def main(runCom):
     tableFormat(salesTot, 'Salesperson Totals', writer1)
     tableFormat(princTab, 'Principal Totals', writer1)
 
-    # Try saving the file, exit with error if file is currently open.
-    try:
-        writer1.save()
-    except IOError:
-        print('---\n'
-              'Final report file is open in Excel!\n'
-              'Please close the file and try again.\n'
-              '***')
-        return
+    # Save the files.
+    writer.save()
+    writer1.save()
     print('---\n'
-          'Reports completed successfully!\n'
+          'Sales reports finished successfully!\n'
+          '---\n'
+          'Commissions Master updated.\n'
+          'Lookup Master updated.\n'
           '+++')
     # Close the Excel instance.
     excel.Application.Quit()

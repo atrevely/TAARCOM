@@ -506,9 +506,8 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
     if duplicates:
         # Let us know we found duplictes and removed them.
         print('---\n'
-              'The following files are already in Running Commissions:')
-        for file in list(duplicates):
-            print(file)
+              'The following files are already in Running Commissions:\n%s' %
+              ', '.join(map(str, duplicates)))
         print('Duplicate files were removed from processing.')
         # Exit if no new files are left.
         if not filenames:
