@@ -15,6 +15,8 @@ def main(runCom):
     """
     # Set the directory for the data input/output.
     dataDir = 'Z:/MK Working Commissions/'
+    lookDir = 'Z:/Commissions Lookup/'
+
     print('Loading the data from Commissions Master...')
     # ----------------------------------------------
     # Load and prepare the Running Commissions file.
@@ -123,7 +125,8 @@ def main(runCom):
     # ---------------------------------------
     # Load up the Account List.
     try:
-        acctList = pd.read_excel('Master Account List.xlsx', 'Allacct')
+        acctList = pd.read_excel(lookDir + 'Master Account List.xlsx',
+                                 'Allacct')
     except FileNotFoundError:
         print('No Account List file found!\n'
               '***')
@@ -136,8 +139,8 @@ def main(runCom):
     # -----------------------------------
     # Load and prepare the Master Lookup.
     # -----------------------------------
-    if os.path.exists('Lookup Master - Current.xlsx'):
-        masterLookup = pd.read_excel('Lookup Master - Current.xlsx').fillna('')
+    if os.path.exists(lookDir + 'Lookup Master - Current.xlsx'):
+        masterLookup = pd.read_excel(lookDir + 'Lookup Master - Current.xlsx').fillna('')
         # Check the column names.
         lookupCols = ['CM Sales', 'Design Sales', 'CM Split',
                       'Reported Customer', 'CM', 'Part Number', 'T-Name',

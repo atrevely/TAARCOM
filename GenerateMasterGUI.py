@@ -49,8 +49,9 @@ class GenMast(QMainWindow):
         # Initialize global variables.
         global fieldMappings
         # Upload field mappings, if found.
-        if os.path.exists('fieldMappings.xlsx'):
-            fieldMappings = pd.read_excel('fieldMappings.xlsx',
+        lookDir = 'Z:/Commissions Lookup/'
+        if os.path.exists(lookDir + 'fieldMappings.xlsx'):
+            fieldMappings = pd.read_excel(lookDir + 'fieldMappings.xlsx',
                                           index_col=False)
         else:
             print('No field mappings found!\n'
@@ -103,7 +104,8 @@ class GenMast(QMainWindow):
         self.btnGenMast.clicked.connect(self.genMastClicked)
         self.btnGenMast.setToolTip('Process selected raw data files and '
                                    'append them to the selected Running '
-                                   'Commissions.')
+                                   'Commissions.\nIf no Running Commissions '
+                                   'is selected, starts a new one.')
 
         # Button for selecting files to compile into master list.
         self.btnOpenFiles = QPushButton('Select Raw\n Commission Files', self)
@@ -142,17 +144,19 @@ class GenMast(QMainWindow):
         self.btnGenReports.move(850, 400)
         self.btnGenReports.resize(150, 150)
         self.btnGenReports.clicked.connect(self.genReportsClicked)
-        self.btnGenReports.setToolTip('Generate sales reports from a finished '
+        self.btnGenReports.setToolTip('Generate commission and revenue '
+                                      'reports from a finished '
                                       'Running Commissions file,\nthen '
                                       'migrate the Running Commissions data '
                                       'over to the Commissions Master.')
 
         # Button for clearing filename and master choices.
-        self.btnClearAll = QPushButton('Clear Filename(s)\nand Running\n'
-                                       'Commissions\nSelections', self)
-        self.btnClearAll.move(650, 200)
-        self.btnClearAll.resize(150, 150)
+        self.btnClearAll = QPushButton('Clear\nSelections', self)
+        self.btnClearAll.move(450, 30)
+        self.btnClearAll.resize(150, 100)
         self.btnClearAll.clicked.connect(self.clearAllClicked)
+        self.btnClearAll.setToolTip('Clear all selected files from the '
+                                    'workspace.')
 
         # Dropdown menu for selecting principal.
         self.princMenu = QComboBox(self)
