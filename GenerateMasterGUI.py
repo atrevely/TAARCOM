@@ -48,8 +48,9 @@ class GenMast(QMainWindow):
 
         # Initialize global variables.
         global fieldMappings
-        # Upload field mappings, if found.
+        global lookDir
         lookDir = 'Z:/Commissions Lookup/'
+        # Upload field mappings, if found.
         if os.path.exists(lookDir + 'fieldMappings.xlsx'):
             fieldMappings = pd.read_excel(lookDir + 'fieldMappings.xlsx',
                                           index_col=False)
@@ -59,16 +60,16 @@ class GenMast(QMainWindow):
                   '***')
 
         # Try finding/loading the supporting files.
-        if not os.path.exists('Lookup Master - Current.xlsx'):
+        if not os.path.exists(lookDir + 'Lookup Master - Current.xlsx'):
             print('No Lookup Master found!\n'
                   'Please make sure Lookup Master is in the directory.\n'
                   '***')
-        if not os.path.exists('distributorLookup.xlsx'):
+        if not os.path.exists(lookDir + 'distributorLookup.xlsx'):
             print('No distributor lookup found!\n'
                   'Please make sure distributorLookup.xlsx '
                   'is in the directory.\n'
                   '***')
-        if not os.path.exists('principalList.xlsx'):
+        if not os.path.exists(lookDir + 'principalList.xlsx'):
             print('No principal list found!\n'
                   'Please make sure principalList.xlsx '
                   'is in the directory.\n'
@@ -92,9 +93,10 @@ class GenMast(QMainWindow):
         """Creates UI window on launch."""
         # Check for existence of principal list file.
         princList = None
-        if os.path.exists('principalList.xlsx'):
+        if os.path.exists(lookDir + 'principalList.xlsx'):
             # Load principal list.
-            princList = pd.read_excel('principalList.xlsx', index_col=False)
+            princList = pd.read_excel(lookDir + 'principalList.xlsx',
+                                      index_col=False)
 
         # Button for generating the master list.
         self.btnGenMast = QPushButton('Process Raw Files\nto '
