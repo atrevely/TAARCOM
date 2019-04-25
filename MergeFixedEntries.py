@@ -235,8 +235,8 @@ def main(runCom):
     # Check if the files we're going to save are open already.
     fname1 = outDir + 'Running Commissions ' + comDate
     fname2 = outDir + 'Entries Need Fixing ' + comDate
-    fname3 = 'Lookup Master - Current.xlsx'
-    fname4 = 'Quarantined Lookups.xlsx'
+    fname3 = lookDir + 'Lookup Master - Current.xlsx'
+    fname4 = lookDir + 'Quarantined Lookups.xlsx'
     if saveError(fname1, fname2, fname3, fname4):
         print('---\n'
               'One or more files are currently open in Excel!\n'

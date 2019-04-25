@@ -629,9 +629,9 @@ def main(runCom):
     # %%
     # Save the files.
     fname1 = dataDir + 'Commissions Master.xlsx'
-    fname2 = ('Running Commissions ' + time.strftime('%Y-%m-%d')
+    fname2 = (dataDir + 'Running Commissions ' + time.strftime('%Y-%m-%d')
               + ' Reported.xlsx')
-    fname3 = 'Lookup Master - Current.xlsx'
+    fname3 = lookDir + 'Lookup Master - Current.xlsx'
 
     if saveError(fname1, fname2, fname3):
         print('---\n'

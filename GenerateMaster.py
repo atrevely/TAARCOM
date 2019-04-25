@@ -980,7 +980,7 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
     currentTime = time.strftime('%Y-%m-%d-%H%M')
     fname1 = outDir + 'Running Commissions ' + currentTime + '.xlsx'
     fname2 = outDir + 'Entries Need Fixing ' + currentTime + '.xlsx'
-    fname3 = 'Lookup Master - Current.xlsx'
+    fname3 = lookDir + 'Lookup Master - Current.xlsx'
     if saveError(fname1, fname2, fname3):
         print('---\n'
               'One or more of these files are currently open in Excel:\n'
