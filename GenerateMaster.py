@@ -552,7 +552,8 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
 
     # Read in the Master Lookup. Exit if not found.
     if os.path.exists(lookDir + 'Lookup Master - Current.xlsx'):
-        masterLookup = pd.read_excel(lookDir + 'Lookup Master - Current.xlsx').fillna('')
+        masterLookup = pd.read_excel(lookDir + 'Lookup Master - '
+                                     'Current.xlsx').fillna('')
         # Check the column names.
         lookupCols = ['CM Sales', 'Design Sales', 'CM Split',
                       'Reported Customer', 'CM', 'Part Number', 'T-Name',

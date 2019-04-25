@@ -140,7 +140,8 @@ def main(runCom):
     # Load and prepare the Master Lookup.
     # -----------------------------------
     if os.path.exists(lookDir + 'Lookup Master - Current.xlsx'):
-        masterLookup = pd.read_excel(lookDir + 'Lookup Master - Current.xlsx').fillna('')
+        masterLookup = pd.read_excel(lookDir + 'Lookup Master - '
+                                     'Current.xlsx').fillna('')
         # Check the column names.
         lookupCols = ['CM Sales', 'Design Sales', 'CM Split',
                       'Reported Customer', 'CM', 'Part Number', 'T-Name',
@@ -193,9 +194,9 @@ def main(runCom):
     # Columns appended from Running Commissions.
     colAppend = list(runningCom)
 
-    # --------------------------------------------------------------------
-    # Combine and tag data for the quarters that we're going to report on.
-    # --------------------------------------------------------------------
+    # ----------------------------------------------------------------------
+    # Combine and tag revenue data for the quarters that we're reporting on.
+    # ----------------------------------------------------------------------
     # Grab the quarters in Commission Master and Running Commissions.
     comMastQuarters = comMast['Quarter Shipped'].unique()
     runComQuarters = runningCom['Quarter Shipped'].unique()
@@ -220,6 +221,27 @@ def main(runCom):
         revDat.loc[row, 'CDS'] = revDat.loc[row, 'Design Sales']
     # Also grab the section of the data that aren't 80/20 splits.
     splitDat = revDat[revDat['CM Split'] > 20]
+
+    # --------------------------------------------------------
+    # Combine and tag commission data for the current quarter.
+    # --------------------------------------------------------
+    # Figure out what slice of commissions data is in the current quarter.
+    try:
+        commDates = comMast['Comm Month'].map(lambda x: parse(x))
+    except TypeError:
+        print('Error reading month in Comm Month column!\n'
+              'Please make sure all months are in YYYY-MM format.\n'
+              '***')
+        return
+    # Filter to data in this year.
+    yearData = comMast[commDates.map(lambda x: x.year) == currentYear]
+    # Determine how many months back we need to go.
+    numPrevMos = (currentMonth - 1) % 3
+    months = range(currentMonth, currentMonth - numPrevMos - 1, -1)
+    dataMos = yearData['Comm Month'].map(lambda x: parse(x).month)
+    qtrData = yearData[dataMos.isin(list(months))]
+    # Compile the commissions data.
+    commData = qtrData.append(runningCom, ingore_index=True, sort=False)
 
     # ----------------------------------
     # Open Excel using the win32c tools.
@@ -287,18 +309,18 @@ def main(runCom):
         pivTable.PivotFields('Principal').Orientation = win32c.xlPageField
         # Add the sum of Paid-On Revenue as the data field.
         dataField = pivTable.AddDataField(pivTable.PivotFields('Paid-On Revenue'),
-                                            'Revenue', win32c.xlSum)
+                                          'Revenue', win32c.xlSum)
         dataField.NumberFormat = '$#,##0'
         wb.Close(SaveChanges=1)
 
-        # --------------------------------------------------------------
-        # Create the sales reports for each salesperson, using all data.
-        # --------------------------------------------------------------
+        # --------------------------------------------------------------------
+        # Create the commissions reports for each salesperson, using all data.
+        # --------------------------------------------------------------------
         # Find sales entries for the salesperson.
-        CM = runningCom['CM Sales'] == person
-        Design = runningCom['Design Sales'] == person
+        CM = commData['CM Sales'] == person
+        Design = commData['Design Sales'] == person
         # Grab entries that are CM Sales for this salesperson.
-        CMSales = runningCom[[x and not y for x, y in zip(CM, Design)]]
+        CMSales = commData[[x and not y for x, y in zip(CM, Design)]]
         if CMSales.shape[0]:
             # Determine share of sales.
             CMOnly = CMSales[CMSales['Design Sales'] == '']
@@ -315,7 +337,7 @@ def main(runCom):
             CMWithDesign = pd.DataFrame(columns=colAppend)
 
         # Grab entries that are Design Sales only.
-        designSales = runningCom[[not x and y for x, y in zip(CM, Design)]]
+        designSales = commData[[not x and y for x, y in zip(CM, Design)]]
         if designSales.shape[0]:
             # Determine share of sales.
             designOnly = designSales[designSales['CM Sales'] == '']
@@ -332,7 +354,7 @@ def main(runCom):
             designWithCM = pd.DataFrame(columns=colAppend)
 
         # Grab CM + Design Sales entries.
-        dualSales = runningCom[[x and y for x, y in zip(CM, Design)]]
+        dualSales = commData[[x and y for x, y in zip(CM, Design)]]
         if dualSales.shape[0]:
             dualSales['Sales Percent'] = 100
         else:
