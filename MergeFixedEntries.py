@@ -34,6 +34,7 @@ def main(runCom):
 
     # Set the directory for saving output files.
     outDir = 'Z:/MK Working Commissions/'
+    lookDir = 'Z:/Commissions Lookup/'
 
     # Track commission dollars.
     try:
@@ -65,8 +66,8 @@ def main(runCom):
         return
 
     # Read in the Master Lookup. Exit if not found.
-    if os.path.exists('Lookup Master - Current.xlsx'):
-        mastLook = pd.read_excel('Lookup Master - Current.xlsx').fillna('')
+    if os.path.exists(lookDir + 'Lookup Master - Current.xlsx'):
+        mastLook = pd.read_excel(lookDir + 'Lookup Master - Current.xlsx').fillna('')
         # Check the column names.
         lookupCols = ['CM Sales', 'Design Sales', 'CM Split',
                       'Reported Customer', 'CM', 'Part Number', 'T-Name',
@@ -87,8 +88,8 @@ def main(runCom):
         return
 
     # Load the Quarantined Lookups.
-    if os.path.exists('Quarantined Lookups.xlsx'):
-        quarantined = pd.read_excel('Quarantined Lookups.xlsx').fillna('')
+    if os.path.exists(lookDir + 'Quarantined Lookups.xlsx'):
+        quarantined = pd.read_excel(lookDir + 'Quarantined Lookups.xlsx').fillna('')
     else:
         print('No Quarantied Lookups file found!\n'
               'Please make sure Quarantined Lookups.xlsx '
@@ -234,8 +235,8 @@ def main(runCom):
     # Check if the files we're going to save are open already.
     fname1 = outDir + 'Running Commissions ' + comDate
     fname2 = outDir + 'Entries Need Fixing ' + comDate
-    fname3 = 'Lookup Master - Current.xlsx'
-    fname4 = 'Quarantined Lookups.xlsx'
+    fname3 = lookDir + 'Lookup Master - Current.xlsx'
+    fname4 = lookDir + 'Quarantined Lookups.xlsx'
     if saveError(fname1, fname2, fname3, fname4):
         print('---\n'
               'One or more files are currently open in Excel!\n'

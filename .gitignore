@@ -2,14 +2,5 @@
 *.xls
 *.pyc
 __pycache__/
-!ATPCustomerLookup.xlsx
-!distributorLookup.xlsx
-!fieldMappings.xlsx
-!Lookup Master - Current.xlsx
-!Mill-Max Invoice Log.xlsx
-!principalList.xlsx
-!rootCustomerMappings.xlsx
-!Master Account List.xlsx
-!Quarantined Lookups.xlsx
 LookupMasterIntegrator2.py
 RevReportTester.py
