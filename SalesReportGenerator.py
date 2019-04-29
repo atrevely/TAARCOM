@@ -458,8 +458,9 @@ def main(runCom):
         pivTable.PivotFields('T-End Cust').Orientation = win32c.xlRowField
         pivTable.PivotFields('T-End Cust').Position = 1
         pivTable.PivotFields('Principal').Orientation = win32c.xlRowField
-        pivTable.PivotFields('Principal').Position = 2        
-        # Add the sum of Paid-On Revenue as the data field.
+        pivTable.PivotFields('Principal').Position = 2 
+        pivTable.PivotFields('Comm Month').Orientation = win32c.xlColumnField
+        # Add the sum of Sales Commissions as the data field.
         dataField = pivTable.AddDataField(pivTable.PivotFields('Sales Commission'),
                                             'Sales Comm', win32c.xlSum)
         dataField.NumberFormat = '$#,##0'

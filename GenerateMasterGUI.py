@@ -48,7 +48,6 @@ class GenMast(QMainWindow):
 
         # Initialize global variables.
         global fieldMappings
-        global lookDir
         lookDir = 'Z:/Commissions Lookup/'
         # Upload field mappings, if found.
         if os.path.exists(lookDir + 'fieldMappings.xlsx'):
@@ -93,6 +92,7 @@ class GenMast(QMainWindow):
         """Creates UI window on launch."""
         # Check for existence of principal list file.
         princList = None
+        lookDir = 'Z:/Commissions Lookup/'
         if os.path.exists(lookDir + 'principalList.xlsx'):
             # Load principal list.
             princList = pd.read_excel(lookDir + 'principalList.xlsx',
