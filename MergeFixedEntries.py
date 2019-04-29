@@ -67,7 +67,8 @@ def main(runCom):
 
     # Read in the Master Lookup. Exit if not found.
     if os.path.exists(lookDir + 'Lookup Master - Current.xlsx'):
-        mastLook = pd.read_excel(lookDir + 'Lookup Master - Current.xlsx').fillna('')
+        mastLook = pd.read_excel(lookDir +
+                                 'Lookup Master - Current.xlsx').fillna('')
         # Check the column names.
         lookupCols = ['CM Sales', 'Design Sales', 'CM Split',
                       'Reported Customer', 'CM', 'Part Number', 'T-Name',
@@ -89,7 +90,8 @@ def main(runCom):
 
     # Load the Quarantined Lookups.
     if os.path.exists(lookDir + 'Quarantined Lookups.xlsx'):
-        quarantined = pd.read_excel(lookDir + 'Quarantined Lookups.xlsx').fillna('')
+        quarantined = pd.read_excel(lookDir +
+                                    'Quarantined Lookups.xlsx').fillna('')
     else:
         print('No Quarantied Lookups file found!\n'
               'Please make sure Quarantined Lookups.xlsx '
@@ -175,7 +177,8 @@ def main(runCom):
             else:
                 print('Mismatch in commission dollars found in Entries '
                       'Need Fixing on row '
-                      + str(row + 2)
+                      + str(row + 2) + '\n Check to make sure lines were not '
+                      'deleted from the Running Commissions.'
                       + '\n***')
                 return
             # Delete the fixed entry from the Needs Fixing file.
@@ -184,6 +187,8 @@ def main(runCom):
     # %%
     # Make sure all the dates are formatted correctly.
     runningCom['Invoice Date'] = runningCom['Invoice Date'].map(
+            lambda x: formDate(x))
+    fixList['Invoice Date'] = fixList['Invoice Date'].map(
             lambda x: formDate(x))
     mastLook['Last Used'] = mastLook['Last Used'].map(lambda x: formDate(x))
     mastLook['Date Added'] = mastLook['Date Added'].map(lambda x: formDate(x))
@@ -195,6 +200,7 @@ def main(runCom):
     cols.remove('Principal')
     for col in cols:
         runningCom[col] = pd.to_numeric(runningCom[col], errors='ignore')
+        fixList[col] = pd.to_numeric(fixList[col], errors='ignore')
     # Check to make sure commission dollars still match.
     comm = pd.to_numeric(runningCom['Actual Comm Paid'],
                          errors='coerce').fillna(0)
