@@ -268,8 +268,9 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
             sheet['Comm Source'] = 'Cost'
         elif 'Part Number' not in list(sheet) and invNum:
             # We need to load in the part number log.
-            if os.path.exists('Mill-Max Invoice Log.xlsx'):
-                MMaxLog = pd.read_excel('Mill-Max Invoice Log.xlsx',
+            lookDir = 'Z:/Commissions Lookup/'
+            if os.path.exists(lookDir + 'Mill-Max Invoice Log.xlsx'):
+                MMaxLog = pd.read_excel(lookDir + 'Mill-Max Invoice Log.xlsx',
                                         'Logs', dtype=str).fillna('')
                 print('Looking up part numbers from invoice log.\n'
                       '---')
