@@ -215,7 +215,8 @@ class GenMast(QMainWindow):
         """Runs function for processing new files to master."""
         # Check to see if we're ready to process.
         princ = self.princMenu.currentText()
-        mapExists = os.path.exists('fieldMappings.xlsx')
+        lookDir = 'Z:/Commissions Lookup/'
+        mapExists = os.path.exists(lookDir + 'fieldMappings.xlsx')
         if self.filenames and mapExists and princ != '(No Selection)':
             # Turn buttons off.
             self.lockButtons()
