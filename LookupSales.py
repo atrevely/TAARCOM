@@ -233,7 +233,7 @@ def main(filepath):
                 insFile.loc[row, 'Sales'] = match['Salesperson'].iloc[0]
             else:
                 # Record that the customer is new.
-                insFile.loc[row, 'New T-Cust'] = 'Y' 
+                insFile.loc[row, 'New T-Cust'] = 'Y'
         # Convert applicable entries to numeric.
         for col in list(insFile):
             insFile.loc[row, col] = pd.to_numeric(insFile.loc[row, col],
@@ -251,11 +251,11 @@ def main(filepath):
               '***')
         return
 
-    # Write the Insight file, which now contains salespeople.
+    # Write the Digikey Insight file, which now contains salespeople.
     writer1 = pd.ExcelWriter(fname1, engine='xlsxwriter',
                              datetime_format='mm/dd/yyyy')
     insFile.to_excel(writer1, sheet_name='Data', index=False)
-    # Format as table in Excel.
+    # Format in Excel.
     tableFormat(insFile, 'Data', writer1)
 
     # Save the files.
@@ -263,4 +263,4 @@ def main(filepath):
 
     print('---\n'
           'Salespeople successfully looked up!\n'
-          '+++')
+          'New file saved as: ' + fname1 + '\n+++')

@@ -95,7 +95,7 @@ def main(filepaths):
     # ------------------
     # Set the directory paths to the server.
     lookDir = 'Z:/Commissions Lookup/'
-    dataDir = 'Z:/Digikey Data/'
+    dataDir = 'D:/'
     # Load the Digikey Insights Master file.
     if os.path.exists(dataDir + 'Digikey Insight Master.xlsx'):
         insMast = pd.read_excel(dataDir + 'Digikey Insight Master.xlsx',
@@ -173,7 +173,7 @@ def main(filepaths):
 
     # Create the master dataframe to append to.
     finalData = pd.DataFrame(columns=inputData[0].colums)
-
+    # Copy over the comments.
     fileNum = 0
     for sheet in inputData:
         print('---\n'
