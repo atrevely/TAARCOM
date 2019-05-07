@@ -90,10 +90,12 @@ def main(filepath):
     # ----------------------------
     # Load in the necessary files.
     # ----------------------------
+    # Set the directory paths to the server.
+    lookDir = 'Z:/Commissions Lookup/'
     # Load the Root Customer Mappings file.
-    if os.path.exists('rootCustomerMappings.xlsx'):
+    if os.path.exists(lookDir + 'rootCustomerMappings.xlsx'):
         try:
-            rootCustMap = pd.read_excel('rootCustomerMappings.xlsx',
+            rootCustMap = pd.read_excel(lookDir + 'rootCustomerMappings.xlsx',
                                         'Sales Lookup').fillna('')
         except XLRDError:
             print('---\n'
@@ -119,9 +121,9 @@ def main(filepath):
         return
 
     # Load the Master Account List file.
-    if os.path.exists('Master Account List.xlsx'):
+    if os.path.exists(lookDir + 'Master Account List.xlsx'):
         try:
-            mastAcct = pd.read_excel('Master Account List.xlsx',
+            mastAcct = pd.read_excel(lookDir + 'Master Account List.xlsx',
                                      'Allacct').fillna('')
         except XLRDError:
             print('---\n'

@@ -41,7 +41,8 @@ class GenMast(QMainWindow):
               '----------------------------------')
 
         # Try finding/loading the supporting files.
-        if not os.path.exists('rootCustomerMappings.xlsx'):
+        lookDir = 'Z:/Commissions Lookup/'
+        if not os.path.exists(lookDir + 'rootCustomerMappings.xlsx'):
             print('No Root Customer Mappings found!\n'
                   'Please make sure rootCustomerMappings'
                   'is in the directory.\n'
@@ -80,8 +81,9 @@ class GenMast(QMainWindow):
         self.btnCompileFeedback.resize(150, 150)
         self.btnCompileFeedback.clicked.connect(self.compileFeedbackClicked)
         self.btnCompileFeedback.setToolTip('Combine individual reports with '
-                                       'feedback into one file, and append '
-                                       'that file to Digikey Insight Master.')
+                                           'feedback into one file, and '
+                                           'append that file to Digikey '
+                                           'Insight Master.')
 
         # Button for clearing selections.
         self.btnClearAll = QPushButton('Clear \n File Selections', self)
@@ -165,7 +167,8 @@ class GenMast(QMainWindow):
     def lookSalesExecute(self):
         """Runs function for looking up salespeople."""
         # Check to see if we're ready to process.
-        mapExists = os.path.exists('rootCustomerMappings.xlsx')
+        lookDir = 'Z:/Commissions Lookup/'
+        mapExists = os.path.exists(lookDir + 'rootCustomerMappings.xlsx')
         if self.filename and mapExists:
             # Turn buttons off.
             self.lockButtons()

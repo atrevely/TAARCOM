@@ -93,11 +93,14 @@ def main(filepaths):
     # ------------------
     # Load in the files.
     # ------------------
+    # Set the directory paths to the server.
+    lookDir = 'Z:/Commissions Lookup/'
+    dataDir = 'Z:/Digikey Data/'
     # Load the Digikey Insights Master file.
-    if os.path.exists('Digikey Insight Master.xlsx'):
-        insMast = pd.read_excel('Digikey Insight Master.xlsx',
+    if os.path.exists(dataDir + 'Digikey Insight Master.xlsx'):
+        insMast = pd.read_excel(dataDir + 'Digikey Insight Master.xlsx',
                                 'Master').fillna('')
-        filesProcessed = pd.read_excel('Digikey Insight Master.xlsx',
+        filesProcessed = pd.read_excel(dataDir + 'Digikey Insight Master.xlsx',
                                        'Files Processed').fillna('')
     else:
         print('---\n'
@@ -107,9 +110,9 @@ def main(filepaths):
         return
 
     # Load the Root Customer Mappings file.
-    if os.path.exists('rootCustomerMappings.xlsx'):
+    if os.path.exists(lookDir + 'rootCustomerMappings.xlsx'):
         try:
-            rootCustMap = pd.read_excel('rootCustomerMappings.xlsx',
+            rootCustMap = pd.read_excel(lookDir + 'rootCustomerMappings.xlsx',
                                         'Sales Lookup').fillna('')
         except XLRDError:
             print('---\n'
