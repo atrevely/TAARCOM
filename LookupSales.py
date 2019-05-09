@@ -243,7 +243,8 @@ def main(filepath):
     insFile = insFile.loc[:, colNames].fillna('')
 
     # Try saving the files, exit with error if any file is currently open.
-    fname1 = filename[:-5] + ' With Salespeople.xlsx'
+    outDir = 'C:/Users/kerry/Documents/disty data/Digikey/'
+    fname1 = outDir + filename[:-5] + ' With Salespeople.xlsx'
     if saveError(fname1):
         print('---\n'
               'One or more files are currently open in Excel!\n'
@@ -263,4 +264,4 @@ def main(filepath):
 
     print('---\n'
           'Salespeople successfully looked up!\n'
-          'New file saved as: ' + fname1 + '\n+++')
+          'New file saved as in:\n ' + fname1 + '\n+++')

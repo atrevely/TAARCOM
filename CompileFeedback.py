@@ -95,7 +95,7 @@ def main(filepaths):
     # ------------------
     # Set the directory paths to the server.
     lookDir = 'Z:/Commissions Lookup/'
-    dataDir = 'D:/'
+    dataDir = 'W:/'
     # Load the Digikey Insights Master file.
     if os.path.exists(dataDir + 'Digikey Insight Master.xlsx'):
         insMast = pd.read_excel(dataDir + 'Digikey Insight Master.xlsx',
