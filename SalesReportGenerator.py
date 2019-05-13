@@ -219,6 +219,9 @@ def main(runCom):
     # Design Sales for that line.
     for row in revDat[pd.isna(revDat['CDS'])].index:
         revDat.loc[row, 'CDS'] = revDat.loc[row, 'Design Sales']
+        # If no design sales, use CM sales.
+        if not revDat.loc[row, 'CDS']:
+            revDat.loc[row, 'CDS'] = revDat.loc[row, 'CM Sales']
     # Also grab the section of the data that aren't 80/20 splits.
     splitDat = revDat[revDat['CM Split'] > 20]
 

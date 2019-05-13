@@ -374,4 +374,3 @@ if __name__ == '__main__':
     # Open main window.
     gui = GenMast()
     sys.exit(app.exec_())
-    #test
