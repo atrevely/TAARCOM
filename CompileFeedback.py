@@ -172,7 +172,7 @@ def main(filepaths):
         initList.append(inits)
 
     # Create the master dataframe to append to.
-    finalData = pd.DataFrame(columns=inputData[0].colums)
+    finalData = pd.DataFrame(columns=inputData[0].columns)
     # Copy over the comments.
     fileNum = 0
     for sheet in inputData:
