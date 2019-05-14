@@ -158,7 +158,6 @@ def main(filepaths):
     initList = []
     for filename in filenames:
         inits = filename[0:2]
-        initList.append(inits)
         if inits not in salespeople:
             print('Salesperson initials ' + inits + ' not recognized!\n'
                   'Make sure the first two letters of each filename are '
@@ -170,6 +169,7 @@ def main(filepaths):
                   'Make sure each salesperson has only one file.\n'
                   '***')
             return
+        initList.append(inits)
 
     # Create the master dataframe to append to.
     finalData = pd.DataFrame(columns=inputData[0].colums)

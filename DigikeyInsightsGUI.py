@@ -37,8 +37,9 @@ class GenMast(QMainWindow):
         # Show welcome message.
         print('Welcome to the TAARCOM Digikey Insights Manager.\n'
               'Messages and updates will display below.\n'
-              '----------------------------------'
-              '----------------------------------')
+              '______________________________________________________\n'
+              'REMINDER: Did you pull the latest version from GitHub?\n'
+              '---')
 
         # Try finding/loading the supporting files.
         lookDir = 'Z:/Commissions Lookup/'
