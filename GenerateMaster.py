@@ -279,7 +279,7 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
             lookDir = 'Z:/Commissions Lookup/'
             if os.path.exists(lookDir + 'Mill-Max Invoice Log.xlsx'):
                 MMaxLog = pd.read_excel(lookDir + 'Mill-Max Invoice Log.xlsx',
-                                        'Logs', dtype=str).fillna('')
+                                        dtype=str).fillna('')
                 print('Looking up part numbers from invoice log.\n'
                       '---')
             else:
