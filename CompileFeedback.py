@@ -223,6 +223,8 @@ def main(filepaths):
 
     # Append the new data to the Digikey Insight Master.
     insMast = insMast.append(finalData, ignore_index=True, sort=False)
+    insMast.fillna('', inplace=True)
+    finalData.fillna('', inplace=True)
 
     # Try saving the files, exit with error if any file is currently open.
     currentTime = time.strftime('%Y-%m-%d')
@@ -240,7 +242,7 @@ def main(filepaths):
               '***')
         return
 
-    # Write the Insight Master file.
+    # Write the finished Insight file.
     writer1 = pd.ExcelWriter(fname1, engine='xlsxwriter',
                              datetime_format='mm/dd/yyyy')
     finalData.to_excel(writer1, sheet_name='Master', index=False)
