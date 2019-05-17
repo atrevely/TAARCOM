@@ -6,6 +6,9 @@ from RCExcelTools import tableFormat, formDate, saveError
 from xlrd import XLRDError
 import win32com.client
 import os
+import re
+import sys
+import shutil
 
 
 # The main function.
@@ -118,7 +121,8 @@ def main(runCom):
         currentMonth = 1
         currentYear += 1
     # Tag the new data as the current month/year.
-    runningCom['Comm Month'] = str(currentYear) + '-' + str(currentMonth)
+    currentYrMo = str(currentYear) + '-' + str(currentMonth)
+    runningCom['Comm Month'] = currentYrMo
 
     # ---------------------------------------
     # Load and prepare the Account List file.
@@ -229,27 +233,39 @@ def main(runCom):
     # Combine and tag commission data for the current quarter.
     # --------------------------------------------------------
     # Figure out what slice of commissions data is in the current quarter.
+    comMastTracked = comMast[comMast['Comm Month'] != '']
     try:
-        commDates = comMast['Comm Month'].map(lambda x: parse(str(x)))
-    except TypeError:
+        commDates = comMastTracked['Comm Month'].map(lambda x: parse(str(x)))
+    except (TypeError, ValueError):
         print('Error reading month in Comm Month column!\n'
               'Please make sure all months are in YYYY-MM format.\n'
               '***')
         return
     # Filter to data in this year.
-    yearData = comMast[commDates.map(lambda x: x.year) == currentYear]
+    yearData = comMastTracked[commDates.map(lambda x: x.year) == currentYear]
     # Determine how many months back we need to go.
     numPrevMos = (currentMonth - 1) % 3
     months = range(currentMonth, currentMonth - numPrevMos - 1, -1)
     dataMos = yearData['Comm Month'].map(lambda x: parse(str(x)).month)
     qtrData = yearData[dataMos.isin(list(months))]
     # Compile the commissions data.
-    commData = qtrData.append(runningCom, ingore_index=True, sort=False)
+    commData = qtrData.append(runningCom, ignore_index=True, sort=False)
 
     # ----------------------------------
     # Open Excel using the win32c tools.
     # ----------------------------------
-    excel = win32com.client.gencache.EnsureDispatch('Excel.Application')
+    try:
+        excel = win32com.client.gencache.EnsureDispatch('Excel.Application')
+    except AttributeError:
+        # Need to shut down the old module, or something. Windows sucks.
+        module_list = [m.__name__ for m in sys.modules.values()]
+        for module in module_list:
+            if re.match(r'win32com\.gen_py\..+', module):
+                del sys.modules[module]
+        shutil.rmtree(os.path.join(os.environ.get('LOCALAPPDATA'), 'Temp',
+                                   'gen_py'))
+        # Now try again.
+        excel = win32com.client.gencache.EnsureDispatch('Excel.Application')
     win32c = win32com.client.constants
 
     # %%
@@ -270,8 +286,7 @@ def main(runCom):
         designDat = designDat[designDat['Quarter Shipped'] != '']
         designDat.reset_index(drop=True, inplace=True)
         # Write the raw data to a file.
-        filename = (person + ' Revenue Report - ' + time.strftime('%Y-%m-%d')
-                    + '.xlsx')
+        filename = (person + ' Revenue Report - ' + currentYrMo + '.xlsx')
         writer = pd.ExcelWriter(filename, engine='xlsxwriter',
                                 datetime_format='mm/dd/yyyy')
         designDat.to_excel(writer, sheet_name='Raw Data', index=False)
@@ -422,8 +437,7 @@ def main(runCom):
         princTab.loc[row, 'Sales Commission'] = totComm
 
         # Write report to file.
-        filename = (person + ' Commission Report - '
-                    + time.strftime('%Y-%m-%d') + '.xlsx')
+        filename = (person + ' Commission Report - ' + currentYrMo + '.xlsx')
         writer = pd.ExcelWriter(filename, engine='xlsxwriter',
                                 datetime_format='mm/dd/yyyy')
         princTab.to_excel(writer, sheet_name='Principals', index=False)
@@ -518,7 +532,7 @@ def main(runCom):
     # Create the overall Revenue Report.
     # -----------------------------------
     # Write the raw data to a file.
-    filename = ('Revenue Report - ' + time.strftime('%Y-%m-%d') + '.xlsx')
+    filename = ('Revenue Report - ' + currentYrMo + '.xlsx')
     writer = pd.ExcelWriter(filename, engine='xlsxwriter',
                             datetime_format='mm/dd/yyyy')
     revDat.to_excel(writer, sheet_name='Raw Data', index=False)
@@ -655,7 +669,7 @@ def main(runCom):
     # %%
     # Save the files.
     fname1 = dataDir + 'Commissions Master.xlsx'
-    fname2 = (dataDir + 'Running Commissions ' + time.strftime('%Y-%m-%d')
+    fname2 = (dataDir + 'Running Commissions ' + currentYrMo
               + ' Reported.xlsx')
     fname3 = lookDir + 'Lookup Master - Current.xlsx'
 
