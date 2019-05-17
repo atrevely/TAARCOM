@@ -284,7 +284,8 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
                       '---')
             else:
                 print('No Mill-Max Invoice Log found!\n'
-                      'Please make sure the Invoice Log is in the directory.\n'
+                      'Please make sure the Invoice Log is in the '
+                      'Commission Lookup directory.\n'
                       'Skipping tab.\n'
                       '---')
                 return

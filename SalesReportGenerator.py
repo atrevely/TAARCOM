@@ -102,7 +102,7 @@ def main(runCom):
     # Determine the commissions months that are currently in the Master.
     commMonths = comMast['Comm Month'].unique()
     try:
-        commMonths = [parse(i) for i in commMonths if i != '']
+        commMonths = [parse(str(i)) for i in commMonths if i != '']
     except ValueError:
         print('Error parsing dates in Comm Month column of Commissions Master!'
               '\nPlease check that all dates are in standard formatting and '
@@ -230,7 +230,7 @@ def main(runCom):
     # --------------------------------------------------------
     # Figure out what slice of commissions data is in the current quarter.
     try:
-        commDates = comMast['Comm Month'].map(lambda x: parse(x))
+        commDates = comMast['Comm Month'].map(lambda x: parse(str(x)))
     except TypeError:
         print('Error reading month in Comm Month column!\n'
               'Please make sure all months are in YYYY-MM format.\n'
@@ -241,7 +241,7 @@ def main(runCom):
     # Determine how many months back we need to go.
     numPrevMos = (currentMonth - 1) % 3
     months = range(currentMonth, currentMonth - numPrevMos - 1, -1)
-    dataMos = yearData['Comm Month'].map(lambda x: parse(x).month)
+    dataMos = yearData['Comm Month'].map(lambda x: parse(str(x)).month)
     qtrData = yearData[dataMos.isin(list(months))]
     # Compile the commissions data.
     commData = qtrData.append(runningCom, ingore_index=True, sort=False)
