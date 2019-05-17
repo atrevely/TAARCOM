@@ -706,7 +706,7 @@ def main(runCom):
     tableFormat(princTab, 'Principal Totals', writer1)
 
     # Write the Lookup Master.
-    writer2 = pd.ExcelWriter(fname2, engine='xlsxwriter',
+    writer2 = pd.ExcelWriter(fname3, engine='xlsxwriter',
                              datetime_format='mm/dd/yyyy')
     masterLookup.to_excel(writer2, sheet_name='Lookup', index=False)
     # Format everything in Excel.
