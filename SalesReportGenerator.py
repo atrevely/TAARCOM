@@ -62,10 +62,11 @@ def main(runCom):
                 lambda x: pd.to_numeric(x, errors='ignore'))
     # Now remove the nans.
     runningCom.replace('nan', '', inplace=True)
-
     # Make sure all the dates are formatted correctly.
     runningCom['Invoice Date'] = runningCom['Invoice Date'].map(
             lambda x: formDate(x))
+    # Make sure that the CM Splits aren't blank or zero.
+    runningCom['CM Split'] = runningCom['CM Split'].replace(['', '0', 0], 20)
 
     # ---------------------------------------------
     # Load and prepare the Commissions Master file.
@@ -101,6 +102,8 @@ def main(runCom):
     # Make sure all the dates are formatted correctly.
     comMast['Invoice Date'] = comMast['Invoice Date'].map(
             lambda x: formDate(x))
+    # Make sure that the CM Splits aren't blank or zero.
+    comMast['CM Split'] = comMast['CM Split'].replace(['', '0', 0], 20)
 
     # Determine the commissions months that are currently in the Master.
     commMonths = comMast['Comm Month'].unique()
