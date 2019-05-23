@@ -652,7 +652,7 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
                                  inplace=True)
                     if columnName[0] in renameDict.values():
                         columnName[0] = [i for i in renameDict.keys()
-                                         if renameDict[i] == columnName[0]]
+                                         if renameDict[i] == columnName[0]][0]
                     rawSheet.loc[0, columnName[0]] = dataName
 
             # Replace the old raw data sheet with the new one.
