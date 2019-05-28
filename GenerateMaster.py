@@ -121,7 +121,7 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
                   'Commission Rate, Paid-On Revenue, '
                   'Actual Comm Paid\n'
                   '---')
-        elif not invIn and commRateNotIn:
+        elif not invIn and commRateNotIn and extCost:
             # Fill down Distributor for their grouping scheme.
             sheet['Reported Distributor'].replace('', np.nan, inplace=True)
             sheet['Reported Distributor'].fillna(method='ffill', inplace=True)
