@@ -838,14 +838,6 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
         POSCust = masterLookup['Reported Customer'].map(
                 lambda x: str(x).lower())
         custMatches = masterLookup[repCust == POSCust]
-        # If the T-Name/CM/T-End Cust info is unique, fill it in.
-        fillCols = ['CM', 'T-Name', 'T-End Cust']
-        for col in fillCols:
-            if len(custMatches[col].unique()) == 1:
-                finalData.loc[row, col] = custMatches.iloc[0][col]
-        # Copy CM over to T-Name if no End Cust is found.
-        if finalData.loc[row, 'CM'] and not finalData.loc[row, 'T-End Cust']:
-            finalData.loc[row, 'T-Name'] = finalData.loc[row, 'CM']
         # Now match part number.
         partNum = str(finalData.loc[row, 'Part Number']).lower()
         PPN = masterLookup['Part Number'].map(lambda x: str(x).lower())
