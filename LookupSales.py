@@ -230,7 +230,7 @@ def main(filepath):
                                   'Milpitas', 'San Francisco']}
             # Assign salesperson based on city.
             for key in salesByCity.keys():
-                city = insFile.loc[row, 'CITY'].upper()
+                city = insFile.loc[row, 'Customer City'].upper()
                 if city in map(lambda x: x.upper(), salesByCity[key]):
                     insFile.loc[row, 'Sales'] = key
             # Done, so move to next line in file.
