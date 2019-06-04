@@ -213,21 +213,21 @@ def main(filepath):
         if 'individual' in insFile.loc[row, 'Root Customer Class'].lower():
             insFile.loc[row, 'TAARCOM Comments'] = 'Individual'
             # Assocaited cities to each salesperson.
-            salesByCity = {'CM': ['Santa Clara'],
+            salesByCity = {'CM': ['Santa Francisco'],
                            'CR': ['San Jose', 'Morgan Hill'],
                            'DC': ['Oakland', 'Union City', 'Hayward',
-                                  'Alameda', 'Berkeley'],
+                                  'Alameda', 'Berkeley', 'Petaluma',
+                                  'Healdsburg', 'Santa Rosa', 'Rohnert Park'],
                            'HS': ['Sacramento', 'Auburn', 'Grass Valley',
                                   'Carson City', 'Reno'],
                            'JW': ['Sunnyvale', 'Moffett Field', 'Campbell',
                                   'Saratoga', 'Los Gatos', 'Cupertino',
                                   'Scotts Valley', 'Santa Cruz'],
-                           'JC': ['San Francisco'],
                            'MG': ['Palo Alto', 'San Mateo', 'Belmont',
                                   'Stanford', 'San Carlos', 'Redwood City',
                                   'Menlo Park'],
                            'MM': ['Mountain View', 'Los Altos', 'Fremont',
-                                  'Milpitas']}
+                                  'Milpitas', 'San Francisco']}
             # Assign salesperson based on city.
             for key in salesByCity.keys():
                 city = insFile.loc[row, 'CITY'].upper()
