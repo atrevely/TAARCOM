@@ -13,8 +13,8 @@ import shutil
 
 # The main function.
 def main(runCom):
-    """Generates sales reports, the appends the Running Commissions data to the
-    Commissions Master.
+    """Generates sales reports, then appends the Running Commissions data
+    to the Commissions Master.
     """
     # Set the directory for the data input/output.
     dataDir = 'Z:/MK Working Commissions/'
@@ -47,7 +47,7 @@ def main(runCom):
     for col in numCols:
         try:
             runningCom[col] = pd.to_numeric(runningCom[col],
-                                            errors='coerce').fillna(0)
+                                            errors='coerce').fillna('')
         except KeyError:
             pass
     # Convert individual numbers to numeric in rest of columns.
@@ -71,7 +71,7 @@ def main(runCom):
     # ---------------------------------------------
     # Load and prepare the Commissions Master file.
     # ---------------------------------------------
-    # Load up the current Commissions Master file.
+    # Load up the current Commissions Master file from the server.
     try:
         comMast = pd.read_excel(dataDir + 'Commissions Master.xlsx', 'Master',
                                 dtype=str)
@@ -100,8 +100,8 @@ def main(runCom):
     comMast.replace('nan', '', inplace=True)
 
     # Make sure all the dates are formatted correctly.
-    comMast['Invoice Date'] = comMast['Invoice Date'].map(
-            lambda x: formDate(x))
+    for col in ['Invoice Date', 'Paid Date', 'Sales Report Date']:
+        comMast[col] = comMast[col].map(lambda x: formDate(x))
     # Make sure that the CM Splits aren't blank or zero.
     comMast['CM Split'] = comMast['CM Split'].replace(['', '0', 0], 20)
 
@@ -313,12 +313,14 @@ def main(runCom):
         dataRange = dataSheet.Range('A1').CurrentRegion
         pivotRange = pivotSheet.Range('A1')
         # Create the pivot table and deploy it on the sheet.
-        pivCache = wb.PivotCaches().Create(SourceType=win32c.xlDatabase,
-                                           SourceData=dataRange,
-                                           Version=win32c.xlPivotTableVersion14)
-        pivTable = pivCache.CreatePivotTable(TableDestination=pivotRange,
-                                             TableName='Revenue Data',
-                                             DefaultVersion=win32c.xlPivotTableVersion14)
+        pivCache = wb.PivotCaches().Create(
+                SourceType=win32c.xlDatabase,
+                SourceData=dataRange,
+                Version=win32c.xlPivotTableVersion14)
+        pivTable = pivCache.CreatePivotTable(
+                TableDestination=pivotRange,
+                TableName='Revenue Data',
+                DefaultVersion=win32c.xlPivotTableVersion14)
         # Drop the data fields into the pivot table.
         pivTable.PivotFields('T-End Cust').Orientation = win32c.xlRowField
         pivTable.PivotFields('T-End Cust').Position = 1
@@ -329,8 +331,9 @@ def main(runCom):
         pivTable.PivotFields('Quarter Shipped').Orientation = win32c.xlColumnField
         pivTable.PivotFields('Principal').Orientation = win32c.xlPageField
         # Add the sum of Paid-On Revenue as the data field.
-        dataField = pivTable.AddDataField(pivTable.PivotFields('Paid-On Revenue'),
-                                          'Revenue', win32c.xlSum)
+        dataField = pivTable.AddDataField(
+                pivTable.PivotFields('Paid-On Revenue'),
+                'Revenue', win32c.xlSum)
         dataField.NumberFormat = '$#,##0'
         wb.Close(SaveChanges=1)
 
@@ -468,21 +471,24 @@ def main(runCom):
         dataRange = dataSheet.Range('A1').CurrentRegion
         pivotRange = pivotSheet.Range('A1')
         # Create the pivot table and deploy it on the sheet.
-        pivCache = wb.PivotCaches().Create(SourceType=win32c.xlDatabase,
-                                           SourceData=dataRange,
-                                           Version=win32c.xlPivotTableVersion14)
-        pivTable = pivCache.CreatePivotTable(TableDestination=pivotRange,
-                                             TableName='Commission Data',
-                                             DefaultVersion=win32c.xlPivotTableVersion14)
+        pivCache = wb.PivotCaches().Create(
+                SourceType=win32c.xlDatabase,
+                SourceData=dataRange,
+                Version=win32c.xlPivotTableVersion14)
+        pivTable = pivCache.CreatePivotTable(
+                TableDestination=pivotRange,
+                TableName='Commission Data',
+                DefaultVersion=win32c.xlPivotTableVersion14)
         # Drop the data fields into the pivot table.
         pivTable.PivotFields('T-End Cust').Orientation = win32c.xlRowField
         pivTable.PivotFields('T-End Cust').Position = 1
         pivTable.PivotFields('Principal').Orientation = win32c.xlRowField
-        pivTable.PivotFields('Principal').Position = 2 
+        pivTable.PivotFields('Principal').Position = 2
         pivTable.PivotFields('Comm Month').Orientation = win32c.xlColumnField
         # Add the sum of Sales Commissions as the data field.
-        dataField = pivTable.AddDataField(pivTable.PivotFields('Sales Commission'),
-                                            'Sales Comm', win32c.xlSum)
+        dataField = pivTable.AddDataField(
+                pivTable.PivotFields('Sales Commission'),
+                'Sales Comm', win32c.xlSum)
         dataField.NumberFormat = '$#,##0'
         wb.Close(SaveChanges=1)
     # %%
@@ -565,9 +571,10 @@ def main(runCom):
     pivCache = wb.PivotCaches().Create(SourceType=win32c.xlDatabase,
                                        SourceData=dataRange,
                                        Version=win32c.xlPivotTableVersion14)
-    pivTable = pivCache.CreatePivotTable(TableDestination=pivotRange,
-                                         TableName='Revenue Data',
-                                         DefaultVersion=win32c.xlPivotTableVersion14)
+    pivTable = pivCache.CreatePivotTable(
+            TableDestination=pivotRange,
+            TableName='Revenue Data',
+            DefaultVersion=win32c.xlPivotTableVersion14)
     # Drop the data fields into the pivot table.
     pivTable.PivotFields('T-End Cust').Orientation = win32c.xlRowField
     pivTable.PivotFields('T-End Cust').Position = 1

@@ -11,10 +11,10 @@ def tableFormat(sheetData, sheetName, wbook):
     # Set default document format.
     docFormat = wbook.book.add_format({'font': 'Calibri',
                                        'font_size': 11})
-    # Accounting format ($ XX.XX).
+    # Currency format ($XX.XX).
     acctFormat = wbook.book.add_format({'font': 'Calibri',
                                         'font_size': 11,
-                                        'num_format': 44})
+                                        'num_format': 7})
     # Comma format (XX,XXX).
     commaFormat = wbook.book.add_format({'font': 'Calibri',
                                          'font_size': 11,
@@ -51,8 +51,7 @@ def tableFormat(sheetData, sheetName, wbook):
         elif col == 'Quantity':
             formatting = commaFormat
         elif col in ['Invoice Number', 'Part Number']:
-            # We're going to do some work in order to format the Invoice
-            # Number as a number, yet keep leading zeros.
+            # We're going to do some work in order to keep leading zeros.
             for row in sheetData.index:
                 invLen = len(str(sheetData.loc[row, col]))
                 # Figure out how many places the number goes to.
