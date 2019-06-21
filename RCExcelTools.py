@@ -91,7 +91,7 @@ def tableFormat(sheetData, sheetName, wbook):
         sheet.set_column(index, index, maxWidth+0.8, formatting)
         index += 1
     # Set the autofilter for the sheet.
-    sheet.autofilter(0, 0, sheetData.shape[0], sheetData.shape[1])
+    sheet.autofilter(0, 0, sheetData.shape[0], sheetData.shape[1]-1)
 
 
 def saveError(*excelFiles):

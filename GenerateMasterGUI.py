@@ -70,11 +70,6 @@ class GenMast(QMainWindow):
                   'Please make sure distributorLookup.xlsx '
                   'is in the directory.\n'
                   '***')
-        if not os.path.exists(lookDir + 'principalList.xlsx'):
-            print('No principal list found!\n'
-                  'Please make sure principalList.xlsx '
-                  'is in the directory.\n'
-                  '***')
 
     def onUpdateText(self, text):
         """Write console output to text widget."""
@@ -92,14 +87,6 @@ class GenMast(QMainWindow):
 
     def initUI(self):
         """Creates UI window on launch."""
-        # Check for existence of principal list file.
-        princList = None
-        lookDir = 'Z:/Commissions Lookup/'
-        if os.path.exists(lookDir + 'principalList.xlsx'):
-            # Load principal list.
-            princList = pd.read_excel(lookDir + 'principalList.xlsx',
-                                      index_col=False)
-
         # Button for generating the master list.
         self.btnGenMast = QPushButton('Process Raw Files\nto '
                                       'Running\nCommissions', self)
@@ -162,21 +149,6 @@ class GenMast(QMainWindow):
         self.btnClearAll.setToolTip('Clear all selected files from the '
                                     'workspace.')
 
-        # Dropdown menu for selecting principal.
-        self.princMenu = QComboBox(self)
-        self.princMenu.resize(150, 30)
-        self.princMenu.move(650, 100)
-        # Fill in principals, if file is found.
-        if princList is not None:
-            self.princMenu.addItems(list(princList['Abbreviation']))
-        else:
-            print('Principal list not found!\n'
-                  'Please make sure principalList.xlsx is '
-                  'in the directory!')
-        self.princLabel = QLabel('Select Principal:', self)
-        self.princLabel.resize(150, 100)
-        self.princLabel.move(650, 35)
-
         # Create the text output widget.
         self.textBox = QTextEdit(self, readOnly=True)
         self.textBox.ensureCursorVisible()
@@ -216,7 +188,6 @@ class GenMast(QMainWindow):
     def genMastExecute(self):
         """Runs function for processing new files to master."""
         # Check to see if we're ready to process.
-        princ = self.princMenu.currentText()
         lookDir = 'Z:/Commissions Lookup/'
         mapExists = os.path.exists(lookDir + 'fieldMappings.xlsx')
         if self.filenames and mapExists and princ != '(No Selection)':
@@ -225,7 +196,7 @@ class GenMast(QMainWindow):
             # Run the GenerateMaster.py file.
             try:
                 GenerateMaster.main(self.filenames, self.master,
-                                    fieldMappings, princ)
+                                    fieldMappings)
             except Exception as error:
                 print('Unexpected Python error:\n'
                       + str(error)
@@ -238,14 +209,9 @@ class GenMast(QMainWindow):
             print('File fieldMappings.xlsx not found!\n'
                   'Please check file location and try again.\n'
                   '---')
-
         elif not self.filenames:
             print('No commission files selected!\n'
                   'Use the Select Commission Files button to select files.\n'
-                  '---')
-
-        elif princ == '(No Selection)':
-            print('Please select a principal from the dropdown menu!\n'
                   '---')
 
     def genReportsExecute(self):
@@ -287,12 +253,12 @@ class GenMast(QMainWindow):
                   '---')
 
     def uploadMastClicked(self):
-        """Upload an existing master list."""
-        # Grab an existing master list to append to.
+        """Upload an existing Running Commissions."""
+        # Grab an existing Running Commissions to append to.
         self.master, _ = QFileDialog.getOpenFileName(
                 self, filter="Excel files (*.xls *.xlsx *.xlsm)")
         if self.master:
-            print('Current master list provided:\n'
+            print('Current Running Commissions selected:\n'
                   + self.master
                   + '\n---')
             if 'Running Commissions' not in self.master:
@@ -332,7 +298,6 @@ class GenMast(QMainWindow):
         self.btnOpenFiles.setEnabled(False)
         self.btnUploadMast.setEnabled(False)
         self.btnClearAll.setEnabled(False)
-        self.princMenu.setEnabled(False)
         self.btnFixEntries.setEnabled(False)
         self.btnGenReports.setEnabled(False)
 
@@ -341,7 +306,6 @@ class GenMast(QMainWindow):
         self.btnOpenFiles.setEnabled(True)
         self.btnUploadMast.setEnabled(True)
         self.btnClearAll.setEnabled(True)
-        self.princMenu.setEnabled(True)
         self.btnFixEntries.setEnabled(True)
         self.btnGenReports.setEnabled(True)
 

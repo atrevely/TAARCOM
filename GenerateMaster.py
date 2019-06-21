@@ -379,7 +379,7 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
 
 
 # %% Main function.
-def main(filepaths, runningCom, fieldMappings, inPrinc):
+def main(filepaths, runningCom, fieldMappings):
     """Processes commission files and appends them to Running Commissions.
 
     Columns in individual commission files are identified and appended to the
@@ -595,12 +595,19 @@ def main(filepaths, runningCom, fieldMappings, inPrinc):
         # Set total commissions for file at zero.
         totalComm = 0
 
-        # If principal is auto-detected, find it from filename.
-        if inPrinc == 'AUTO-DETECT':
-            principal = filename[0:3]
-            print('Principal detected as: ' + principal)
-        else:
-            principal = inPrinc
+        # Detect principal from filename.
+        principal = filename[0:3]
+        print('Principal detected as: ' + principal)
+        # If principal not in list, let us know and exit.
+        princList = ['ABR', 'ATP', 'ATS', 'ATO', 'COS', 'EVE', 'GLO', 'INF',
+                     'ISS', 'LAT', 'MIL', 'OSR', 'QRF', 'SUR', 'TRI', 'TRU']
+        if principal not in princList:
+            print('Principal supplied is not valid!\n'
+                  'Current valid principals: '
+                  + ', '.join(map(str, princList))
+                  + '\nRemember to capitalize the principal abbreviation.'
+                  '\n***')
+            return
 
         # Iterate over each dataframe in the ordered dictionary.
         # Each sheet in the file is its own dataframe in the dictionary.
