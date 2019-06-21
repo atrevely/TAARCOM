@@ -340,7 +340,7 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
             except KeyError:
                 print('No Paid-On Revenue found, could not calculate '
                       'Actual Comm Paid.\n'
-                      '***')
+                      '---')
                 return
         # Globtek is paid on resale.
         sheet['Comm Source'] = 'Resale'
@@ -455,7 +455,7 @@ def main(filepaths, runningCom, fieldMappings):
                   ', '.join(map(str, missCols))
                   + '\nExtra (erroneous) columns:\n%s' %
                   ', '.join(map(str, addCols))
-                  + '\n***')
+                  + '\n*Program terminated*')
             return
         # Load in the matching Entries Need Fixing file.
         comDate = runningCom[-20:]
@@ -490,12 +490,12 @@ def main(filepaths, runningCom, fieldMappings):
                   'Running Commissions file!\n'
                   'Make sure ' + fixName
                   + ' is in the proper folder.\n'
-                  '***')
+                  '*Program terminated*')
             return
         except XLRDError:
             print('No sheet named Data found in Entries Need Fixing '
                   + fixName + '.xlsx!\n'
-                  + '***')
+                  + '*Program terminated*')
             return
     # Start new Running Commissions.
     else:
@@ -525,7 +525,7 @@ def main(filepaths, runningCom, fieldMappings):
             print('---\n'
                   'No new commissions files selected.\n'
                   'Please try selecting files again.\n'
-                  '***')
+                  '*Program terminated*')
             return
 
     # Read in each new file with Pandas and store them as dictionaries.
@@ -542,7 +542,7 @@ def main(filepaths, runningCom, fieldMappings):
             print('---\n'
                   'Error reading sheet name for distributorLookup.xlsx!\n'
                   'Please make sure the main tab is named Distributors.\n'
-                  '***')
+                  '*Program terminated*')
             return
         # Check the column names.
         distMapCols = ['Corrected Dist', 'Search Abbreviation']
@@ -551,13 +551,13 @@ def main(filepaths, runningCom, fieldMappings):
             print('The following columns were not detected in '
                   'distributorLookup.xlsx:\n%s' %
                   ', '.join(map(str, missCols))
-                  + '\n***')
+                  + '\n*Program terminated*')
             return
     else:
         print('---\n'
               'No distributor lookup file found!\n'
               'Please make sure distributorLookup.xlsx is in the directory.\n'
-              '***')
+              '*Program terminated*')
         return
 
     # Read in the Master Lookup. Exit if not found.
@@ -574,14 +574,14 @@ def main(filepaths, runningCom, fieldMappings):
             print('The following columns were not detected in '
                   'Lookup Master.xlsx:\n%s' %
                   ', '.join(map(str, missCols))
-                  + '\n***')
+                  + '\n*Program terminated*')
             return
     else:
         print('---\n'
               'No Lookup Master found!\n'
               'Please make sure Lookup Master - Current.xlsx is '
               'in the directory.\n'
-              '***')
+              '*Program terminated*')
         return
 
     # %% Done loading in the data and supporting files, now go to work.
@@ -605,8 +605,9 @@ def main(filepaths, runningCom, fieldMappings):
             print('Principal supplied is not valid!\n'
                   'Current valid principals: '
                   + ', '.join(map(str, princList))
-                  + '\nRemember to capitalize the principal abbreviation.'
-                  '\n***')
+                  + '\nRemember to capitalize the principal abbreviation at'
+                  'start of filename.'
+                  '\n*Program terminated*')
             return
 
         # Iterate over each dataframe in the ordered dictionary.
@@ -652,7 +653,7 @@ def main(filepaths, runningCom, fieldMappings):
                           + '\nMatching columns: %s' %
                           ', '.join(map(str, columnName))
                           + '\nPlease fix column names and try again.\n'
-                          '***')
+                          '*Program terminated*')
                     return
                 elif len(columnName) == 1:
                     sheet.rename(columns={columnName[0]: dataName},
@@ -711,7 +712,7 @@ def main(filepaths, runningCom, fieldMappings):
                 print('Two items are being mapped to the same column!\n'
                       'These columns contain duplicates: %s' %
                       ', '.join(map(str, dupes))
-                      + '\n***')
+                      + '\n*Program terminated*')
                 return
             elif 'Actual Comm Paid' not in list(sheet):
                 # Tab has no commission data, so it is ignored.
@@ -727,7 +728,7 @@ def main(filepaths, runningCom, fieldMappings):
                 # Tab has no date column, so report and exit.
                 print('No Invoice Date column found for this tab.\n'
                       'Please make sure the Invoice Date is mapped.\n'
-                      '***')
+                      '*Program terminated*')
                 return
             else:
                 # Remove entries with no commissions dollars.
@@ -788,7 +789,7 @@ def main(filepaths, runningCom, fieldMappings):
                 print('---\n'
                       'One or more of the raw data files are open in Excel.\n'
                       'Please close these files and try again.\n'
-                      '***')
+                      '*Program terminated*')
                 return
             # Write the raw data file with matches.
             matchDir = 'Z:/Matched Raw Data Files/'
@@ -829,7 +830,7 @@ def main(filepaths, runningCom, fieldMappings):
               'No new valid data provided.\n'
               'Please check the new files for missing '
               'data or column matches.\n'
-              '***')
+              '*Program terminated*')
         return
     print('---\n'
           'Beginning processing on ' + numRows + ' rows of data.')
@@ -996,7 +997,7 @@ def main(filepaths, runningCom, fieldMappings):
               'One or more of these files are currently open in Excel:\n'
               'Running Commissions, Entries Need Fixing, Lookup Master.\n'
               'Please close these files and try again.\n'
-              '***')
+              '*Program terminated*')
         return
 
     # Write the Running Commissions file.

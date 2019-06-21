@@ -90,7 +90,7 @@ class GenMast(QMainWindow):
         # Button for generating the master list.
         self.btnGenMast = QPushButton('Process Raw Files\nto '
                                       'Running\nCommissions', self)
-        self.btnGenMast.move(650, 400)
+        self.btnGenMast.move(650, 430)
         self.btnGenMast.resize(150, 150)
         self.btnGenMast.clicked.connect(self.genMastClicked)
         self.btnGenMast.setToolTip('Process selected raw data files and '
@@ -118,7 +118,7 @@ class GenMast(QMainWindow):
         # Button for writing fixed entries.
         self.btnFixEntries = QPushButton('Copy Fixed ENF\nEntries to\n'
                                          'Running\nCommissions', self)
-        self.btnFixEntries.move(850, 200)
+        self.btnFixEntries.move(650, 230)
         self.btnFixEntries.resize(150, 150)
         self.btnFixEntries.clicked.connect(self.fixEntriesClicked)
         self.btnFixEntries.setToolTip('Migrate finished lines in the Entries '
@@ -132,7 +132,7 @@ class GenMast(QMainWindow):
         # Button for generating sales reports.
         self.btnGenReports = QPushButton('Generate Reports\nand Migrate Data\n'
                                          'to Comm Master', self)
-        self.btnGenReports.move(850, 400)
+        self.btnGenReports.move(650, 30)
         self.btnGenReports.resize(150, 150)
         self.btnGenReports.clicked.connect(self.genReportsClicked)
         self.btnGenReports.setToolTip('Generate commission and revenue '
@@ -159,7 +159,7 @@ class GenMast(QMainWindow):
         self.textBox.move(50, 150)
 
         # Set window size and title, then show the window.
-        self.setGeometry(300, 300, 1100, 600)
+        self.setGeometry(300, 300, 900, 600)
         self.setWindowTitle('Commissions Manager 2.0')
         self.show()
 
@@ -190,7 +190,7 @@ class GenMast(QMainWindow):
         # Check to see if we're ready to process.
         lookDir = 'Z:/Commissions Lookup/'
         mapExists = os.path.exists(lookDir + 'fieldMappings.xlsx')
-        if self.filenames and mapExists and princ != '(No Selection)':
+        if self.filenames and mapExists:
             # Turn buttons off.
             self.lockButtons()
             # Run the GenerateMaster.py file.
