@@ -3,7 +3,7 @@ import pandas as pd
 import os.path
 from PyQt5 import QtCore, QtGui
 from PyQt5.QtWidgets import QMainWindow, QPushButton, QApplication, \
-                            QFileDialog, QTextEdit, QComboBox, QLabel
+                            QFileDialog, QTextEdit
 from PyQt5.QtCore import pyqtSlot
 import GenerateMaster
 import MergeFixedEntries
@@ -26,28 +26,23 @@ class GenMast(QMainWindow):
     """Main application window."""
     def __init__(self):
         super().__init__()
-
         # Custom output stream.
         sys.stdout = Stream(newText=self.onUpdateText)
-
         # Set working directory as current file directory.
         dirPath = os.path.dirname(os.path.realpath(__file__))
         os.chdir(dirPath)
-
         # Initialize the threadpool for handling worker jobs.
         self.threadpool = QtCore.QThreadPool()
         # Initialize UI and supporting filenames.
         self.initUI()
         self.filenames = []
         self.master = []
-
         # Show welcome message.
         print('Welcome to the TAARCOM Commissions Manager.\n'
               'Messages and updates will display below.\n'
               '______________________________________________________\n'
-              'REMINDER: Did you pull the latest version from GitHub?\n'
+              'REMINDER: Did you check for updates on GitHub?\n'
               '---')
-
         # Initialize global variables.
         global fieldMappings
         lookDir = 'Z:/Commissions Lookup/'
@@ -59,8 +54,7 @@ class GenMast(QMainWindow):
             print('No field mappings found!\n'
                   'Please make sure fieldMappings.xlsx is in the directory.\n'
                   '***')
-
-        # Try finding/loading the supporting files.
+        # Try loading the supporting files.
         if not os.path.exists(lookDir + 'Lookup Master - Current.xlsx'):
             print('No Lookup Master found!\n'
                   'Please make sure Lookup Master is in the directory.\n'
@@ -269,15 +263,12 @@ class GenMast(QMainWindow):
 
     def openFilesClicked(self):
         """Provide filepaths for new data to process using GenerateMaster."""
-
         # Let us know we're clearing old selections.
         if self.filenames:
             print('Selecting new files, old selections cleared...')
-
         # Grab the filenames to be passed into GenerateMaster.
         self.filenames, _ = QFileDialog.getOpenFileNames(
                 self, filter="Excel files (*.xls *.xlsx *.xlsm)")
-
         # Check if the current master got uploaded as a new file.
         for name in self.filenames:
             if 'Running Master' in name:
@@ -285,7 +276,6 @@ class GenMast(QMainWindow):
                       'Try uploading files again.\n'
                       '---')
                 return
-
         # Print out the selected filenames.
         if self.filenames:
             print('Files selected:')

@@ -19,12 +19,7 @@ def tableFormat(sheetData, sheetName, wbook):
     commaFormat = wbook.book.add_format({'font': 'Calibri',
                                          'font_size': 11,
                                          'num_format': 3})
-    newFormat = wbook.book.add_format({'font': 'Calibri',
-                                       'font_size': 11,
-                                       'bg_color': 'yellow'})
-    movedFormat = wbook.book.add_format({'font': 'Calibri',
-                                         'font_size': 11,
-                                         'bg_color': '#FFCC99'})
+
     # Format and fit each column.
     i = 0
     # Columns which get shrunk down in reports.
@@ -52,21 +47,6 @@ def tableFormat(sheetData, sheetName, wbook):
             maxWidth = 25
         sheet.set_column(i, i, maxWidth+0.8, formatting)
         i += 1
-    # Highlight new root customer and moved city rows.
-    try:
-        for row in sheetData.index:
-            if sheetData.loc[row, 'Sales'] == '':
-                sheet.write(row+1, 4, sheetData.loc[row, 'Root Customer..'],
-                            newFormat)
-            elif sheetData.loc[row, 'City on Acct List']:
-                sheet.write(row+1, 4, sheetData.loc[row, 'Root Customer..'],
-                            movedFormat)
-                sheet.write(row+1, 24, sheetData.loc[row, 'City on Acct List'],
-                            movedFormat)
-    except KeyError:
-        print('Error locating Sales and/or City on Acct List columns.\n'
-              'Unable to highlight without these columns.\n'
-              '---')
 
 
 def saveError(*excelFiles):
