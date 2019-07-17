@@ -1,5 +1,6 @@
 import pandas as pd
 import time
+import pythoncom
 import datetime
 from dateutil.parser import parse
 from RCExcelTools import tableFormat, formDate, saveError
@@ -19,6 +20,9 @@ def main(runCom):
     # Set the directory for the data input/output.
     dataDir = 'Z:/MK Working Commissions/'
     lookDir = 'Z:/Commissions Lookup/'
+
+    # Call this for multithreading, for some reason.
+    pythoncom.CoInitialize()
 
     print('Loading the data from Commissions Master...')
     # ----------------------------------------------
