@@ -21,10 +21,25 @@ def main(runCom):
     dataDir = 'Z:/MK Working Commissions/'
     lookDir = 'Z:/Commissions Lookup/'
 
-    # Call this for multithreading, for some reason.
+    # Call this for multithreading using win32com, for some reason.
     pythoncom.CoInitialize()
 
     print('Loading the data from Commissions Master...')
+    # ------------------------------------
+    # Load and prepare the QQ Splits file.
+    # ------------------------------------
+    try:
+        QQSplits = pd.read_excel('QQ Sales Splits.xlsx', 'Splits')
+    except FileNotFoundError:
+        print('No QQ Sales Splits file found!\n'
+              '***')
+        return
+    except XLRDError:
+        print('QQ Sales Splits tab names incorrect!\n'
+              'Make sure the main tab is named Splits.\n'
+              '***')
+        return
+
     # ----------------------------------------------
     # Load and prepare the Running Commissions file.
     # ----------------------------------------------
@@ -109,7 +124,7 @@ def main(runCom):
     # Make sure that the CM Splits aren't blank or zero.
     comMast['CM Split'] = comMast['CM Split'].replace(['', '0', 0], 20)
 
-    # Determine the commissions months that are currently in the Master.
+    # Determine the commission months that are currently in the Master.
     commMonths = comMast['Comm Month'].unique()
     try:
         commMonths = [parse(str(i)) for i in commMonths if i != '']
@@ -193,9 +208,10 @@ def main(runCom):
     # Get the salespeople information ready.
     # --------------------------------------
     # Grab all of the salespeople initials.
-    salespeople = list(set().union(runningCom['CM Sales'].unique(),
-                                   runningCom['Design Sales'].unique()))
-    del salespeople[salespeople == '']
+    salespeople = list(set().union(
+            runningCom['CM Sales'].map(lambda x: str.strip(x)).unique(),
+            runningCom['Design Sales'].map(lambda x: str.strip(x)).unique()))
+    salespeople = [i for i in salespeople if i not in ['QQ', '']]
     salespeople.sort()
 
     # Create the dataframe with the commission information by salesperson.
@@ -344,9 +360,9 @@ def main(runCom):
         # --------------------------------------------------------------------
         # Create the commissions reports for each salesperson, using all data.
         # --------------------------------------------------------------------
-        # Find sales entries for the salesperson.
+        # Find sales entries for the salesperson, including QQ lines.
         CM = commData['CM Sales'] == person
-        Design = commData['Design Sales'] == person
+        Design = commData['Design Sales'].isin([person, 'QQ'])
         # Grab entries that are CM Sales for this salesperson.
         CMSales = commData[[x and not y for x, y in zip(CM, Design)]]
         if CMSales.shape[0]:
@@ -370,6 +386,14 @@ def main(runCom):
             # Determine share of sales.
             designOnly = designSales[designSales['CM Sales'] == '']
             designOnly['Sales Percent'] = 100
+            # Scale down the QQ entries based on the salesperson's share.
+            QQperson = QQSplits[QQSplits['Salesperson'] == person]
+            try:
+                QQscale = QQperson['Split'].iloc[0]
+                QQid = designOnly[designOnly['Design Sales'] == 'QQ'].index
+                designOnly.loc[QQid, 'Sales Commission'] *= QQscale/100
+            except IndexError:
+                pass
             designWithCM = designSales[designSales['CM Sales'] != '']
             try:
                 split = (100 - designWithCM['CM Split'])/100
@@ -618,8 +642,9 @@ def main(runCom):
         for matchID in fullMatches.index:
             matchCols = ['CM Sales', 'Design Sales', 'CM', 'T-Name',
                          'T-End Cust']
-            duplicate = all(fullMatches.loc[matchID, i] == runningCom.loc[row, i]
-                            for i in matchCols)
+            duplicate = all(
+                    fullMatches.loc[matchID, i] == runningCom.loc[row, i]
+                    for i in matchCols)
             if duplicate:
                 break
         # If it's not an exact duplicate, add it to the Lookup Master.
