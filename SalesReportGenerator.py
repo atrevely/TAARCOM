@@ -29,7 +29,7 @@ def main(runCom):
     # Load and prepare the QQ Splits file.
     # ------------------------------------
     try:
-        QQSplits = pd.read_excel('QQ Sales Splits.xlsx', 'Splits')
+        QQSplits = pd.read_excel(lookDir + 'QQ Sales Splits.xlsx', 'Splits')
     except FileNotFoundError:
         print('No QQ Sales Splits file found!\n'
               '***')
