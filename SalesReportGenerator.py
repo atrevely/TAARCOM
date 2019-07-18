@@ -421,6 +421,9 @@ def main(runCom):
                                           designWithCM[colAppend],
                                           dualSales[colAppend]],
                                          ignore_index=True, sort=False)
+        # Adjust the JC commissions to be 35% instead of 45%.
+        if person == 'JC':
+            finalReport['Sales Commission'] *= 35/45
         # Make sure columns are numeric.
         finalReport['Paid-On Revenue'] = pd.to_numeric(
                 finalReport['Paid-On Revenue'], errors='coerce').fillna(0)
