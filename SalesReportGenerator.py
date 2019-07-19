@@ -362,7 +362,7 @@ def main(runCom):
         # --------------------------------------------------------------------
         # Find sales entries for the salesperson, including QQ lines.
         CM = commData['CM Sales'] == person
-        Design = commData['Design Sales'].isin([person, 'QQ'])
+        Design = commData['Design Sales'] == person
         # Grab entries that are CM Sales for this salesperson.
         CMSales = commData[[x and not y for x, y in zip(CM, Design)]]
         if CMSales.shape[0]:
@@ -386,14 +386,6 @@ def main(runCom):
             # Determine share of sales.
             designOnly = designSales[designSales['CM Sales'] == '']
             designOnly['Sales Percent'] = 100
-            # Scale down the QQ entries based on the salesperson's share.
-            QQperson = QQSplits[QQSplits['Salesperson'] == person]
-            try:
-                QQscale = QQperson['Split'].iloc[0]
-                QQid = designOnly[designOnly['Design Sales'] == 'QQ'].index
-                designOnly.loc[QQid, 'Sales Commission'] *= QQscale/100
-            except IndexError:
-                pass
             designWithCM = designSales[designSales['CM Sales'] != '']
             try:
                 split = (100 - designWithCM['CM Split'])/100
@@ -412,6 +404,23 @@ def main(runCom):
         else:
             dualSales = pd.DataFrame(columns=colAppend)
 
+        # Grab the QQ entries and combine into one line.
+        qqDat = commData[commData['Design Sales'] == 'QQ']
+        qqCondensed = pd.DataFrame(columns=colAppend)
+        qqCondensed.loc[0, 'T-End Cust'] = 'MISC POOL'
+        qqCondensed.loc[0, 'Sales Commission'] = sum(qqDat['Sales Commission'])
+        qqCondensed.loc[0, 'Design Sales'] = 'QQ'
+        qqCondensed.loc[0, 'Principal'] = 'VARIOUS (MISC POOL)'
+        qqCondensed.loc[0, 'Comm Month'] = currentYrMo
+        # Scale down the QQ entries based on the salesperson's share.
+        QQperson = QQSplits[QQSplits['Salesperson'] == person]
+        try:
+            QQscale = QQperson['Split'].iloc[0]
+            qqCondensed.loc[0, 'Sales Commission'] *= QQscale/100
+        except IndexError:
+            # No salesperson QQ split found, so empty it out.
+            qqCondensed = pd.DataFrame(columns=colAppend)
+
         # Start creating report.
         finalReport = pd.DataFrame(columns=colAppend)
         # Append the data.
@@ -419,7 +428,8 @@ def main(runCom):
                                           CMWithDesign[colAppend],
                                           designOnly[colAppend],
                                           designWithCM[colAppend],
-                                          dualSales[colAppend]],
+                                          dualSales[colAppend],
+                                          qqCondensed[colAppend]],
                                          ignore_index=True, sort=False)
         # Adjust the JC commissions to be 35% instead of 45%.
         if person == 'JC':

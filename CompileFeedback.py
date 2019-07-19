@@ -133,8 +133,8 @@ def main(filepaths):
     # Combine the report data from each salesperson.
     # ----------------------------------------------
     # Make sure each filename has a salesperson initials.
-    salespeople = ['CM', 'CR', 'DC', 'HS', 'IT', 'JC', 'JW', 'KC', 'LK',
-                   'MG', 'MM', 'VD']
+    salespeople = ['CM', 'CR', 'DC', 'HS', 'IT', 'JW', 'KC', 'LK', 'MG', 'MM',
+                   'VD']
     initList = []
     for filename in filenames:
         inits = filename[0:2]
