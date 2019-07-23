@@ -12,12 +12,18 @@ from RCExcelTools import tableFormat, saveError, formDate
 
 
 def tailoredPreCalc(princ, sheet, sheetName):
-    """Do special pre-processing tailored to the principal input."""
+    """Do special pre-processing tailored to the principal input. Primarily,
+    this involves renaming columns that would get looked up incorrectly
+    in the Field Mappings.
+
+    This function modifies a dataframe inplace.
+    """
     # Initialize the renameDict in case it doesn't get set later.
     renameDict = {}
-    # Osram special processing.
+    # ------------------------------
+    # Osram special pre-processing.
+    # ------------------------------
     if princ == 'OSR':
-        # Get rid of the bad columns.
         renameDict = {'Item': 'Unmapped', 'Material Number': 'Unmapped 2',
                       'Customer Name': 'Unmapped 3',
                       'Sales Date': 'Unmapped 4'}
@@ -27,40 +33,43 @@ def tailoredPreCalc(princ, sheet, sheetName):
             print('Copying Rep 2 % into empty Rep 1 % lines.\n'
                   '---')
             for row in sheet.index:
-                if sheet.loc[row, 'Rep 2 %']:
-                    if not sheet.loc[row, 'Rep 1 %']:
-                        sheet.loc[row, 'Rep 1 %'] = sheet.loc[row, 'Rep 2 %']
-    # ISSI special processing.
+                if sheet.loc[row, 'Rep 2 %'] and not sheet.loc[row, 'Rep 1 %']:
+                    sheet.loc[row, 'Rep 1 %'] = sheet.loc[row, 'Rep 2 %']
+    # -----------------------------
+    # ISSI special pre-processing.
+    # -----------------------------
     if princ == 'ISS':
-        # Rename the Commissions Due and Name columns.
         renameDict = {'Commission Due': 'Unmapped', 'Name': 'OEM/POS'}
         sheet.rename(columns=renameDict, inplace=True)
-    # ATS special processing.
+    # ----------------------------
+    # ATS special pre-processing.
+    # ----------------------------
     if princ == 'ATS':
-        # Rename the Resale and Cost columns.
         renameDict = {'Resale': 'Extended Resale', 'Cost': 'Extended Cost'}
         sheet.rename(columns=renameDict, inplace=True)
-    # ATP special processing.
+    # ----------------------------
+    # ATP special pre-processing.
+    # ----------------------------
     if princ == 'ATP':
-        # Rename the 'Commissions Due' column.
         renameDict = {'Customer': 'Unmapped', 'Address': 'Unmapped 2'}
         sheet.rename(columns=renameDict, inplace=True)
-    # QRF special processing.
+    # ----------------------------
+    # QRF special pre-processing.
+    # ----------------------------
     if princ == 'QRF':
         if sheetName in ['OEM', 'OFF']:
-            # The column Name 11 needs to be deleted.
             renameDict = {'Name 11': 'Unmapped', 'End Customer': 'Unmapped 2',
                           'Item': 'Unmapped 3'}
             sheet.rename(columns=renameDict, inplace=True)
         elif sheetName == 'POS':
-            # The column Customer is actually the Distributor.
             renameDict = {'Company': 'Distributor', 'BillDocNo': 'Unmapped',
                           'End Customer': 'Unmapped 2', 'Item': 'Unmapped 3'}
             sheet.rename(columns=renameDict, inplace=True)
-    # INF special processing.
+    # ----------------------------
+    # INF special pre-processing.
+    # ----------------------------
     if princ == 'INF':
         if 'Rep Group' in list(sheet):
-            # Material Number is bad on this sheet.
             renameDict = {'Material Number': 'Unmapped'}
             sheet.rename(columns=renameDict, inplace=True)
             # Drop the RunRate row(s) on this sheet.
@@ -73,23 +82,28 @@ def tailoredPreCalc(princ, sheet, sheetName):
                 print('Found no Comm Type column!\n'
                       '-')
         else:
-            # A bunch of things are bad on this sheet.
             renameDict = {'Material Description': 'Unmapped1',
                           'Sold To Name': 'Unmapped2',
                           'Ship To Name': 'Unmapped3', 'Item': 'Unmapped4',
                           'End Name': 'Customer Name'}
             sheet.rename(columns=renameDict, inplace=True)
-    # XMO special processing.
+    # ----------------------------
+    # XMO special pre-processing.
+    # ----------------------------
     if princ == 'XMO':
-        # The Amount column is Actual Comm Paid.
         renameDict = {'Amount': 'Commission', 'Commission Due': 'Unmapped'}
         sheet.rename(columns=renameDict, inplace=True)
-    # Return the renameDict for future use.
+    # Return the renameDict for future use in the matched raw file.
     return renameDict
 
 
 def tailoredCalc(princ, sheet, sheetName, distMap):
-    """Do special processing tailored to the principal input."""
+    """Do special processing tailored to the principal input. This involves
+    things like filling in commissions source as cost/resale, setting some
+    commission rates that aren't specified in the data, etc.
+
+    This function modifies a dataframe inplace.
+    """
     # Make sure applicable entries exist and are numeric.
     invDol = True
     extCost = True
@@ -103,13 +117,12 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
                                            errors='coerce').fillna(0)
     except KeyError:
         extCost = False
-
+    # ---------------------------
     # Abracon special processing.
+    # ---------------------------
     if princ == 'ABR':
-        invIn = 'Invoiced Dollars' in list(sheet)
-        commNotIn = 'Actual Comm Paid' not in list(sheet)
-        commRateNotIn = 'Commission Rate' not in list(sheet)
-        if invIn and commNotIn:
+        # Use the sheet names to figure out what processing needs to be done.
+        if 'Adj' in sheetName:
             # Input missing data. Commission Rate is always 3% here.
             sheet['Commission Rate'] = 0.03
             sheet['Paid-On Revenue'] = pd.to_numeric(sheet['Invoiced Dollars'],
@@ -121,7 +134,7 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
                   'Commission Rate, Paid-On Revenue, '
                   'Actual Comm Paid\n'
                   '---')
-        elif not invIn and commRateNotIn and extCost:
+        elif 'MoComm' in sheetName:
             # Fill down Distributor for their grouping scheme.
             sheet['Reported Distributor'].replace('', np.nan, inplace=True)
             sheet['Reported Distributor'].fillna(method='ffill', inplace=True)
@@ -147,7 +160,15 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
             print('Columns added from Abracon special processing:\n'
                   'Commission Rate\n'
                   '---')
+        else:
+            print('Sheet not recognized!\n'
+                  'Make sure the tab name contains either MoComm or Adj '
+                  'in the name.\n'
+                  'Continuing without extra ABR processing.\n'
+                  '---')
+    # -------------------------
     # ISSI special processing.
+    # -------------------------
     if princ == 'ISS':
         if 'OEM/POS' in list(sheet):
             for row in sheet.index:
@@ -169,7 +190,9 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
                             pass
         # ISSI is paid on resale.
         sheet['Comm Source'] = 'Resale'
-    # ATS special Processing.
+    # ------------------------
+    # ATS special processing.
+    # ------------------------
     if princ == 'ATS':
         # Try setting the Paid-On Revenue as the Invoiced Dollars.
         try:
@@ -187,7 +210,9 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
                     sheet.loc[row, 'Comm Source'] = 'Resale'
         except KeyError:
             pass
-    # ATP special Processing.
+    # ------------------------
+    # ATP special processing.
+    # ------------------------
     if princ == 'ATP':
         # Load up the customer lookup file.
         if os.path.exists('ATPCustomerLookup.xlsx'):
@@ -200,38 +225,53 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
                   '---')
             return
         # Fill in commission rates and commission paid.
-        if 'US' in sheetName and invDol:
-            sheet['Commission Rate'] = 0.03
-            sheet['Paid-On Revenue'] = sheet['Invoiced Dollars']
-            sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*0.03
-            print('Commission rate filled in for this tab: 3%\n'
-                  '---')
-            sheet['Reported Customer'].replace('', np.nan, inplace=True)
-            sheet['Reported Customer'].fillna(method='ffill', inplace=True)
-            print('Correcting customer names.\n'
-                  '---')
+        if 'US' in sheetName:
+            try:
+                sheet['Commission Rate'] = 0.03
+                sheet['Paid-On Revenue'] = sheet['Invoiced Dollars']
+                sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*0.03
+                print('Commission rate filled in for this tab: 3%\n'
+                      '---')
+                sheet['Reported Customer'].replace('', np.nan, inplace=True)
+                sheet['Reported Customer'].fillna(method='ffill', inplace=True)
+                print('Correcting customer names.\n'
+                      '---')
+            except KeyError:
+                print('Invoiced Dollars not found on this tab!\n'
+                      'Cannot do special processing.\n'
+                      '---')
             # US paid on resale.
             sheet['Comm Source'] = 'Resale'
-        elif 'TW' in sheetName and invDol:
-            sheet['Commission Rate'] = 0.024
-            sheet['Paid-On Revenue'] = sheet['Invoiced Dollars']
-            sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*0.024
-            print('Commission rate filled in for this tab: 2.4%\n'
-                  '---')
-            sheet['Reported Customer'].replace('', np.nan, inplace=True)
-            sheet['Reported Customer'].fillna(method='ffill', inplace=True)
-            print('Correcting customer names.\n'
-                  '---')
+        elif 'TW' in sheetName:
+            try:
+                sheet['Commission Rate'] = 0.024
+                sheet['Paid-On Revenue'] = sheet['Invoiced Dollars']
+                sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*0.024
+                print('Commission rate filled in for this tab: 2.4%\n'
+                      '---')
+                sheet['Reported Customer'].replace('', np.nan, inplace=True)
+                sheet['Reported Customer'].fillna(method='ffill', inplace=True)
+                print('Correcting customer names.\n'
+                      '---')
+            except KeyError:
+                print('Invoiced Dollars not found on this tab!\n'
+                      'Cannot do special processing.\n'
+                      '---')
             # TW paid on resale.
             sheet['Comm Source'] = 'Resale'
-        elif 'POS' in sheetName and extCost:
-            sheet['Commission Rate'] = 0.03
-            sheet['Paid-On Revenue'] = sheet['Ext. Cost']
-            sheet.rename(columns={'Reported End Customer':
-                                  'Reported Customer'}, inplace=True)
-            sheet['Actual Comm Paid'] = sheet['Ext. Cost']*0.03
-            print('Commission rate filled in for this tab: 3%\n'
-                  '---')
+        elif 'POS' in sheetName:
+            try:
+                sheet['Commission Rate'] = 0.03
+                sheet['Paid-On Revenue'] = sheet['Ext. Cost']
+                sheet.rename(columns={'Reported End Customer':
+                                      'Reported Customer'}, inplace=True)
+                sheet['Actual Comm Paid'] = sheet['Ext. Cost']*0.03
+                print('Commission rate filled in for this tab: 3%\n'
+                      '---')
+            except KeyError:
+                print('Ext. Cost not found on this tab!\n'
+                      'Cannot do special processing.\n'
+                      '---')
             # POS paid on cost.
             sheet['Comm Source'] = 'Cost'
         else:
@@ -257,7 +297,9 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
                 sheet.loc[row, 'Reported Customer'] = corrCust
         # ATP is paid on resale.
         sheet['Comm Source'] = 'Resale'
-    # Mill-Max special Processing.
+    # ----------------------------
+    # Mill-Max special processing.
+    # ----------------------------
     if princ == 'MIL':
         invNum = True
         try:
@@ -300,7 +342,9 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
                         sheet.loc[row, 'Part Number'] = 'NOT FOUND'
             # These commissions are paid on resale.
             sheet['Comm Source'] = 'Resale'
-    # Osram special Processing.
+    # --------------------------
+    # Osram special processing.
+    # --------------------------
     if princ == 'OSR':
         # For World Star POS tab, enter World Star as the distributor.
         if 'World' in sheetName:
@@ -311,7 +355,9 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
             pass
         # Osram is paid on resale.
         sheet['Comm Source'] = 'Resale'
-    # Cosel special Processing.
+    # --------------------------
+    # Cosel special processing.
+    # --------------------------
     if princ == 'COS':
         # Only work with the Details tab.
         if sheetName == 'Details' and extCost:
@@ -330,7 +376,9 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
                     sheet.loc[row, 'Actual Comm Paid'] = 0.05*extenCost
         # Cosel is paid on cost.
         sheet['Comm Source'] = 'Cost'
-    # Globtek special Processing.
+    # ----------------------------
+    # Globtek special processing.
+    # ----------------------------
     if princ == 'GLO':
         if 'Commission Rate' not in sheet.columns:
             sheet['Commission Rate'] = 0.05
@@ -344,7 +392,9 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
                 return
         # Globtek is paid on resale.
         sheet['Comm Source'] = 'Resale'
-    # RF360 special Processing.
+    # --------------------------
+    # RF360 special processing.
+    # --------------------------
     if princ == 'QRF':
         try:
             sheet['Paid-On Revenue'] = sheet['Invoiced Dollars']
@@ -352,15 +402,21 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
             pass
         # RF360 is paid on resale.
         sheet['Comm Source'] = 'Resale'
+    # ------------------------
     # INF special processing.
+    # ------------------------
     if princ == 'INF':
         # INF is paid on resale.
         sheet['Comm Source'] = 'Resale'
+    # ------------------------
     # LAT special processing.
+    # ------------------------
     if princ == 'LAT':
         # LAT is paid on resale.
         sheet['Comm Source'] = 'Resale'
+    # ------------------------
     # SUR special processing.
+    # ------------------------
     if princ == 'SUR':
         try:
             sheet['Paid-On Revenue'] = sheet['Invoiced Dollars']
@@ -368,7 +424,9 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
             pass
         # SUR is paid on resale.
         sheet['Comm Source'] = 'Resale'
+    # ------------------------
     # XMO special processing.
+    # ------------------------
     if princ == 'XMO':
         try:
             sheet['Paid-On Revenue'] = sheet['Invoiced Dollars']
@@ -385,18 +443,16 @@ def main(filepaths, runningCom, fieldMappings):
     Columns in individual commission files are identified and appended to the
     Running Commissions under the appropriate column, as identified by the
     fieldMappings file. Entries are then passed through the Lookup Master in
-    search of a match to Reported Customer + Part Number. Distributors are
+    search of a match to Reported Customer and Part Number. Distributors are
     corrected to consistent names. Entries with missing information are copied
     to Entries Need Fixing for further attention.
 
     Arguments:
     filepaths -- paths for opening (Excel) files to process.
-    runningCom -- current Running Commissions file (in Excel) to
-                  which we are appending data.
+    runningCom -- current Running Commissions file (in Excel) onto which we are
+                  appending data.
     fieldMappings -- dataframe which links Running Commissions columns to
                      file data columns.
-    principal -- the principal that supplied the commission file(s). Chosen
-                 from the dropdown menu on the GUI main window.
     """
     # Grab lookup table data names.
     columnNames = list(fieldMappings)
@@ -409,11 +465,14 @@ def main(filepaths, runningCom, fieldMappings):
     columnNames.extend(['CM Split', 'TEMP/FINAL', 'Paid Date', 'From File',
                         'Sales Report Date'])
 
-    # Set the directory for saving output files.
+    # Set the directories for outputting data and finding lookups.
     outDir = 'Z:/MK Working Commissions/'
     lookDir = 'Z:/Commissions Lookup/'
 
-    # Check to see if there's an existing Running Commissions to append to.
+    # -------------------------------------------------------------------
+    # Check to see if there's an existing Running Commissions to append
+    # the new data onto. If so, we need to do some work to get it ready.
+    # -------------------------------------------------------------------
     if runningCom:
         finalData = pd.read_excel(runningCom, 'Master', dtype=str)
         # Convert applicable columns to numeric.
@@ -501,13 +560,15 @@ def main(filepaths, runningCom, fieldMappings):
     else:
         print('No Running Commissions file provided. Starting a new one.')
         runComLen = 0
-        # These are our names for the data in Running Commissions.
         finalData = pd.DataFrame(columns=columnNames)
         filesProcessed = pd.DataFrame(columns=['Filename',
                                                'Total Commissions',
                                                'Date Added',
                                                'Paid Date'])
 
+    # -----------------------------------------------
+    # Check to make sure we aren't duplicating files.
+    # -----------------------------------------------
     # Strip the root off of the filepaths and leave just the filenames.
     filenames = [os.path.basename(val) for val in filepaths]
     # Check if we've duplicated any files.
@@ -595,7 +656,9 @@ def main(filepaths, runningCom, fieldMappings):
         # Set total commissions for file at zero.
         totalComm = 0
 
+        # --------------------------------
         # Detect principal from filename.
+        # --------------------------------
         principal = filename[0:3]
         print('Principal detected as: ' + principal)
         # If principal not in list, let us know and exit.
