@@ -58,8 +58,7 @@ def tailoredPreCalc(princ, sheet, sheetName):
     # ----------------------------
     if princ == 'QRF':
         if sheetName in ['OEM', 'OFF']:
-            renameDict = {'Name 11': 'Unmapped', 'End Customer': 'Unmapped 2',
-                          'Item': 'Unmapped 3'}
+            renameDict = {'End Customer': 'Unmapped 2', 'Item': 'Unmapped 3'}
             sheet.rename(columns=renameDict, inplace=True)
         elif sheetName == 'POS':
             renameDict = {'Company': 'Distributor', 'BillDocNo': 'Unmapped',
