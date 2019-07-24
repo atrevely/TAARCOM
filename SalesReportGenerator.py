@@ -40,10 +40,29 @@ def main(runCom):
               '***')
         return
 
+    # -----------------------------------------------------------------------
+    # Read in Salespeople Info. Terminate if not found or if errors in file.
+    # -----------------------------------------------------------------------
+    if os.path.exists(lookDir + 'Salespeople Info.xlsx'):
+        try:
+            salesInfo = pd.read_excel(lookDir + 'Salespeople Info.xlsx',
+                                      'Info')
+        except XLRDError:
+            print('---\n'
+                  'Error reading sheet name for Salespeople Info.xlsx!\n'
+                  'Please make sure the main tab is named Info.\n'
+                  '*Program terminated*')
+            return
+    else:
+        print('---\n'
+              'No Salespeople Info file found!\n'
+              'Please make sure Salespeople Info.xlsx is in the directory.\n'
+              '*Program terminated*')
+        return
+
     # ----------------------------------------------
     # Load and prepare the Running Commissions file.
     # ----------------------------------------------
-    # Load up the current Running Commissions file.
     try:
         runningCom = pd.read_excel(runCom, 'Master', dtype=str)
         filesProcessed = pd.read_excel(runCom, 'Files Processed').fillna('')
@@ -88,9 +107,25 @@ def main(runCom):
     runningCom['CM Split'] = runningCom['CM Split'].replace(['', '0', 0], 20)
 
     # ---------------------------------------------
+    # Fill in the Sales Commission in the RC file.
+    # ---------------------------------------------
+    for row in runningCom.index:
+        # Get the CM and Design salespeople percentages.
+        CMSales = runningCom.loc[row, 'CM Sales']
+        DesignSales = runningCom.loc[row, 'Design Sales']
+        CM = salesInfo[salesInfo['Sales Initials'] == CMSales]
+        design = salesInfo[salesInfo['Sales Initials'] == DesignSales]
+        CMpct = CM['Sales Percentage']/100
+        designPct = design['Sales Percentage']/100
+        # Calculate the total sales commission
+        CMpct *= runningCom.loc[row, 'CM Split']
+        designPct *= 100 - runningCom.loc[row, 'CM Split']
+        salesComm = (CMpct + designPct)*runningCom.loc[row, 'Actual Comm Paid']
+        runningCom.loc[row, 'Sales Commission'] = salesComm
+
+    # ---------------------------------------------
     # Load and prepare the Commissions Master file.
     # ---------------------------------------------
-    # Load up the current Commissions Master file from the server.
     try:
         comMast = pd.read_excel(dataDir + 'Commissions Master.xlsx', 'Master',
                                 dtype=str)
@@ -149,7 +184,6 @@ def main(runCom):
     # ---------------------------------------
     # Load and prepare the Account List file.
     # ---------------------------------------
-    # Load up the Account List.
     try:
         acctList = pd.read_excel(lookDir + 'Master Account List.xlsx',
                                  'Allacct')
@@ -345,7 +379,7 @@ def main(runCom):
         pivTable.PivotFields('T-End Cust').Orientation = win32c.xlRowField
         pivTable.PivotFields('T-End Cust').Position = 1
         pivTable.PivotFields('Part Number').Orientation = win32c.xlRowField
-        pivTable.PivotFields('Part Number').Position = 2        
+        pivTable.PivotFields('Part Number').Position = 2
         pivTable.PivotFields('CM').Orientation = win32c.xlRowField
         pivTable.PivotFields('CM').Position = 3
         pivTable.PivotFields('Quarter Shipped').Orientation = win32c.xlColumnField
@@ -360,6 +394,9 @@ def main(runCom):
         # --------------------------------------------------------------------
         # Create the commissions reports for each salesperson, using all data.
         # --------------------------------------------------------------------
+        # Determine the salesperson's commission percentage
+        sales = salesInfo[salesInfo['Sales Initials'] == person]
+        commPct = sales['Sales Percentage']/100
         # Find sales entries for the salesperson, including QQ lines.
         CM = commData['CM Sales'] == person
         Design = commData['Design Sales'] == person
@@ -375,7 +412,9 @@ def main(runCom):
             except TypeError:
                 split = 0.2
             CMWithDesign['Sales Percent'] = split*100
-            CMWithDesign['Sales Commission'] *= split
+            # Need to calculate sales commission from start for these.
+            salesComm = split*commPct*CMWithDesign['Actual Comm Paid']
+            CMWithDesign['Sales Commission'] = salesComm
         else:
             CMOnly = pd.DataFrame(columns=colAppend)
             CMWithDesign = pd.DataFrame(columns=colAppend)
@@ -392,7 +431,9 @@ def main(runCom):
             except TypeError:
                 split = 0.8
             designWithCM['Sales Percent'] = split*100
-            designWithCM['Sales Commission'] *= split
+            # Need to calculate sales commission from start for these.
+            salesComm = split*commPct*designWithCM['Actual Comm Paid']
+            designWithCM['Sales Commission'] = salesComm
         else:
             designOnly = pd.DataFrame(columns=colAppend)
             designWithCM = pd.DataFrame(columns=colAppend)
@@ -431,9 +472,6 @@ def main(runCom):
                                           dualSales[colAppend],
                                           qqCondensed[colAppend]],
                                          ignore_index=True, sort=False)
-        # Adjust the JC commissions to be 35% instead of 45%.
-        if person == 'JC':
-            finalReport['Sales Commission'] *= 35/45
         # Make sure columns are numeric.
         finalReport['Paid-On Revenue'] = pd.to_numeric(
                 finalReport['Paid-On Revenue'], errors='coerce').fillna(0)

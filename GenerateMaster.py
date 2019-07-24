@@ -139,19 +139,9 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
             sheet['Reported Distributor'].replace('', np.nan, inplace=True)
             sheet['Reported Distributor'].fillna(method='ffill', inplace=True)
             sheet['Reported Distributor'].fillna('', inplace=True)
-            # Switch reported cost over to Invoiced Dollars for direct lines
-            for row in sheet.index:
-                cost = sheet.loc[row, 'Ext. Cost']
-                if sheet.loc[row, 'Reported Distributor'] == 'ABRACON DIRECT':
-                    # Direct is paid on resale.
-                    sheet.loc[row, 'Invoiced Dollars'] = cost
-                    sheet.loc[row, 'Paid-On Revenue'] = cost
-                    sheet.loc[row, 'Ext. Cost'] = ''
-                    sheet.loc[row, 'Comm Source'] = 'Resale'
-                else:
-                    # All others paid on cost.
-                    sheet.loc[row, 'Paid-On Revenue'] = cost
-                    sheet.loc[row, 'Comm Source'] = 'Cost'
+            # Paid-On Revenue gets Invoiced Dollars.
+            sheet['Paid-On Revenue'] = sheet['Invoiced Dollars']
+            sheet['Comm Source'] = 'Resale'
             # Calculate the Commission Rate.
             comPaid = pd.to_numeric(sheet['Actual Comm Paid'], errors='coerce')
             revenue = pd.to_numeric(sheet['Paid-On Revenue'], errors='coerce')
@@ -210,93 +200,6 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
                     sheet.loc[row, 'Comm Source'] = 'Resale'
         except KeyError:
             pass
-    # ------------------------
-    # ATP special processing.
-    # ------------------------
-    if princ == 'ATP':
-        # Load up the customer lookup file.
-        if os.path.exists('ATPCustomerLookup.xlsx'):
-            ATPCustLook = pd.read_excel('ATPCustomerLookup.xlsx',
-                                        'Lookup').fillna('')
-        else:
-            print('No ATP Customer Lookup found!\n'
-                  'Please make sure the Customer Lookup is in the directory.\n'
-                  'Skipping tab.\n'
-                  '---')
-            return
-        # Fill in commission rates and commission paid.
-        if 'US' in sheetName:
-            try:
-                sheet['Commission Rate'] = 0.03
-                sheet['Paid-On Revenue'] = sheet['Invoiced Dollars']
-                sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*0.03
-                print('Commission rate filled in for this tab: 3%\n'
-                      '---')
-                sheet['Reported Customer'].replace('', np.nan, inplace=True)
-                sheet['Reported Customer'].fillna(method='ffill', inplace=True)
-                print('Correcting customer names.\n'
-                      '---')
-            except KeyError:
-                print('Invoiced Dollars not found on this tab!\n'
-                      'Cannot do special processing.\n'
-                      '---')
-            # US paid on resale.
-            sheet['Comm Source'] = 'Resale'
-        elif 'TW' in sheetName:
-            try:
-                sheet['Commission Rate'] = 0.024
-                sheet['Paid-On Revenue'] = sheet['Invoiced Dollars']
-                sheet['Actual Comm Paid'] = sheet['Invoiced Dollars']*0.024
-                print('Commission rate filled in for this tab: 2.4%\n'
-                      '---')
-                sheet['Reported Customer'].replace('', np.nan, inplace=True)
-                sheet['Reported Customer'].fillna(method='ffill', inplace=True)
-                print('Correcting customer names.\n'
-                      '---')
-            except KeyError:
-                print('Invoiced Dollars not found on this tab!\n'
-                      'Cannot do special processing.\n'
-                      '---')
-            # TW paid on resale.
-            sheet['Comm Source'] = 'Resale'
-        elif 'POS' in sheetName:
-            try:
-                sheet['Commission Rate'] = 0.03
-                sheet['Paid-On Revenue'] = sheet['Ext. Cost']
-                sheet.rename(columns={'Reported End Customer':
-                                      'Reported Customer'}, inplace=True)
-                sheet['Actual Comm Paid'] = sheet['Ext. Cost']*0.03
-                print('Commission rate filled in for this tab: 3%\n'
-                      '---')
-            except KeyError:
-                print('Ext. Cost not found on this tab!\n'
-                      'Cannot do special processing.\n'
-                      '---')
-            # POS paid on cost.
-            sheet['Comm Source'] = 'Cost'
-        else:
-            print('-\n'
-                  'Tab not labeled as US/TW/POS, '
-                  'or Ext. Cost/Invoiced Dollars not found on this tab.\n'
-                  '---')
-        # Correct the customer names.
-        try:
-            sheet['Reported Customer'].fillna('', inplace=True)
-        except KeyError:
-            print('No Reported Customer column found!\n'
-                  '---')
-            return
-        for row in sheet.index:
-            custName = sheet.loc[row, 'Reported Customer']
-            # Find matches for the distName in the Distributor Abbreviations.
-            custMatches = [i for i in ATPCustLook['Name'] if i in custName]
-            if len(custMatches) == 1:
-                # Find and input corrected distributor name.
-                mloc = ATPCustLook['Name'] == custMatches[0]
-                corrCust = ATPCustLook[mloc].iloc[0]['Corrected']
-                sheet.loc[row, 'Reported Customer'] = corrCust
-        # ATP is paid on resale.
-        sheet['Comm Source'] = 'Resale'
     # ----------------------------
     # Mill-Max special processing.
     # ----------------------------
@@ -566,9 +469,9 @@ def main(filepaths, runningCom, fieldMappings):
                                                'Date Added',
                                                'Paid Date'])
 
-    # -----------------------------------------------
-    # Check to make sure we aren't duplicating files.
-    # -----------------------------------------------
+    # -------------------------------------------------------------------
+    # Check to make sure we aren't duplicating files, then load in data.
+    # -------------------------------------------------------------------
     # Strip the root off of the filepaths and leave just the filenames.
     filenames = [os.path.basename(val) for val in filepaths]
     # Check if we've duplicated any files.
@@ -588,13 +491,14 @@ def main(filepaths, runningCom, fieldMappings):
                   'Please try selecting files again.\n'
                   '*Program terminated*')
             return
-
     # Read in each new file with Pandas and store them as dictionaries.
     # Each dictionary has a dataframe for each sheet in the file.
     inputData = [pd.read_excel(filepath, None, dtype=str)
                  for filepath in filepaths]
 
-    # Read in distMap. Exit if not found or if errors in file.
+    # --------------------------------------------------------------
+    # Read in distMap. Terminate if not found or if errors in file.
+    # --------------------------------------------------------------
     if os.path.exists(lookDir + 'distributorLookup.xlsx'):
         try:
             distMap = pd.read_excel(lookDir + 'distributorLookup.xlsx',
@@ -621,7 +525,9 @@ def main(filepaths, runningCom, fieldMappings):
               '*Program terminated*')
         return
 
-    # Read in the Master Lookup. Exit if not found.
+    # ------------------------------------------------------------------------
+    # Read in the Lookup Master. Terminate if not found or if errors in file.
+    # ------------------------------------------------------------------------
     if os.path.exists(lookDir + 'Lookup Master - Current.xlsx'):
         masterLookup = pd.read_excel(lookDir + 'Lookup Master - '
                                      'Current.xlsx').fillna('')
@@ -653,15 +559,14 @@ def main(filepaths, runningCom, fieldMappings):
         newData = inputData[fileNum]
         fileNum += 1
         print('_'*54 + '\nWorking on file: ' + filename + '\n' + '_'*54)
-        # Set total commissions for file at zero.
+        # Initialize total commissions for this file.
         totalComm = 0
 
-        # --------------------------------
-        # Detect principal from filename.
-        # --------------------------------
+        # -------------------------------------------------------------------
+        # Detect principal from filename, terminate if not on approved list.
+        # -------------------------------------------------------------------
         principal = filename[0:3]
         print('Principal detected as: ' + principal)
-        # If principal not in list, let us know and exit.
         princList = ['ABR', 'ATP', 'ATS', 'ATO', 'COS', 'EVE', 'GLO', 'INF',
                      'ISS', 'LAT', 'MIL', 'OSR', 'QRF', 'SUR', 'TRI', 'TRU']
         if principal not in princList:
@@ -673,10 +578,11 @@ def main(filepaths, runningCom, fieldMappings):
                   '\n*Program terminated*')
             return
 
+        # ----------------------------------------------------------------
         # Iterate over each dataframe in the ordered dictionary.
         # Each sheet in the file is its own dataframe in the dictionary.
+        # ----------------------------------------------------------------
         for sheetName in list(newData):
-            # Grab next sheet in file.
             # Rework the index just in case it got read in wrong.
             sheet = newData[sheetName].reset_index(drop=True)
             # Remove the 'nan' strings that got read in.
@@ -901,9 +807,9 @@ def main(filepaths, runningCom, fieldMappings):
 
     # Iterate over each row of the newly appended data.
     for row in range(runComLen, len(finalData)):
-        # Fill in the Sales Commission.
-        salesComm = finalData.loc[row, 'Actual Comm Paid']*0.45
-        finalData.loc[row, 'Sales Commission'] = salesComm
+        # ------------------------------------------
+        # Try to find a match in the Lookup Master.
+        # ------------------------------------------
         # First match reported customer.
         repCust = str(finalData.loc[row, 'Reported Customer']).lower()
         POSCust = masterLookup['Reported Customer'].map(
@@ -914,7 +820,6 @@ def main(filepaths, runningCom, fieldMappings):
         PPN = masterLookup['Part Number'].map(lambda x: str(x).lower())
         # Reset index, but keep it around for updating usage below.
         fullMatch = custMatches[partNum == PPN].reset_index()
-
         # Record number of Lookup Master matches.
         lookMatches = len(fullMatch)
         # If we found one match we're good, so copy it over.
@@ -948,6 +853,9 @@ def main(filepaths, runningCom, fieldMappings):
                 finalData.loc[row, col] = ', '.join(
                         fullMatch[col].map(lambda x: str(x)).unique())
 
+        # -----------------------------------------------------------
+        # Format the date correctly and fill in the Quarter Shipped.
+        # -----------------------------------------------------------
         # Try parsing the date.
         dateError = False
         dateGiven = finalData.loc[row, 'Invoice Date']
@@ -982,12 +890,15 @@ def main(filepaths, runningCom, fieldMappings):
                 finalData.loc[row, 'Invoice Date'] = date
                 # Fill in quarter/year/month data.
                 finalData.loc[row, 'Year'] = date.year
-                finalData.loc[row, 'Month'] = calendar.month_name[date.month][0:3]
+                month = calendar.month_name[date.month][0:3]
+                finalData.loc[row, 'Month'] = month
                 Qtr = str(math.ceil(date.month/3))
                 finalData.loc[row, 'Quarter Shipped'] = (str(date.year) + 'Q'
                                                          + Qtr)
 
-        # Find a corrected distributor match.
+        # ---------------------------------------------------
+        # Try to correct the distributor to consistent name.
+        # ---------------------------------------------------
         # Strip extraneous characters and all spaces, and make lowercase.
         repDist = str(finalData.loc[row, 'Reported Distributor'])
         distName = re.sub('[^a-zA-Z0-9]', '', repDist).lower()
@@ -1004,7 +915,9 @@ def main(filepaths, runningCom, fieldMappings):
             finalData.loc[row, 'Corrected Distributor'] = ''
             distMatches = ['Empty']
 
+        # -----------------------------------------------------------------
         # Go through each column and convert applicable entries to numeric.
+        # -----------------------------------------------------------------
         cols = list(finalData)
         # Invoice number sometimes has leading zeros we'd like to keep.
         cols.remove('Invoice Number')
@@ -1014,7 +927,9 @@ def main(filepaths, runningCom, fieldMappings):
             finalData.loc[row, col] = pd.to_numeric(finalData.loc[row, col],
                                                     errors='ignore')
 
-        # If any data isn't found/parsed, copy entry to Fix Entries.
+        # -----------------------------------------------------------------
+        # If any data isn't found/parsed, copy over to Entries Need Fixing.
+        # -----------------------------------------------------------------
         if lookMatches != 1 or len(distMatches) != 1 or dateError:
             fixList = fixList.append(finalData.loc[row, :], sort=False)
             fixList.loc[row, 'Running Com Index'] = row
