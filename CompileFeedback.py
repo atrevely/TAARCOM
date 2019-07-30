@@ -19,7 +19,6 @@ def tableFormat(sheetData, sheetName, wbook):
     commaFormat = wbook.book.add_format({'font': 'Calibri',
                                          'font_size': 11,
                                          'num_format': 3})
-
     # Format and fit each column.
     i = 0
     # Columns which get shrunk down in reports.
@@ -47,6 +46,8 @@ def tableFormat(sheetData, sheetName, wbook):
             maxWidth = 25
         sheet.set_column(i, i, maxWidth+0.8, formatting)
         i += 1
+    # Set the autofilter for the sheet.
+    sheet.autofilter(0, 0, sheetData.shape[0], sheetData.shape[1]-1)
 
 
 def saveError(*excelFiles):
@@ -70,13 +71,14 @@ def main(filepaths):
     Arguments:
     filepaths -- The filepaths to the files with new comments.
     """
-    # ------------------
-    # Load in the files.
-    # ------------------
+
     # Set the directory paths to the server.
     lookDir = 'Z:/Commissions Lookup/'
     dataDir = 'W:/'
+
+    # ---------------------------------------
     # Load the Digikey Insights Master file.
+    # ---------------------------------------
     if os.path.exists(dataDir + 'Digikey Insight Master.xlsx'):
         insMast = pd.read_excel(dataDir + 'Digikey Insight Master.xlsx',
                                 'Master').fillna('')
@@ -86,10 +88,12 @@ def main(filepaths):
         print('---\n'
               'No Digikey Insight Master file found!\n'
               'Please make sure Digikey Insight Master is in the directory.\n'
-              '***')
+              '*Program Terminated*')
         return
 
+    # --------------------------------------
     # Load the Root Customer Mappings file.
+    # --------------------------------------
     if os.path.exists(lookDir + 'rootCustomerMappings.xlsx'):
         try:
             rootCustMap = pd.read_excel(lookDir + 'rootCustomerMappings.xlsx',
@@ -98,7 +102,7 @@ def main(filepaths):
             print('---\n'
                   'Error reading sheet name for rootCustomerMappings.xlsx!\n'
                   'Please make sure the main tab is named Sales Lookup.\n'
-                  '***')
+                  '*Program Terminated*')
             return
         # Check the column names.
         rootMapCols = ['Root Customer', 'Salesperson']
@@ -107,34 +111,54 @@ def main(filepaths):
             print('The following columns were not detected in '
                   'rootCustomerMappings.xlsx:\n%s' %
                   ', '.join(map(str, missCols))
-                  + '\n***')
+                  + '\n*Program Terminated*')
             return
     else:
         print('---\n'
               'No Root Customer Mappings file found!\n'
               'Please make sure rootCustomerMappings.xlsx'
               'is in the directory.\n'
-              '***')
+              '*Program Terminated*')
         return
 
+    # --------------------------------
+    # Load the Salesperson Info file.
+    # --------------------------------
+    if os.path.exists(lookDir + 'Salespeople Info.xlsx'):
+        try:
+            salesInfo = pd.read_excel(lookDir + 'Salespeople Info.xlsx',
+                                      'Info')
+        except XLRDError:
+            print('---\n'
+                  'Error reading sheet name for Salespeople Info.xlsx!\n'
+                  'Please make sure the main tab is named Info.\n'
+                  '*Program terminated*')
+            return
+    else:
+        print('---\n'
+              'No Salespeople Info file found!\n'
+              'Please make sure Salespeople Info.xlsx is in the directory.\n'
+              '*Program terminated*')
+        return
+
+    # ------------------------
+    # Load the Insight files.
+    # ------------------------
     # Strip the root off of the filepaths and leave just the filenames.
     filenames = [os.path.basename(i) for i in filepaths]
-
-    # Load the Insight files.
     try:
         inputData = [pd.read_excel(i) for i in filepaths]
     except XLRDError:
         print('---\n'
               'Error reading in files!\n'
-              '***')
+              '*Program Terminated*')
         return
 
     # ----------------------------------------------
     # Combine the report data from each salesperson.
     # ----------------------------------------------
     # Make sure each filename has a salesperson initials.
-    salespeople = ['CM', 'CR', 'DC', 'HS', 'IT', 'JW', 'KC', 'LK', 'MG', 'MM',
-                   'VD']
+    salespeople = salesInfo['Sales Initials'].values
     initList = []
     for filename in filenames:
         inits = filename[0:2]
@@ -142,15 +166,14 @@ def main(filepaths):
             print('Salesperson initials ' + inits + ' not recognized!\n'
                   'Make sure the first two letters of each filename are '
                   'salesperson initials (capitalized).\n'
-                  '***')
+                  '*Program Terminated*')
             return
         elif inits in initList:
             print('Salesperson initials ' + inits + ' duplicated!\n'
-                  'Make sure each salesperson has only one file.\n'
-                  '***')
+                  'Make sure each salesperson has at most one file.\n'
+                  '*Program Terminated*')
             return
         initList.append(inits)
-
     # Create the master dataframe to append to.
     finalData = pd.DataFrame(columns=inputData[0].columns)
     # Copy over the comments.
@@ -158,7 +181,6 @@ def main(filepaths):
     for sheet in inputData:
         print('---\n'
               'Copying comments from file: ' + filenames[fileNum])
-
         # Grab only the salesperson's data.
         sales = filenames[fileNum][0:2]
         sheetData = sheet[sheet['Sales'] == sales]
@@ -166,7 +188,6 @@ def main(filepaths):
         finalData = finalData.append(sheetData, ignore_index=True, sort=False)
         # Next file.
         fileNum += 1
-
     # Drop any unnamed columns that got processed.
     try:
         finalData = finalData.loc[:, ~sheet.columns.str.contains('^Unnamed')]
@@ -198,11 +219,12 @@ def main(filepaths):
                 print('There appears to be a duplicate customer in'
                       ' rootCustomerMappings:\n'
                       + str(cust) + '\nPlease trim to one entry and try again.'
-                      + '\n***')
+                      + '\n*Program Terminated*')
                 return
 
     # Append the new data to the Digikey Insight Master.
-    insMast = insMast.append(finalData, ignore_index=True, sort=False)
+    insMast = insMast.append(finalData[list(insMast)],
+                             ignore_index=True, sort=False)
     insMast.fillna('', inplace=True)
     finalData.fillna('', inplace=True)
 
@@ -219,7 +241,7 @@ def main(filepaths):
         print('---\n'
               'Insight Master and/or Final is currently open in Excel!\n'
               'Please close the file and try again.\n'
-              '***')
+              '*Program Terminated*')
         return
 
     # Write the finished Insight file.
@@ -239,7 +261,7 @@ def main(filepaths):
     tableFormat(insMast, 'Master', writer2)
     tableFormat(filesProcessed, 'Files Processed', writer2)
 
-    # Save the file.
+    # Save the files.
     writer1.save()
     writer2.save()
 
