@@ -19,12 +19,7 @@ def tableFormat(sheetData, sheetName, wbook):
     commaFormat = wbook.book.add_format({'font': 'Calibri',
                                          'font_size': 11,
                                          'num_format': 3})
-    newFormat = wbook.book.add_format({'font': 'Calibri',
-                                       'font_size': 11,
-                                       'bg_color': 'yellow'})
-    movedFormat = wbook.book.add_format({'font': 'Calibri',
-                                         'font_size': 11,
-                                         'bg_color': '#FF9900'})
+
     # Format and fit each column.
     i = 0
     # Columns which get shrunk down in reports.
@@ -52,21 +47,8 @@ def tableFormat(sheetData, sheetName, wbook):
             maxWidth = 25
         sheet.set_column(i, i, maxWidth+0.8, formatting)
         i += 1
-    # Highlight new root customer and moved city rows.
-    try:
-        for row in sheetData.index:
-            if sheetData.loc[row, 'Sales'] == '':
-                sheet.write(row+1, 4, sheetData.loc[row, 'Root Customer..'],
-                            newFormat)
-            elif sheetData.loc[row, 'City on Acct List']:
-                sheet.write(row+1, 4, sheetData.loc[row, 'Root Customer..'],
-                            movedFormat)
-                sheet.write(row+1, 24, sheetData.loc[row, 'City on Acct List'],
-                            movedFormat)
-    except KeyError:
-        print('Error locating Sales and/or City on Acct List columns.\n'
-              'Unable to highlight without these columns.\n'
-              '---')
+    # Set the autofilter for the sheet.
+    sheet.autofilter(0, 0, sheetData.shape[0], sheetData.shape[1]-1)
 
 
 def saveError(*excelFiles):
@@ -88,7 +70,9 @@ def main(filepaths):
     Arguments:
     filepaths -- The filepaths to the files that will be appended.
     """
+    # ---------------------------------------
     # Load the Digikey Insights Master file.
+    # ---------------------------------------
     if os.path.exists('Digikey Insight Master.xlsx'):
         insMast = pd.read_excel('Digikey Insight Master.xlsx',
                                 'Master').fillna('')
@@ -101,7 +85,9 @@ def main(filepaths):
               '***')
         return
 
+    # --------------------------------------
     # Load the Root Customer Mappings file.
+    # --------------------------------------
     if os.path.exists('rootCustomerMappings.xlsx'):
         try:
             rootCustMap = pd.read_excel('rootCustomerMappings.xlsx',
@@ -132,10 +118,11 @@ def main(filepaths):
     # Get column name layout, prepare combined insight file.
     colNames = list(insMast)
     newDatComb = pd.DataFrame(columns=colNames)
-
+    # ---------------------------------------
+    # Make sure we aren't duplicating files.
+    # ---------------------------------------
     # Strip the root off of the filepaths and leave just the filenames.
     filenames = [os.path.basename(val) for val in filepaths]
-    # Check if we've duplicated any files.
     duplicates = list(set(filenames).intersection(filesProcessed['Filename']))
     # Don't let duplicate files get processed.
     filenames = [val for val in filenames if val not in duplicates]
@@ -154,46 +141,40 @@ def main(filepaths):
                   '***')
             return
 
+    # Load the Insight files.
     newFiles = pd.DataFrame({'Filename': filenames})
     filesProcessed = filesProcessed.append(newFiles, ignore_index=True,
                                            sort=False)
-    # Load the Insight files.
     inputData = [pd.read_excel(filepath, None) for filepath in filepaths]
 
+    # ------------------------------------------------------------------
     # Iterate through each file that we're appending to Digikey Master.
+    # ------------------------------------------------------------------
     fileNum = 0
     for filename in filenames:
-        # Grab the next file from the list.
+        # Grab data from the next file from the list.
         newData = inputData[fileNum]
         fileNum += 1
         print('---\n'
               'Working on file: ' + filename)
-
         # Iterate over each dataframe in the ordered dictionary.
         # Each sheet in the file is its own dataframe in the dictionary.
         for sheetName in list(newData):
-            # Grab next sheet in file.
             # Rework the index just in case it got read in wrong.
             sheet = newData[sheetName].reset_index(drop=True).fillna('')
-
             # Check to see if column names match.
             noMatch = [val for val in list(insMast) if val not in list(sheet)]
             if noMatch:
                 print('The following Digikey Master columns were not found:')
                 for colName in noMatch:
                     print(colName)
-                print('***')
+                print('*Program Terminated*')
                 return
-
             # Append new salespeople mappings to rootCustMappings.
             for row in range(len(sheet)):
                 # Get root customer and salesperson.
                 cust = sheet.loc[row, 'Root Customer..']
                 salesperson = sheet.loc[row, 'Sales']
-                if not salesperson:
-                    print('Missing salesperson entry detected!\n'
-                          'Please check Sales column for each file.\n'
-                          '***')
                 if cust and salesperson:
                     # Find match in rootCustomerMappings.
                     custMatch = rootCustMap['Root Customer'] == cust
@@ -212,20 +193,20 @@ def main(filepaths):
                         print('There appears to be a duplicate customer in'
                               ' rootCustomerMappings:\n'
                               + str(cust)
-                              + '\n***')
+                              + '\n*Program Terminated*')
                         return
-
             # Append the sheet to the combined dataframe.
             newDatComb = newDatComb.append(sheet, ignore_index=True,
                                            sort=False)
 
+    # ------------------------------------------------------------
     # Go through the combined insights and prepare sales reports.
+    # ------------------------------------------------------------
     salespeople = newDatComb['Sales'].unique()
     salespeople = [val for val in salespeople if len(val) == 2]
     for sales in salespeople:
         repDat = newDatComb[newDatComb['Sales'] == sales]
         repDat = repDat.loc[:, colNames].reset_index(drop=True)
-
         # Try saving.
         fname = ('Digikey Insights Report'
                  + time.strftime(' %m-%d-%Y - ') + sales + '.xlsx')
@@ -233,9 +214,8 @@ def main(filepaths):
             print('---\n'
                   'One of the report files is currently open in Excel!\n'
                   'Please close the file and try again.\n'
-                  '***')
+                  '*Program Terminated*')
             return
-
         # Write report to file.
         writer = pd.ExcelWriter(fname, engine='xlsxwriter',
                                 datetime_format='mm/dd/yyyy')
@@ -243,11 +223,12 @@ def main(filepaths):
         # Format as table in Excel.
         tableFormat(repDat, 'Report Data', writer)
         writer.save()
-
     # Append the new data to the Insight Master.
     insMast = insMast.append(newDatComb, ignore_index=True, sort=False)
 
+    # ---------------------------------------------------------------------
     # Try saving the files, exit with error if any file is currently open.
+    # ---------------------------------------------------------------------
     fname1 = 'Digikey Insight Master.xlsx'
     fname2 = 'rootCustomerMappings.xlsx'
     fname3 = ('Digikey Insights Report ' + time.strftime('%m-%d-%Y') +
@@ -257,7 +238,7 @@ def main(filepaths):
               'Insight Master and/or rootCustomerMappings'
               'are currently open in Excel!\n'
               'Please close the file(s) and try again.\n'
-              '***')
+              '*Program Terminated*')
         return
 
     # Write the Insight Master file.

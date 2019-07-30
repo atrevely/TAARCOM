@@ -48,12 +48,6 @@ def tailoredPreCalc(princ, sheet, sheetName):
         renameDict = {'Resale': 'Extended Resale', 'Cost': 'Extended Cost'}
         sheet.rename(columns=renameDict, inplace=True)
     # ----------------------------
-    # ATP special pre-processing.
-    # ----------------------------
-    if princ == 'ATP':
-        renameDict = {'Customer': 'Unmapped', 'Address': 'Unmapped 2'}
-        sheet.rename(columns=renameDict, inplace=True)
-    # ----------------------------
     # QRF special pre-processing.
     # ----------------------------
     if princ == 'QRF':
