@@ -79,7 +79,7 @@ def main(filepaths):
     # ---------------------------------------
     # Load the Digikey Insights Master file.
     # ---------------------------------------
-    if os.path.exists(dataDir + 'Digikey Insight Master.xlsx'):
+    if os.path.exists(lookDir + 'Digikey Insight Master.xlsx'):
         insMast = pd.read_excel(dataDir + 'Digikey Insight Master.xlsx',
                                 'Master').fillna('')
         filesProcessed = pd.read_excel(dataDir + 'Digikey Insight Master.xlsx',
@@ -88,6 +88,37 @@ def main(filepaths):
         print('---\n'
               'No Digikey Insight Master file found!\n'
               'Please make sure Digikey Insight Master is in the directory.\n'
+              '*Program Terminated*')
+        return
+
+    # -----------------------------------
+    # Load the Master Account List file.
+    # -----------------------------------
+    if os.path.exists(lookDir + 'Master Account List.xlsx'):
+        try:
+            mastAcct = pd.read_excel(lookDir + 'Master Account List.xlsx',
+                                     'Allacct').fillna('')
+        except XLRDError:
+            print('---\n'
+                  'Error reading sheet name for Master Account List.xlsx!\n'
+                  'Please make sure the main tab is named Allacct.\n'
+                  '*Program Terminated*')
+            return
+        # Check the column names.
+        mastCols = ['ProperName', 'SLS', 'CITY']
+        missCols = [i for i in mastCols if i not in list(mastAcct)]
+        if missCols:
+            print('The following columns were not detected in '
+                  'Master Account List.xlsx:\n%s' %
+                  ', '.join(map(str, missCols))
+                  + '\nRemember to delete lines before the column '
+                  'headers.\n*Program Terminated*')
+            return
+    else:
+        print('---\n'
+              'No Master Account List file found!\n'
+              'Please make sure the Master Account List '
+              'is in the directory.\n'
               '*Program Terminated*')
         return
 
@@ -222,35 +253,52 @@ def main(filepaths):
                       + '\n*Program Terminated*')
                 return
 
-    # Append the new data to the Digikey Insight Master.
+    # ----------------------------------------------------------------
+    # Append the new data to the Digikey Insight Master, then update
+    # the Current Salesperson.
+    # ----------------------------------------------------------------
     insMast = insMast.append(finalData[list(insMast)],
                              ignore_index=True, sort=False)
     insMast.fillna('', inplace=True)
     finalData.fillna('', inplace=True)
+    # Go through each root customer and update current salesperson.
+    for cust in insMast['Root Customer..'].unique():
+        currentSales = ''
+        # First check the Account List.
+        acctMatch = mastAcct[mastAcct['ProperName'] == cust]
+        if not acctMatch.empty:
+            currentSales = acctMatch['SLS'].iloc[0]
+        # Next try rootCustomerMappings.
+        mapMatch = rootCustMap[rootCustMap['Root Customer'] == cust]
+        if acctMatch.empty and not mapMatch.empty:
+            currentSales = mapMatch['SLS'].iloc[0]
+        # Update current salesperson.
+        matchID = insMast[insMast['Root Customer..'] == cust].index
+        insMast.loc[matchID, 'Current Sales'] = currentSales
 
+    # ---------------------------------------------------------------------
     # Try saving the files, exit with error if any file is currently open.
+    # ---------------------------------------------------------------------
     currentTime = time.strftime('%Y-%m-%d')
-    fname1 = 'Digikey Insight Final ' + currentTime + '.xlsx'
+    fname1 = dataDir + 'Digikey Insight Final ' + currentTime + '.xlsx'
     # Append the new file to files processed.
     newFile = pd.DataFrame(columns=filesProcessed.columns)
     newFile.loc[0, 'Filename'] = fname1
     filesProcessed = filesProcessed.append(newFile, ignore_index=True,
                                            sort=False)
-    fname2 = 'Digikey Insight Master.xlsx'
+    fname2 = lookDir + 'Digikey Insight Master.xlsx'
     if saveError(fname1, fname2):
         print('---\n'
               'Insight Master and/or Final is currently open in Excel!\n'
               'Please close the file and try again.\n'
               '*Program Terminated*')
         return
-
     # Write the finished Insight file.
     writer1 = pd.ExcelWriter(fname1, engine='xlsxwriter',
                              datetime_format='mm/dd/yyyy')
     finalData.to_excel(writer1, sheet_name='Master', index=False)
     # Format as table in Excel.
     tableFormat(finalData, 'Master', writer1)
-
     # Write the Insight Master file.
     writer2 = pd.ExcelWriter(fname2, engine='xlsxwriter',
                              datetime_format='mm/dd/yyyy')
@@ -260,11 +308,9 @@ def main(filepaths):
     # Format as table in Excel.
     tableFormat(insMast, 'Master', writer2)
     tableFormat(filesProcessed, 'Files Processed', writer2)
-
     # Save the files.
     writer1.save()
     writer2.save()
-
     print('---\n'
           'Updates completed successfully!\n'
           '---\n'

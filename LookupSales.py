@@ -87,12 +87,13 @@ def main(filepath):
     Arguments:
     filepath -- The filepath to the new Digikey Insight file.
     """
-    # ----------------------------
-    # Load in the necessary files.
-    # ----------------------------
+
     # Set the directory paths to the server.
     lookDir = 'Z:/Commissions Lookup/'
+
+    # --------------------------------------
     # Load the Root Customer Mappings file.
+    # --------------------------------------
     if os.path.exists(lookDir + 'rootCustomerMappings.xlsx'):
         try:
             rootCustMap = pd.read_excel(lookDir + 'rootCustomerMappings.xlsx',
@@ -101,7 +102,7 @@ def main(filepath):
             print('---\n'
                   'Error reading sheet name for rootCustomerMappings.xlsx!\n'
                   'Please make sure the main tab is named Sales Lookup.\n'
-                  '***')
+                  '*Program Terminated*')
             return
         # Check the column names.
         rootMapCols = ['Root Customer', 'Salesperson']
@@ -110,17 +111,19 @@ def main(filepath):
             print('The following columns were not detected in '
                   'rootCustomerMappings.xlsx:\n%s' %
                   ', '.join(map(str, missCols))
-                  + '\n***')
+                  + '\n*Program Terminated*')
             return
     else:
         print('---\n'
               'No Root Customer Mappings file found!\n'
               'Please make sure rootCustomerMappings.xlsx'
               'is in the directory.\n'
-              '***')
+              '*Program Terminated*')
         return
 
+    # -----------------------------------
     # Load the Master Account List file.
+    # -----------------------------------
     if os.path.exists(lookDir + 'Master Account List.xlsx'):
         try:
             mastAcct = pd.read_excel(lookDir + 'Master Account List.xlsx',
@@ -129,7 +132,7 @@ def main(filepath):
             print('---\n'
                   'Error reading sheet name for Master Account List.xlsx!\n'
                   'Please make sure the main tab is named Allacct.\n'
-                  '***')
+                  '*Program Terminated*')
             return
         # Check the column names.
         mastCols = ['ProperName', 'SLS', 'CITY']
@@ -139,14 +142,14 @@ def main(filepath):
                   'Master Account List.xlsx:\n%s' %
                   ', '.join(map(str, missCols))
                   + '\nRemember to delete lines before the column '
-                  'headers.\n***')
+                  'headers.\n*Program Terminated*')
             return
     else:
         print('---\n'
               'No Master Account List file found!\n'
               'Please make sure the Master Account List '
               'is in the directory.\n'
-              '***')
+              '*Program Terminated*')
         return
 
     print('Looking up salespeople...')
@@ -189,7 +192,7 @@ def main(filepath):
               'are in the report.\n'
               '(Also check that the top line of the file contains '
               'the column names).\n'
-              '***')
+              '*Program Terminated*')
         return
 
     # Remove the 'Send' column, if present.
@@ -202,7 +205,7 @@ def main(filepath):
         print('Did not find a column named "Root Customer.."\n'
               'Please make sure this column exists and try again.\n'
               'Note: also check that row 1 of the file is the column headers.'
-              '\n***')
+              '\n*Program Terminated*')
         return
 
     # Go through each entry in the Insight file and look for a sales match.
@@ -295,7 +298,7 @@ def main(filepath):
         print('---\n'
               'One or more files are currently open in Excel!\n'
               'Please close the files and try again.\n'
-              '***')
+              '*Program Terminated*')
         return
 
     # Write the Digikey Insight file, which now contains salespeople.
