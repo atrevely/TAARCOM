@@ -276,6 +276,10 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
     # Globtek special processing.
     # ----------------------------
     if princ == 'GLO':
+        try:
+            sheet['Paid-On Revenue'] = sheet['Invoiced Dollars']
+        except KeyError:
+            print('No Invoiced Dollars found on this sheet!\n')
         if 'Commission Rate' not in sheet.columns:
             sheet['Commission Rate'] = 0.05
         if 'Actual Comm Paid' not in sheet.columns:

@@ -46,7 +46,7 @@ class GenMast(QMainWindow):
         # Initialize global variables.
         global fieldMappings
         lookDir = 'Z:/Commissions Lookup/'
-        # Upload field mappings, if found.
+        # Try loading/finding the supporting files.
         if os.path.exists(lookDir + 'fieldMappings.xlsx'):
             fieldMappings = pd.read_excel(lookDir + 'fieldMappings.xlsx',
                                           index_col=False)
@@ -54,7 +54,6 @@ class GenMast(QMainWindow):
             print('No field mappings found!\n'
                   'Please make sure fieldMappings.xlsx is in the directory.\n'
                   '***')
-        # Try loading the supporting files.
         if not os.path.exists(lookDir + 'Lookup Master - Current.xlsx'):
             print('No Lookup Master found!\n'
                   'Please make sure Lookup Master is in the directory.\n'
