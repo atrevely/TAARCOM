@@ -79,7 +79,7 @@ def main(filepaths):
     # ---------------------------------------
     # Load the Digikey Insights Master file.
     # ---------------------------------------
-    if os.path.exists(lookDir + 'Digikey Insight Master.xlsx'):
+    if os.path.exists(dataDir + 'Digikey Insight Master.xlsx'):
         insMast = pd.read_excel(dataDir + 'Digikey Insight Master.xlsx',
                                 'Master').fillna('')
         filesProcessed = pd.read_excel(dataDir + 'Digikey Insight Master.xlsx',
@@ -286,7 +286,7 @@ def main(filepaths):
     newFile.loc[0, 'Filename'] = fname1
     filesProcessed = filesProcessed.append(newFile, ignore_index=True,
                                            sort=False)
-    fname2 = lookDir + 'Digikey Insight Master.xlsx'
+    fname2 = dataDir + 'Digikey Insight Master.xlsx'
     if saveError(fname1, fname2):
         print('---\n'
               'Insight Master and/or Final is currently open in Excel!\n'
