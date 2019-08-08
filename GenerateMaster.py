@@ -171,7 +171,6 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
                             sheet.loc[row, 'Reported Distributor'] = cust
                         except KeyError:
                             pass
-        # ISSI is paid on resale.
         sheet['Comm Source'] = 'Resale'
     # ------------------------
     # ATS special processing.
@@ -249,7 +248,6 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
             sheet['Paid-On Revenue'] = sheet['Invoiced Dollars']
         except KeyError:
             pass
-        # Osram is paid on resale.
         sheet['Comm Source'] = 'Resale'
     # --------------------------
     # Cosel special processing.
@@ -270,7 +268,6 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
                 else:
                     sheet.loc[row, 'Commission Rate'] = 0.05
                     sheet.loc[row, 'Actual Comm Paid'] = 0.05*extenCost
-        # Cosel is paid on cost.
         sheet['Comm Source'] = 'Cost'
     # ----------------------------
     # Globtek special processing.
@@ -290,7 +287,6 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
                       'Actual Comm Paid.\n'
                       '---')
                 return
-        # Globtek is paid on resale.
         sheet['Comm Source'] = 'Resale'
     # --------------------------
     # RF360 special processing.
@@ -300,19 +296,16 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
             sheet['Paid-On Revenue'] = sheet['Invoiced Dollars']
         except KeyError:
             pass
-        # RF360 is paid on resale.
         sheet['Comm Source'] = 'Resale'
     # ------------------------
     # INF special processing.
     # ------------------------
     if princ == 'INF':
-        # INF is paid on resale.
         sheet['Comm Source'] = 'Resale'
     # ------------------------
     # LAT special processing.
     # ------------------------
     if princ == 'LAT':
-        # LAT is paid on resale.
         sheet['Comm Source'] = 'Resale'
     # ------------------------
     # SUR special processing.
@@ -322,7 +315,6 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
             sheet['Paid-On Revenue'] = sheet['Invoiced Dollars']
         except KeyError:
             pass
-        # SUR is paid on resale.
         sheet['Comm Source'] = 'Resale'
     # ------------------------
     # XMO special processing.
@@ -332,7 +324,15 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
             sheet['Paid-On Revenue'] = sheet['Invoiced Dollars']
         except KeyError:
             pass
-        # XMO is paid on resale.
+        sheet['Comm Source'] = 'Resale'
+    # ------------------------
+    # TRI special processing.
+    # ------------------------
+    if princ == 'TRI':
+        try:
+            sheet['Paid-On Revenue'] = sheet['Invoiced Dollars']
+        except KeyError:
+            pass
         sheet['Comm Source'] = 'Resale'
 
 

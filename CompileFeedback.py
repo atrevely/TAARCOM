@@ -257,7 +257,9 @@ def main(filepaths):
     # Append the new data to the Digikey Insight Master, then update
     # the Current Salesperson.
     # ----------------------------------------------------------------
-    insMast = insMast.append(finalData[list(insMast)],
+    mastCols = list(insMast)
+    mastCols.remove('Current Sales')
+    insMast = insMast.append(finalData[mastCols],
                              ignore_index=True, sort=False)
     insMast.fillna('', inplace=True)
     finalData.fillna('', inplace=True)
@@ -271,7 +273,7 @@ def main(filepaths):
         # Next try rootCustomerMappings.
         mapMatch = rootCustMap[rootCustMap['Root Customer'] == cust]
         if acctMatch.empty and not mapMatch.empty:
-            currentSales = mapMatch['SLS'].iloc[0]
+            currentSales = mapMatch['Current Sales'].iloc[0]
         # Update current salesperson.
         matchID = insMast[insMast['Root Customer..'] == cust].index
         insMast.loc[matchID, 'Current Sales'] = currentSales
