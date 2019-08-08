@@ -29,11 +29,14 @@ def main(runCom):
     # Load up the current Running Commissions file.
     runningCom = pd.read_excel(runCom, 'Master', dtype=str)
     runningCom.replace('nan', '', inplace=True)
+    # Round the Actual Comm Paid field.
+    runningCom['Actual Comm Paid'] = runningCom['Actual Comm Paid'].map(
+            lambda x: round(float(x), 2))
     filesProcessed = pd.read_excel(runCom, 'Files Processed').fillna('')
     comDate = runCom[-20:]
 
     # Set the directory for saving output files.
-    outDir = 'Z:/MK Working Commissions/'
+    outDir = Z:/MK Working Commissions/'
     lookDir = 'Z:/Commissions Lookup/'
 
     # Track commission dollars.
@@ -44,7 +47,7 @@ def main(runCom):
     except ValueError:
         print('Non-numeric entry detected in Actual Comm Paid!\n'
               'Check the Actual Comm Paid column for bad data and try again.\n'
-              '***')
+              '*Program Teminated*')
         return
 
     # Load up the Entries Need Fixing file.
@@ -53,16 +56,19 @@ def main(runCom):
             fixList = pd.read_excel(outDir + 'Entries Need Fixing ' + comDate,
                                     'Data', dtype=str)
             fixList.replace('nan', '', inplace=True)
+            # Round the Actual Comm Paid field.
+            fixList['Actual Comm Paid'] = fixList['Actual Comm Paid'].map(
+                    lambda x: round(float(x), 2))
         except XLRDError:
             print('Error reading sheet name for Entries Need Fixing.xlsx!\n'
                   'Please make sure the main tab is named Data.\n'
-                  '***')
+                  '*Program Teminated*')
             return
     else:
         print('No Entries Need Fixing file found!\n'
               'Please make sure Entries Need Fixing ' + comDate
               + ' is in the directory ' + outDir + '.\n'
-              '***')
+              '*Program Teminated*')
         return
 
     # Read in the Master Lookup. Exit if not found.
@@ -79,13 +85,13 @@ def main(runCom):
             print('The following columns were not detected in '
                   'Lookup Master - Current.xlsx:\n%s' %
                   ', '.join(map(str, missCols))
-                  + '\n***')
+                  + '\n*Program Teminated*')
             return
     else:
         print('No Lookup Master found!\n'
               'Please make sure Lookup Master - Current.xlsx is '
               'in the directory.\n'
-              '***')
+              '*Program Teminated*')
         return
 
     # Load the Quarantined Lookups.
@@ -96,7 +102,7 @@ def main(runCom):
         print('No Quarantied Lookups file found!\n'
               'Please make sure Quarantined Lookups.xlsx '
               'is in the directory.\n'
-              '***')
+              '*Program Teminated*')
         return
 
     # -----------------------------------------
@@ -113,7 +119,7 @@ def main(runCom):
         print('No new fixed entries detected.\n'
               'Entries need a T-End Cust, Salespeople, and an Invoice Date '
               'in order to be eligible for migration to Running Commissions.\n'
-              '***')
+              '*Program Teminated*')
         return
 
     # %% Start the process of writing over fixed entries.
@@ -168,10 +174,11 @@ def main(runCom):
             except ValueError:
                 print('Error reading Running Com Index!\n'
                       'Make sure all values are numeric.\n'
-                      '***')
+                      '*Program Teminated*')
                 return
-            comm = fixed.loc[row, 'Actual Comm Paid']
-            if runningCom.loc[RCIndex, 'Actual Comm Paid'] == comm:
+            ENFcomm = fixed.loc[row, 'Actual Comm Paid']
+            RCcomm = runningCom.loc[RCIndex, 'Actual Comm Paid']
+            if RCcomm == ENFcomm:
                 # Replace the Running Commissions entry with the fixed one.
                 runningCom.loc[RCIndex, :] = fixed.loc[row, list(runningCom)]
             else:
@@ -179,7 +186,7 @@ def main(runCom):
                       'Need Fixing on row '
                       + str(row + 2) + '\n Check to make sure lines were not '
                       'deleted from the Running Commissions.'
-                      + '\n***')
+                      + '\n*Program Teminated*')
                 return
             # Delete the fixed entry from the Needs Fixing file.
             fixList.drop(row, inplace=True)
@@ -210,7 +217,7 @@ def main(runCom):
               'Running Commissions.\n'
               'This error was likely caused by adding or removing rows '
               'in either file.\n'
-              '***')
+              '*Program Teminated*')
         return
     # Re-index the fix list and drop nans in Lookup Master.
     fixList.reset_index(drop=True, inplace=True)
@@ -247,7 +254,7 @@ def main(runCom):
         print('---\n'
               'One or more files are currently open in Excel!\n'
               'Please close the files and try again.\n'
-              '***')
+              '*Program Teminated*')
         return
 
     # Write the Running Commissions file.
@@ -288,4 +295,4 @@ def main(runCom):
     writer4.save()
 
     print('Fixed entries migrated successfully!\n'
-          '+++')
+          '+Program Complete+')

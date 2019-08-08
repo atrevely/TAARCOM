@@ -152,6 +152,37 @@ def main(filepath):
               '*Program Terminated*')
         return
 
+    # --------------------------------
+    # Load the Salesperson Info file.
+    # --------------------------------
+    if os.path.exists(lookDir + 'Salespeople Info.xlsx'):
+        try:
+            salesInfo = pd.read_excel(lookDir + 'Salespeople Info.xlsx',
+                                      'Info').fillna('')
+        except XLRDError:
+            print('---\n'
+                  'Error reading sheet name for Salespeople Info.xlsx!\n'
+                  'Please make sure the main tab is named Info.\n'
+                  '*Program terminated*')
+            return
+    else:
+        print('---\n'
+              'No Salespeople Info file found!\n'
+              'Please make sure Salespeople Info.xlsx is in the directory.\n'
+              '*Program terminated*')
+        return
+    # Check for duplicate cities in the Salespeople Info.
+    cityList = [i.split(', ') for i in salesInfo['Territory Cities']
+                if i != '']
+    cityList = [j for i in cityList for j in i]
+    duplicates = set(x for x in cityList if cityList.count(x) > 1)
+    if duplicates:
+        print('The following cities are in the Salespeople Info file multiple '
+              'times:\n%s' % ', '.join(map(str, duplicates))
+              + '\nPlease remove the extras and try again.\n'
+              '*Program Terminated*')
+        return
+
     print('Looking up salespeople...')
 
     # Strip the root off of the filepath and leave just the filename.
@@ -215,50 +246,13 @@ def main(filepath):
             insFile.loc[row, 'TAARCOM Comments'] = 'Contract Manufacturer'
         if 'individual' in insFile.loc[row, 'Root Customer Class'].lower():
             insFile.loc[row, 'TAARCOM Comments'] = 'Individual'
-            # Assocaited cities to each salesperson.
-            salesByCity = {'CM': ['San Francisco'],
-                           'CR': ['San Jose', 'Morgan Hill', 'Gilroy'],
-                           'DC': ['Oakland', 'Union City', 'Hayward',
-                                  'Alameda', 'Berkeley', 'Petaluma',
-                                  'Healdsburg', 'Santa Rosa', 'Rohnert Park',
-                                  'Castro Valley', 'Hercules', 'Albany',
-                                  'El Cerrito', 'Richmond', 'Emeryville',
-                                  'Livermore', 'San Ramon', 'Pleasant Hill',
-                                  'Walnut Creek', 'San Leandro', 'San Lorenzo',
-                                  'Danville', 'Dublin', 'Eureka', 'Yreka',
-                                  'Ukiah', 'San Rafael', 'Novato', 'Concord',
-                                  'Martinez', 'Pittsburg', 'Antioch'],
-                           'HS': ['Sacramento', 'Auburn', 'Grass Valley',
-                                  'Carson City', 'Reno', 'Davis', 'Newman',
-                                  'Stockton', 'Modesto', 'Fresno',
-                                  'Rancho Cordova', 'Antelope',
-                                  'Shingle Springs', 'Roseville', 'Sparks',
-                                  'Folsom', 'Elk Grove', 'Rocklin',
-                                  'Placerville', 'Lincoln', 'Granite Bay',
-                                  'Verdi', 'Truckee', 'Fairfield', 'Vacaville',
-                                  'Dixon', 'Vallejo', 'Redding', 'Benicia',
-                                  'Chico', 'Tracy'],
-                           'JW': ['Sunnyvale', 'Moffett Field', 'Campbell',
-                                  'Saratoga', 'Los Gatos', 'Cupertino',
-                                  'Scotts Valley', 'Santa Cruz', 'Watsonville',
-                                  'Monterey', 'Felton', 'Ben Lomond',
-                                  'Boulder Creek', 'Aptos', 'Freedom',
-                                  'Capitola', 'Moss Landing', 'Castroville',
-                                  'Marina', 'Salinas', 'Paso Robles'],
-                           'MG': ['Palo Alto', 'San Mateo', 'Belmont',
-                                  'Stanford', 'San Carlos', 'Redwood City',
-                                  'Menlo Park', 'Burlingame',
-                                  'South San Francisco', 'Daly City',
-                                  'Brisbane', 'San Bruno', 'Pacifica',
-                                  'Half Moon Bay', 'Woodside', 'Atherton',
-                                  'Foster City'],
-                           'MM': ['Mountain View', 'Los Altos', 'Fremont',
-                                  'Milpitas', 'Santa Clara']}
-            # Assign salesperson based on city.
-            for key in salesByCity.keys():
-                city = insFile.loc[row, 'Customer City'].upper()
-                if city in map(lambda x: x.upper(), salesByCity[key]):
-                    insFile.loc[row, 'Sales'] = key
+            city = insFile.loc[row, 'Customer City'].upper()
+            # Check for matches to city and assign salesperson.
+            for row in salesInfo.index:
+                cities = salesInfo['Territory Cities'][row].upper().split(', ')
+                if city in cities:
+                    insFile.loc[row, 'Sales'] = salesInfo.loc[row,
+                                                              'Salesperson']
             # Done, so move to next line in file.
             continue
         cust = insFile.loc[row, 'Root Customer..']
@@ -313,4 +307,4 @@ def main(filepath):
 
     print('---\n'
           'Salespeople successfully looked up!\n'
-          'New file saved as in:\n ' + fname1 + '\n+++')
+          'New file saved as:\n ' + fname1 + '\n+Program Complete+')

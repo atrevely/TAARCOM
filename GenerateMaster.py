@@ -1010,4 +1010,4 @@ def main(filepaths, runningCom, fieldMappings):
           'Running Commissions updated.\n'
           'Lookup Master updated.\n'
           'Entries Need Fixing updated.\n'
-          '+++')
+          '+Program Complete+')

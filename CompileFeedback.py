@@ -315,4 +315,4 @@ def main(filepaths):
           'Updates completed successfully!\n'
           '---\n'
           'Digikey Master updated.\n'
-          '+++')
+          '+Program Complete+')
