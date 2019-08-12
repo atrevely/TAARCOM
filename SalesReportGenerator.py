@@ -403,10 +403,10 @@ def main(runCom):
         # --------------------------------------------------------------------
         # Create the commissions reports for each salesperson, using all data.
         # --------------------------------------------------------------------
-        # Determine the salesperson's commission percentage
+        # Determine the salesperson's commission percentage.
         sales = salesInfo[salesInfo['Sales Initials'] == person]
-        commPct = sales['Sales Percentage']/100
-        # Find sales entries for the salesperson, including QQ lines.
+        commPct = sales['Sales Percentage'].iloc[0]/100
+        # Find sales entries for the salesperson.
         CM = commData['CM Sales'] == person
         Design = commData['Design Sales'] == person
         # Grab entries that are CM Sales for this salesperson.

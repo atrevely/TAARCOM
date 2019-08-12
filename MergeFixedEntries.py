@@ -23,22 +23,43 @@ def main(runCom):
     entries when needed, and quarantining old entries that have not been
     used in 2+ years.
     """
-    # -------------------------
-    # Load in all of the files.
-    # -------------------------
+
+    # Set the directory for saving output files.
+    outDir = 'Z:/MK Working Commissions/'
+    lookDir = 'Z:/Commissions Lookup/'
+
+    # ----------------------------------------------
     # Load up the current Running Commissions file.
+    # ----------------------------------------------
     runningCom = pd.read_excel(runCom, 'Master', dtype=str)
+    # Convert applicable columns to numeric.
+    numCols = ['Quantity', 'Ext. Cost', 'Invoiced Dollars',
+               'Paid-On Revenue', 'Actual Comm Paid', 'Unit Cost',
+               'Unit Price', 'CM Split', 'Year', 'Sales Commission',
+               'Split Percentage', 'Commission Rate',
+               'Gross Rev Reduction', 'Shared Rev Tier Rate']
+    for col in numCols:
+        try:
+            runningCom[col] = pd.to_numeric(runningCom[col],
+                                            errors='coerce').fillna('')
+        except KeyError:
+            pass
+    # Convert individual numbers to numeric in rest of columns.
+    mixedCols = [col for col in list(runningCom) if col not in numCols]
+    # Invoice/part numbers sometimes has leading zeros we'd like to keep.
+    mixedCols.remove('Invoice Number')
+    mixedCols.remove('Part Number')
+    # The INF gets read in as infinity, so skip the principal column.
+    mixedCols.remove('Principal')
+    for col in mixedCols:
+        runningCom[col] = runningCom[col].map(
+                lambda x: pd.to_numeric(x, errors='ignore'))
     runningCom.replace('nan', '', inplace=True)
     # Round the Actual Comm Paid field.
     runningCom['Actual Comm Paid'] = runningCom['Actual Comm Paid'].map(
             lambda x: round(float(x), 2))
     filesProcessed = pd.read_excel(runCom, 'Files Processed').fillna('')
     comDate = runCom[-20:]
-
-    # Set the directory for saving output files.
-    outDir = 'Z:/MK Working Commissions/'
-    lookDir = 'Z:/Commissions Lookup/'
-
     # Track commission dollars.
     try:
         comm = pd.to_numeric(runningCom['Actual Comm Paid'],
@@ -50,11 +71,23 @@ def main(runCom):
               '*Program Teminated*')
         return
 
+    # --------------------------------------
     # Load up the Entries Need Fixing file.
+    # --------------------------------------
     if os.path.exists(outDir + 'Entries Need Fixing ' + comDate):
         try:
             fixList = pd.read_excel(outDir + 'Entries Need Fixing ' + comDate,
                                     'Data', dtype=str)
+            # Convert entries to proper types, like above.
+            for col in numCols:
+                try:
+                    fixList[col] = pd.to_numeric(fixList[col],
+                                                 errors='coerce').fillna('')
+                except KeyError:
+                    pass
+            for col in mixedCols:
+                fixList[col] = fixList[col].map(
+                        lambda x: pd.to_numeric(x, errors='ignore'))
             fixList.replace('nan', '', inplace=True)
             # Round the Actual Comm Paid field.
             fixList['Actual Comm Paid'] = fixList['Actual Comm Paid'].map(
@@ -71,7 +104,9 @@ def main(runCom):
               '*Program Teminated*')
         return
 
+    # ----------------------------------------------
     # Read in the Master Lookup. Exit if not found.
+    # ----------------------------------------------
     if os.path.exists(lookDir + 'Lookup Master - Current.xlsx'):
         mastLook = pd.read_excel(lookDir +
                                  'Lookup Master - Current.xlsx').fillna('')
@@ -94,7 +129,9 @@ def main(runCom):
               '*Program Teminated*')
         return
 
+    # ------------------------------
     # Load the Quarantined Lookups.
+    # ------------------------------
     if os.path.exists(lookDir + 'Quarantined Lookups.xlsx'):
         quarantined = pd.read_excel(lookDir +
                                     'Quarantined Lookups.xlsx').fillna('')

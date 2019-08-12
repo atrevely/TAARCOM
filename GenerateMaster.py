@@ -393,6 +393,7 @@ def main(filepaths, runningCom, fieldMappings):
         mixedCols.remove('Invoice Number')
         mixedCols.remove('Part Number')
         # The INF gets read in as infinity, so skip the principal column.
+        # It's always a string anyway.
         mixedCols.remove('Principal')
         for col in mixedCols:
             finalData[col] = finalData[col].map(
@@ -421,24 +422,13 @@ def main(filepaths, runningCom, fieldMappings):
         fixName = outDir + 'Entries Need Fixing ' + comDate
         try:
             fixList = pd.read_excel(fixName, 'Data', dtype=str)
-            # Convert applicable columns to numeric.
-            numCols = ['Quantity', 'Ext. Cost', 'Invoiced Dollars',
-                       'Paid-On Revenue', 'Actual Comm Paid', 'Unit Cost',
-                       'Unit Price', 'CM Split', 'Year', 'Sales Commission',
-                       'Split Percentage', 'Commission Rate',
-                       'Gross Rev Reduction', 'Shared Rev Tier Rate']
+            # Convert entries to proper types, like above.
             for col in numCols:
                 try:
                     fixList[col] = pd.to_numeric(fixList[col],
                                                  errors='coerce').fillna('')
                 except KeyError:
                     pass
-            # Convert individual numbers to numeric in rest of columns.
-            mixedCols = [col for col in list(fixList) if col not in numCols]
-            # Invoice number sometimes has leading zeros we'd like to keep.
-            mixedCols.remove('Invoice Number')
-            # The INF gets read in as infinity, so skip the principal column.
-            mixedCols.remove('Principal')
             for col in mixedCols:
                 fixList[col] = fixList[col].map(
                         lambda x: pd.to_numeric(x, errors='ignore'))
