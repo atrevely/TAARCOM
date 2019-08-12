@@ -116,6 +116,7 @@ def main(runCom):
         # Deal with the QQ lines.
         if 'QQ' in (CMSales, DesignSales):
             salesComm = 0.45*runningCom.loc[row, 'Actual Comm Paid']
+            runningCom.loc[row, 'Sales Commission'] = salesComm
             continue
         CM = salesInfo[salesInfo['Sales Initials'] == CMSales]
         design = salesInfo[salesInfo['Sales Initials'] == DesignSales]
