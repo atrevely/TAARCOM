@@ -126,7 +126,7 @@ def main(runCom):
         if CMSales and DesignSales:
             CMpct *= runningCom.loc[row, 'CM Split']
             designPct *= 100 - runningCom.loc[row, 'CM Split']
-            totPct = CMpct.iloc[0] + designPct.iloc[0]
+            totPct = (CMpct.iloc[0] + designPct.iloc[0])/100
         else:
             totPct = [i.iloc[0] for i in (CMpct, designPct) if any(i)][0]
         salesComm = totPct*runningCom.loc[row, 'Actual Comm Paid']
