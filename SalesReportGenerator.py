@@ -113,14 +113,22 @@ def main(runCom):
         # Get the CM and Design salespeople percentages.
         CMSales = runningCom.loc[row, 'CM Sales']
         DesignSales = runningCom.loc[row, 'Design Sales']
+        # Deal with the QQ lines.
+        if 'QQ' in (CMSales, DesignSales):
+            salesComm = 0.45*runningCom.loc[row, 'Actual Comm Paid']
+            continue
         CM = salesInfo[salesInfo['Sales Initials'] == CMSales]
         design = salesInfo[salesInfo['Sales Initials'] == DesignSales]
         CMpct = CM['Sales Percentage']/100
         designPct = design['Sales Percentage']/100
         # Calculate the total sales commission
-        CMpct *= runningCom.loc[row, 'CM Split']
-        designPct *= 100 - runningCom.loc[row, 'CM Split']
-        salesComm = (CMpct + designPct)*runningCom.loc[row, 'Actual Comm Paid']
+        if CMSales and DesignSales:
+            CMpct *= runningCom.loc[row, 'CM Split']
+            designPct *= 100 - runningCom.loc[row, 'CM Split']
+            totPct = CMpct.iloc[0] + designPct.iloc[0]
+        else:
+            totPct = [i.iloc[0] for i in (CMpct, designPct) if any(i)][0]
+        salesComm = totPct*runningCom.loc[row, 'Actual Comm Paid']
         runningCom.loc[row, 'Sales Commission'] = salesComm
 
     # ---------------------------------------------
