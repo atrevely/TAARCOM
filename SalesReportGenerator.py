@@ -411,38 +411,40 @@ def main(runCom):
         Design = commData['Design Sales'] == person
         # Grab entries that are CM Sales for this salesperson.
         CMSales = commData[[x and not y for x, y in zip(CM, Design)]]
-        if CMSales.shape[0]:
+        if not CMSales.empty:
             # Determine share of sales.
             CMOnly = CMSales[CMSales['Design Sales'] == '']
             CMOnly['Sales Percent'] = 100
             CMWithDesign = CMSales[CMSales['Design Sales'] != '']
-            try:
-                split = CMWithDesign['CM Split']/100
-            except TypeError:
-                split = 0.2
-            CMWithDesign['Sales Percent'] = split*100
-            # Need to calculate sales commission from start for these.
-            salesComm = split*commPct*CMWithDesign['Actual Comm Paid']
-            CMWithDesign['Sales Commission'] = salesComm
+            if not CMWithDesign.empty:
+                try:
+                    split = CMWithDesign['CM Split']/100
+                except TypeError:
+                    split = 0.2
+                CMWithDesign['Sales Percent'] = split*100
+                # Need to calculate sales commission from start for these.
+                salesComm = split*commPct*CMWithDesign['Actual Comm Paid']
+                CMWithDesign['Sales Commission'] = salesComm
         else:
             CMOnly = pd.DataFrame(columns=colAppend)
             CMWithDesign = pd.DataFrame(columns=colAppend)
 
         # Grab entries that are Design Sales only.
         designSales = commData[[not x and y for x, y in zip(CM, Design)]]
-        if designSales.shape[0]:
+        if not designSales.empty:
             # Determine share of sales.
             designOnly = designSales[designSales['CM Sales'] == '']
             designOnly['Sales Percent'] = 100
             designWithCM = designSales[designSales['CM Sales'] != '']
-            try:
-                split = (100 - designWithCM['CM Split'])/100
-            except TypeError:
-                split = 0.8
-            designWithCM['Sales Percent'] = split*100
-            # Need to calculate sales commission from start for these.
-            salesComm = split*commPct*designWithCM['Actual Comm Paid']
-            designWithCM['Sales Commission'] = salesComm
+            if not designWithCM.empty:
+                try:
+                    split = (100 - designWithCM['CM Split'])/100
+                except TypeError:
+                    split = 0.8
+                designWithCM['Sales Percent'] = split*100
+                # Need to calculate sales commission from start for these.
+                salesComm = split*commPct*designWithCM['Actual Comm Paid']
+                designWithCM['Sales Commission'] = salesComm
         else:
             designOnly = pd.DataFrame(columns=colAppend)
             designWithCM = pd.DataFrame(columns=colAppend)
