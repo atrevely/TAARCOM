@@ -25,20 +25,6 @@ def main(runCom):
     pythoncom.CoInitialize()
 
     print('Loading the data from Commissions Master...')
-    # ------------------------------------
-    # Load and prepare the QQ Splits file.
-    # ------------------------------------
-    try:
-        QQSplits = pd.read_excel(lookDir + 'QQ Sales Splits.xlsx', 'Splits')
-    except FileNotFoundError:
-        print('No QQ Sales Splits file found!\n'
-              '***')
-        return
-    except XLRDError:
-        print('QQ Sales Splits tab names incorrect!\n'
-              'Make sure the main tab is named Splits.\n'
-              '***')
-        return
 
     # -----------------------------------------------------------------------
     # Read in Salespeople Info. Terminate if not found or if errors in file.
@@ -68,12 +54,12 @@ def main(runCom):
         filesProcessed = pd.read_excel(runCom, 'Files Processed').fillna('')
     except FileNotFoundError:
         print('No Running Commissions file found!\n'
-              '***')
+              '*Program Terminated*')
         return
     except XLRDError:
         print('Running Commissions tab names incorrect!\n'
               'Make sure the tabs are named Master and Files Processed.\n'
-              '***')
+              '*Program Terminated*')
         return
 
     # Convert applicable columns to numeric.
@@ -105,6 +91,9 @@ def main(runCom):
             lambda x: formDate(x))
     # Make sure that the CM Splits aren't blank or zero.
     runningCom['CM Split'] = runningCom['CM Split'].replace(['', '0', 0], 20)
+    # Strip any extra spaces that made their way into salespeople columns.
+    for col in ['CM Sales', 'Design Sales']:
+        runningCom[col] = runningCom[col].map(lambda x: x.strip())
 
     # ---------------------------------------------
     # Fill in the Sales Commission in the RC file.
@@ -142,12 +131,12 @@ def main(runCom):
                                     'Files Processed').fillna('')
     except FileNotFoundError:
         print('No Commissions Master file found!\n'
-              '***')
+              '*Program Terminated*')
         return
     except XLRDError:
         print('Commissions Master tab names incorrect!\n'
               'Make sure the tabs are named Master and Files Processed.\n'
-              '***')
+              '*Program Terminated*')
         return
     # Convert applicable columns to numeric.
     for col in numCols:
@@ -161,21 +150,22 @@ def main(runCom):
                 lambda x: pd.to_numeric(x, errors='ignore'))
     # Now remove the nans.
     comMast.replace('nan', '', inplace=True)
-
     # Make sure all the dates are formatted correctly.
     for col in ['Invoice Date', 'Paid Date', 'Sales Report Date']:
         comMast[col] = comMast[col].map(lambda x: formDate(x))
     # Make sure that the CM Splits aren't blank or zero.
     comMast['CM Split'] = comMast['CM Split'].replace(['', '0', 0], 20)
 
+    # ------------------------------------------------------------------
     # Determine the commission months that are currently in the Master.
+    # ------------------------------------------------------------------
     commMonths = comMast['Comm Month'].unique()
     try:
         commMonths = [parse(str(i)) for i in commMonths if i != '']
     except ValueError:
         print('Error parsing dates in Comm Month column of Commissions Master!'
               '\nPlease check that all dates are in standard formatting and '
-              'try again.\n***')
+              'try again.\n*Program Terminated*')
         return
     # Grab the most recent month in Commissions Master
     lastMonth = max(commMonths)
@@ -198,12 +188,12 @@ def main(runCom):
                                  'Allacct')
     except FileNotFoundError:
         print('No Account List file found!\n'
-              '***')
+              '*Program Terminated*')
         return
     except XLRDError:
         print('Account List tab names incorrect!\n'
               'Make sure the main tab is named Allacct.\n'
-              '***')
+              '*Program Terminated*')
         return
     # -----------------------------------
     # Load and prepare the Master Lookup.
@@ -221,14 +211,14 @@ def main(runCom):
             print('The following columns were not detected in '
                   'Lookup Master.xlsx:\n%s' %
                   ', '.join(map(str, missCols))
-                  + '\n***')
+                  + '\n*Program Terminated*')
             return
     else:
         print('---\n'
               'No Lookup Master found!\n'
               'Please make sure Lookup Master - Current.xlsx is '
               'in the directory.\n'
-              '***')
+              '*Program Terminated*')
         return
 
     # ------------------------------------------------------------------
@@ -243,7 +233,7 @@ def main(runCom):
         print('---\n'
               'The following files are already in Commissions Master:\n%s' %
               ', '.join(map(str, duplicates)) + '\nPlease check the files and '
-              'try again.\n***')
+              'try again.\n*Program Terminated*')
         return
 
     print('Preparing report data...')
@@ -251,15 +241,16 @@ def main(runCom):
     # Get the salespeople information ready.
     # --------------------------------------
     # Grab all of the salespeople initials.
-    salespeople = list(set().union(
-            runningCom['CM Sales'].map(lambda x: str.strip(x)).unique(),
-            runningCom['Design Sales'].map(lambda x: str.strip(x)).unique()))
+    salespeople = list(set().union(runningCom['CM Sales'].unique(),
+                                   runningCom['Design Sales'].unique()))
     salespeople = [i for i in salespeople if i not in ['QQ', '']]
     salespeople.sort()
 
     # Create the dataframe with the commission information by salesperson.
     salesTot = pd.DataFrame(columns=['Salesperson', 'Principal',
-                                     'Paid-On Revenue', 'Sales Commission'])
+                                     'Paid-On Revenue', 'Actual Comm Paid',
+                                     'Sales Commission', 'Comm Pct'],
+                            index=[0])
 
     # Columns appended from Running Commissions.
     colAppend = list(runningCom)
@@ -291,7 +282,7 @@ def main(runCom):
         revDat.loc[row, 'CDS'] = revDat.loc[row, 'Design Sales']
         # If no design sales, use CM sales.
         if not revDat.loc[row, 'CDS']:
-            revDat.loc[row, 'CDS'] = revDat.loc[row, 'CM Sales']
+            revDat.loc[row, 'CDS'] = revDat.loc[row, 'CM Sales'].strip()
     # Also grab the section of the data that aren't 80/20 splits.
     splitDat = revDat[revDat['CM Split'] > 20]
 
@@ -305,7 +296,7 @@ def main(runCom):
     except (TypeError, ValueError):
         print('Error reading month in Comm Month column!\n'
               'Please make sure all months are in YYYY-MM format.\n'
-              '***')
+              '*Program Terminated*')
         return
     # Filter to data in this year.
     yearData = comMastTracked[commDates.map(lambda x: x.year) == currentYear]
@@ -316,7 +307,6 @@ def main(runCom):
     qtrData = yearData[dataMos.isin(list(months))]
     # Compile the commissions data.
     commData = qtrData.append(runningCom, ignore_index=True, sort=False)
-
     # ----------------------------------
     # Open Excel using the win32c tools.
     # ----------------------------------
@@ -351,6 +341,12 @@ def main(runCom):
         # Get rid of empty Quarter Shipped lines.
         designDat = designDat[designDat['Quarter Shipped'] != '']
         designDat.reset_index(drop=True, inplace=True)
+        # Replace zeros with blanks.
+        for col in numCols:
+            try:
+                designDat[col].replace(0, '', inplace=True)
+            except KeyError:
+                pass
         # Write the raw data to a file.
         filename = (person + ' Revenue Report - ' + currentYrMo + '.xlsx')
         writer = pd.ExcelWriter(filename, engine='xlsxwriter',
@@ -364,7 +360,7 @@ def main(runCom):
             print('---\n'
                   'A salesperson report file is open in Excel!\n'
                   'Please close the file(s) and try again.\n'
-                  '***')
+                  '*Program Terminated*')
             return
         # Create the workbook and add the report sheet.
         wb = excel.Workbooks.Open(os.getcwd() + '\\' + filename)
@@ -400,9 +396,9 @@ def main(runCom):
         dataField.NumberFormat = '$#,##0'
         wb.Close(SaveChanges=1)
 
-        # --------------------------------------------------------------------
+        # ---------------------------------------------------------------------
         # Create the commissions reports for each salesperson, using all data.
-        # --------------------------------------------------------------------
+        # ---------------------------------------------------------------------
         # Determine the salesperson's commission percentage.
         sales = salesInfo[salesInfo['Sales Initials'] == person]
         commPct = sales['Sales Percentage'].iloc[0]/100
@@ -414,49 +410,52 @@ def main(runCom):
         if not CMSales.empty:
             # Determine share of sales.
             CMOnly = CMSales[CMSales['Design Sales'] == '']
-            CMOnly['Sales Percent'] = 100
+            CMOnly['Sales Commission'] = commPct*CMOnly['Actual Comm Paid']
             CMWithDesign = CMSales[CMSales['Design Sales'] != '']
             if not CMWithDesign.empty:
                 try:
                     split = CMWithDesign['CM Split']/100
                 except TypeError:
                     split = 0.2
-                CMWithDesign['Sales Percent'] = split*100
                 # Need to calculate sales commission from start for these.
-                salesComm = split*commPct*CMWithDesign['Actual Comm Paid']
+                actComm = split*CMWithDesign['Actual Comm Paid']
+                CMWithDesign['Actual Comm Paid'] = actComm
+                salesComm = commPct*actComm
                 CMWithDesign['Sales Commission'] = salesComm
         else:
             CMOnly = pd.DataFrame(columns=colAppend)
             CMWithDesign = pd.DataFrame(columns=colAppend)
-
-        # Grab entries that are Design Sales only.
+        # Grab entries that are Design Sales for this salesperson.
         designSales = commData[[not x and y for x, y in zip(CM, Design)]]
         if not designSales.empty:
             # Determine share of sales.
             designOnly = designSales[designSales['CM Sales'] == '']
-            designOnly['Sales Percent'] = 100
+            desSalesComm = commPct*designOnly['Actual Comm Paid']
+            designOnly['Sales Commission'] = desSalesComm
             designWithCM = designSales[designSales['CM Sales'] != '']
             if not designWithCM.empty:
                 try:
                     split = (100 - designWithCM['CM Split'])/100
                 except TypeError:
                     split = 0.8
-                designWithCM['Sales Percent'] = split*100
                 # Need to calculate sales commission from start for these.
-                salesComm = split*commPct*designWithCM['Actual Comm Paid']
+                actComm = split*designWithCM['Actual Comm Paid']
+                designWithCM['Actual Comm Paid'] = actComm
+                salesComm = commPct*actComm
                 designWithCM['Sales Commission'] = salesComm
         else:
             designOnly = pd.DataFrame(columns=colAppend)
             designWithCM = pd.DataFrame(columns=colAppend)
-
         # Grab CM + Design Sales entries.
         dualSales = commData[[x and y for x, y in zip(CM, Design)]]
-        if dualSales.shape[0]:
-            dualSales['Sales Percent'] = 100
-        else:
+        dualSalesComm = commPct*dualSales['Actual Comm Paid']
+        dualSales['Sales Commission'] = dualSalesComm
+        if dualSales.empty:
             dualSales = pd.DataFrame(columns=colAppend)
 
+        # -----------------------------------------------
         # Grab the QQ entries and combine into one line.
+        # -----------------------------------------------
         qqDat = commData[commData['Design Sales'] == 'QQ']
         qqCondensed = pd.DataFrame(columns=colAppend)
         qqCondensed.loc[0, 'T-End Cust'] = 'MISC POOL'
@@ -464,16 +463,19 @@ def main(runCom):
         qqCondensed.loc[0, 'Design Sales'] = 'QQ'
         qqCondensed.loc[0, 'Principal'] = 'VARIOUS (MISC POOL)'
         qqCondensed.loc[0, 'Comm Month'] = currentYrMo
+        qqCondensed.loc[0, 'Actual Comm Paid'] = sum(qqDat['Actual Comm Paid'])
         # Scale down the QQ entries based on the salesperson's share.
-        QQperson = QQSplits[QQSplits['Salesperson'] == person]
+        QQperson = salesInfo[salesInfo['Sales Initials'] == person]
         try:
-            QQscale = QQperson['Split'].iloc[0]
+            QQscale = QQperson['QQ Split'].iloc[0]
             qqCondensed.loc[0, 'Sales Commission'] *= QQscale/100
         except IndexError:
             # No salesperson QQ split found, so empty it out.
             qqCondensed = pd.DataFrame(columns=colAppend)
 
+        # -----------------------
         # Start creating report.
+        # -----------------------
         finalReport = pd.DataFrame(columns=colAppend)
         # Append the data.
         finalReport = finalReport.append([CMOnly[colAppend],
@@ -486,43 +488,52 @@ def main(runCom):
         # Make sure columns are numeric.
         finalReport['Paid-On Revenue'] = pd.to_numeric(
                 finalReport['Paid-On Revenue'], errors='coerce').fillna(0)
+        finalReport['Actual Comm Paid'] = pd.to_numeric(
+                finalReport['Actual Comm Paid'], errors='coerce').fillna(0)
         finalReport['Sales Commission'] = pd.to_numeric(
                 finalReport['Sales Commission'], errors='coerce').fillna(0)
-        # Total up the Paid-On Revenue and Sales Commission.
+        # Total up the Paid-On Revenue and Actual/Sales Commission.
         reportTot = pd.DataFrame(columns=['Salesperson', 'Paid-On Revenue',
-                                          'Sales Commission'], index=[0])
+                                          'Actual Comm Paid',
+                                          'Sales Commission', 'Comm Pct'],
+                                 index=[0])
         reportTot['Salesperson'] = person
         reportTot['Principal'] = ''
+        actComm = sum(finalReport['Actual Comm Paid'])
+        salesComm = sum(finalReport['Sales Commission'])
         reportTot['Paid-On Revenue'] = sum(finalReport['Paid-On Revenue'])
-        reportTot['Sales Commission'] = sum(finalReport['Sales Commission'])
+        reportTot['Actual Comm Paid'] = actComm
+        reportTot['Sales Commission'] = salesComm
+        reportTot['Comm Pct'] = salesComm/actComm
         # Append to Sales Totals.
         salesTot = salesTot.append(reportTot, ignore_index=True, sort=False)
-
         # Build table of sales by principal.
         princTab = pd.DataFrame(columns=['Principal', 'Paid-On Revenue',
                                          'Sales Commission'])
         row = 0
         totInv = 0
+        totAct = 0
         totComm = 0
         # Tally up Paid-On Revenue and Sales Commission for each principal.
         for principal in finalReport['Principal'].unique():
             princSales = finalReport[finalReport['Principal'] == principal]
             princInv = sum(princSales['Paid-On Revenue'])
+            princAct = sum(princSales['Actual Comm Paid'])
             princComm = sum(princSales['Sales Commission'])
             totInv += princInv
+            totAct += princAct
             totComm += princComm
             # Fill in table with principal's totals.
             princTab.loc[row, 'Principal'] = principal
             princTab.loc[row, 'Paid-On Revenue'] = princInv
+            princTab.loc[row, 'Actual Comm Paid'] = princAct
             princTab.loc[row, 'Sales Commission'] = princComm
             row += 1
-
         # Sort principals in descending order alphabetically.
         princTab.sort_values(by=['Principal'], inplace=True)
         princTab.reset_index(drop=True, inplace=True)
         # Append to Salesperson Totals tab.
         salesTot = salesTot.append(princTab, ignore_index=True, sort=False)
-
         # Sort principals in descending order by Sales Commission.
         princTab.sort_values(by=['Sales Commission'], ascending=False,
                              inplace=True)
@@ -530,8 +541,15 @@ def main(runCom):
         # Fill in overall totals.
         princTab.loc[row, 'Principal'] = 'Grand Total'
         princTab.loc[row, 'Paid-On Revenue'] = totInv
+        princTab.loc[row, 'Actual Comm Paid'] = totAct
         princTab.loc[row, 'Sales Commission'] = totComm
-
+        princTab.loc[row, 'Comm Pct'] = totComm/totAct
+        # Replace zeros with blanks.
+        for col in numCols:
+            try:
+                finalReport[col].replace(0, '', inplace=True)
+            except KeyError:
+                pass
         # Write report to file.
         filename = (person + ' Commission Report - ' + currentYrMo + '.xlsx')
         writer = pd.ExcelWriter(filename, engine='xlsxwriter',
@@ -548,7 +566,7 @@ def main(runCom):
             print('---\n'
                   'A salesperson report file is open in Excel!\n'
                   'Please close the file(s) and try again.\n'
-                  '***')
+                  '*Program Terminated*')
             return
         # Create the workbook and add the report sheet.
         wb = excel.Workbooks.Open(os.getcwd() + '\\' + filename)
@@ -643,7 +661,7 @@ def main(runCom):
         print('---\n'
               'Revenue report file is open in Excel!\n'
               'Please close the file(s) and try again.\n'
-              '***')
+              '*Program Terminated*')
         return
     # -------------------------------------------
     # Add the pivot table for revenue by quarter.
@@ -711,19 +729,20 @@ def main(runCom):
                 break
         # If it's not an exact duplicate, add it to the Lookup Master.
         if not duplicate:
-            lookupCols = ['CM Sales', 'Design Sales', 'CM', 'T-Name',
-                          'T-End Cust', 'Reported Customer', 'Principal',
-                          'Part Number', 'City']
+            lookupCols = ['CM Sales', 'Design Sales', 'CM Split', 'CM',
+                          'T-Name', 'T-End Cust', 'Reported Customer',
+                          'Principal', 'Part Number', 'City']
             newLookup = runningCom.loc[row, lookupCols]
             newLookup['Date Added'] = datetime.datetime.now().date()
             newLookup['Last Used'] = datetime.datetime.now().date()
             masterLookup = masterLookup.append(newLookup, ignore_index=True)
 
-    # Append the new Running Commissions.
+    # --------------------------------------------------------------
+    # Append the new Running Commissions to the Commissions Master.
+    # --------------------------------------------------------------
     comMast = comMast.append(runningCom, ignore_index=True, sort=False)
     masterFiles = masterFiles.append(filesProcessed, ignore_index=True,
                                      sort=False)
-
     # Make sure all the dates are formatted correctly.
     comMast['Invoice Date'] = comMast['Invoice Date'].map(
             lambda x: formDate(x))
@@ -756,16 +775,6 @@ def main(runCom):
     for col in mixedCols:
         comMast[col] = comMast[col].map(
                 lambda x: pd.to_numeric(x, errors='ignore'))
-    # Convert individual numbers to numeric in rest of columns.
-    mixedCols = [col for col in list(comMast) if col not in numCols]
-    # Invoice/part numbers sometimes has leading zeros we'd like to keep.
-    mixedCols.remove('Invoice Number')
-    mixedCols.remove('Part Number')
-    # The INF gets read in as infinity, so skip the principal column.
-    mixedCols.remove('Principal')
-    for col in mixedCols:
-        comMast[col] = comMast[col].map(
-                lambda x: pd.to_numeric(x, errors='ignore'))
 
     # %%
     # Save the files.
@@ -779,7 +788,7 @@ def main(runCom):
               'One or more of these files are currently open in Excel:\n'
               'Running Commissions, Entries Need Fixing, Lookup Master.\n'
               'Please close these files and try again.\n'
-              '***')
+              '*Program Terminated*')
         return
     # Write the Commissions Master file.
     writer = pd.ExcelWriter(fname1, engine='xlsxwriter',

@@ -95,7 +95,7 @@ def reIndex(runningCom):
         invMatch = commMatch[commMatch['Invoice Number'] == invNo]
         # One match, we're good.
         if len(commMatch) == 1:
-            fixList.loc[row, 'Running Com Index'] = commMatch.index
+            fixList.loc[row, 'Running Com Index'] = str(commMatch.index[0])
         # Multiple matches, find and deal with exact duplicates.
         elif len(commMatch) > 1:
             fixList.loc[row, 'Running Com Index'] = ', '.join(
@@ -106,7 +106,12 @@ def reIndex(runningCom):
     # -------------------------------------------
     # Deal with all of the multiple match lines.
     # -------------------------------------------
-    multiMatches = 
+    multiMatches = fixList[fixList['Running Com Index'].str.contains(',')]
+    for match in multiMatches['Running Com Index'].unique():
+        matchIDs = match.split(', ')
+        matchIDs = [int(i) for i in matchIDs]
+        RCMatches = runningCom.loc[matchIDs]
+        allMatch = all([all(RCMatches.iloc[0] == i) for i in RCMatches])
 
     # --------------------------------
     # Check for and clear collisions.
