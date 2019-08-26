@@ -363,7 +363,7 @@ def main(filepaths, runningCom, fieldMappings):
     columnNames[18:18] = ['Sales Commission']
     columnNames[20:20] = ['Quarter Shipped', 'Month', 'Year']
     columnNames.extend(['CM Split', 'Paid Date', 'From File',
-                        'Sales Report Date'])
+                        'Sales Report Date', 'T-Notes'])
 
     # Set the directories for outputting data and finding lookups.
     outDir = 'Z:/MK Working Commissions/'
@@ -723,54 +723,50 @@ def main(filepaths, runningCom, fieldMappings):
                     print('Found no data on this tab. Moving on.\n'
                           '-')
 
-        if totalComm > 0:
-            # Show total commissions.
-            print('Total commissions for this file: '
-                  '${:,.2f}'.format(totalComm))
-            # Append filename and total commissions to Files Processed sheet.
-            currentDate = datetime.datetime.now().date()
-            newFile = pd.DataFrame({'Filename': [filename],
-                                    'Total Commissions': [totalComm],
-                                    'Date Added': [currentDate],
-                                    'Paid Date': ['']})
-            filesProcessed = filesProcessed.append(newFile, ignore_index=True,
-                                                   sort=False)
-            # Save the matched raw data file.
-            fname = filename[:-5]
-            if filename[-12:] != 'Matched.xlsx':
-                fname += ' Matched.xlsx'
-            else:
-                fname += '.xlsx'
-            if saveError(fname):
-                print('---\n'
-                      'One or more of the raw data files are open in Excel.\n'
-                      'Please close these files and try again.\n'
-                      '*Program terminated*')
-                return
-            # Write the raw data file with matches.
-            matchDir = 'Z:/Matched Raw Data Files/'
-            writer = pd.ExcelWriter(matchDir + fname, engine='xlsxwriter',
-                                    datetime_format='mm/dd/yyyy')
-            for tab in list(newData):
-                newData[tab].to_excel(writer, sheet_name=tab, index=False)
-                # Format and fit each column.
-                sheet = writer.sheets[tab]
-                index = 0
-                for col in newData[tab].columns:
-                    # Set column width and formatting.
-                    try:
-                        maxWidth = max(len(str(val)) for val
-                                       in newData[tab][col].values)
-                    except ValueError:
-                        maxWidth = 0
-                    maxWidth = max(10, maxWidth)
-                    sheet.set_column(index, index, maxWidth+0.8)
-                    index += 1
-            # Save the file.
-            writer.save()
+        # Show total commissions.
+        print('Total commissions for this file: '
+              '${:,.2f}'.format(totalComm))
+        # Append filename and total commissions to Files Processed sheet.
+        currentDate = datetime.datetime.now().date()
+        newFile = pd.DataFrame({'Filename': [filename],
+                                'Total Commissions': [totalComm],
+                                'Date Added': [currentDate],
+                                'Paid Date': ['']})
+        filesProcessed = filesProcessed.append(newFile, ignore_index=True,
+                                               sort=False)
+        # Save the matched raw data file.
+        fname = filename[:-5]
+        if filename[-12:] != 'Matched.xlsx':
+            fname += ' Matched.xlsx'
         else:
-            print('No new data found in this file.\n'
-                  'Moving on without adding file.')
+            fname += '.xlsx'
+        if saveError(fname):
+            print('---\n'
+                  'One or more of the raw data files are open in Excel.\n'
+                  'Please close these files and try again.\n'
+                  '*Program terminated*')
+            return
+        # Write the raw data file with matches.
+        matchDir = 'Z:/Matched Raw Data Files/'
+        writer = pd.ExcelWriter(matchDir + fname, engine='xlsxwriter',
+                                datetime_format='mm/dd/yyyy')
+        for tab in list(newData):
+            newData[tab].to_excel(writer, sheet_name=tab, index=False)
+            # Format and fit each column.
+            sheet = writer.sheets[tab]
+            index = 0
+            for col in newData[tab].columns:
+                # Set column width and formatting.
+                try:
+                    maxWidth = max(len(str(val)) for val
+                                   in newData[tab][col].values)
+                except ValueError:
+                    maxWidth = 0
+                maxWidth = max(10, maxWidth)
+                sheet.set_column(index, index, maxWidth+0.8)
+                index += 1
+        # Save the file.
+        writer.save()
 
     # %%
     # Fill NaNs left over from appending.
