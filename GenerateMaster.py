@@ -359,10 +359,10 @@ def main(filepaths, runningCom, fieldMappings):
     # Add in non-lookup'd data names.
     columnNames[0:0] = ['CM Sales', 'Design Sales']
     columnNames[3:3] = ['T-Name', 'CM', 'T-End Cust']
-    columnNames[7:7] = ['Principal', 'Corrected Distributor']
+    columnNames[7:7] = ['Principal', 'Distributor']
     columnNames[18:18] = ['Sales Commission']
     columnNames[20:20] = ['Quarter Shipped', 'Month', 'Year']
-    columnNames.extend(['CM Split', 'TEMP/FINAL', 'Paid Date', 'From File',
+    columnNames.extend(['CM Split', 'Paid Date', 'From File',
                         'Sales Report Date'])
 
     # Set the directories for outputting data and finding lookups.
@@ -897,9 +897,9 @@ def main(filepaths, runningCom, fieldMappings):
             # Find and input corrected distributor name.
             mloc = distMap['Search Abbreviation'] == distMatches[0]
             corrDist = distMap[mloc].iloc[0]['Corrected Dist']
-            finalData.loc[row, 'Corrected Distributor'] = corrDist
+            finalData.loc[row, 'Distributor'] = corrDist
         elif not distName:
-            finalData.loc[row, 'Corrected Distributor'] = ''
+            finalData.loc[row, 'Distributor'] = ''
             distMatches = ['Empty']
 
         # -----------------------------------------------------------------
@@ -923,10 +923,6 @@ def main(filepaths, runningCom, fieldMappings):
             fixList.loc[row, 'Distributor Matches'] = len(distMatches)
             fixList.loc[row, 'Lookup Master Matches'] = lookMatches
             fixList.loc[row, 'Date Added'] = datetime.datetime.now().date()
-            finalData.loc[row, 'TEMP/FINAL'] = 'TEMP'
-        else:
-            # Everything found, so entry is final.
-            finalData.loc[row, 'TEMP/FINAL'] = 'FINAL'
 
         # Update progress every 1,000 rows.
         if row % 1000 == 0 and row > 0:

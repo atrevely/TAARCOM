@@ -125,8 +125,8 @@ def main(runCom):
     # Load and prepare the Commissions Master file.
     # ---------------------------------------------
     try:
-        comMast = pd.read_excel(dataDir + 'Commissions Master.xlsx', 'Master',
-                                dtype=str)
+        comMast = pd.read_excel(dataDir + 'Commissions Master.xlsx',
+                                'Master Data', dtype=str)
         masterFiles = pd.read_excel(dataDir + 'Commissions Master.xlsx',
                                     'Files Processed').fillna('')
     except FileNotFoundError:
@@ -796,7 +796,7 @@ def main(runCom):
     comMast.to_excel(writer, sheet_name='Master', index=False)
     masterFiles.to_excel(writer, sheet_name='Files Processed', index=False)
     # Format everything in Excel.
-    tableFormat(comMast, 'Master', writer)
+    tableFormat(comMast, 'Master Data', writer)
     tableFormat(masterFiles, 'Files Processed', writer)
 
     # Write the Running Commissions report.
@@ -810,7 +810,7 @@ def main(runCom):
     princTab.to_excel(writer1, sheet_name='Principal Totals',
                       index=False)
     # Format as table in Excel.
-    tableFormat(runningCom, 'Master', writer1)
+    tableFormat(runningCom, 'Master Data', writer1)
     tableFormat(filesProcessed, 'Files Processed', writer1)
     tableFormat(salesTot, 'Salesperson Totals', writer1)
     tableFormat(princTab, 'Principal Totals', writer1)

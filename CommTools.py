@@ -122,14 +122,16 @@ def reIndex(runningCom):
 
 
 
+
+
 def removeData(commMonth):
     # ---------------------------------------------
     # Load and prepare the Commissions Master file.
     # ---------------------------------------------
      dataDir = 'Z:/MK Working Commissions/'
     try:
-        comMast = pd.read_excel(dataDir + 'Commissions Master.xlsx', 'Master',
-                                dtype=str)
+        comMast = pd.read_excel(dataDir + 'Commissions Master.xlsx',
+                                'Master Data', dtype=str)
         masterFiles = pd.read_excel(dataDir + 'Commissions Master.xlsx',
                                     'Files Processed').fillna('')
     except FileNotFoundError:

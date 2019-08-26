@@ -42,6 +42,13 @@ def tableFormat(sheetData, sheetName, wbook):
                     'CM', 'Invoice Date']
         dateCols = ['Invoice Date', 'Paid Date', 'Sales Report Date',
                     'Date Added']
+        hideCols = ['Quarter Shipped', 'Month', 'Year', 'Reported Distributor',
+                    'PO Number', 'Sales Order #', 'Unit Cost', 'Unit Price',
+                    'Comm Source', 'On/Offshore', 'INF Comm Type', 'PL',
+                    'Division', 'Gross Rev Rduction', 'Project',
+                    'Product Category', 'Shared Rev Tier Rate',
+                    'Cust Revenue YTD', 'Total NDS', 'Post-Split NDS',
+                    'Cust Part Number', 'End Market', 'Q Number', 'CM Split']
         if col in acctCols:
             formatting = acctFormat
         elif col in pctCols:
@@ -80,13 +87,15 @@ def tableFormat(sheetData, sheetName, wbook):
             maxWidth = max(len(str(val)) for val in sheetData[col].values)
         except ValueError:
             maxWidth = 0
-        # If column is one that always gets filled in, then keep it expanded.
-        if col in coreCols:
+        # Expand/collapse important columns for RC/ENF.
+        if col in hideCols and sheetName != 'Master Data':
+            maxWidth = 0
+        elif col in coreCols:
             maxWidth = max(maxWidth, len(col), 10)
         # Don't let the columns get too wide.
         maxWidth = min(maxWidth, 50)
         # Extra space for '$'/'%' in accounting/percent format.
-        if col in acctCols or col in pctCols:
+        if (col in acctCols or col in pctCols) and col not in hideCols:
             maxWidth += 2
         sheet.set_column(index, index, maxWidth+0.8, formatting)
         index += 1
