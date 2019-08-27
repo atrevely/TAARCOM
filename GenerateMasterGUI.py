@@ -209,23 +209,19 @@ class GenMast(QMainWindow):
 
     def genReportsExecute(self):
         """Runs function for generating salesperson reports."""
-        if self.master:
-            # Turn buttons off.
-            self.lockButtons()
-            # Run the SalesReportGenerator.py file.
-            try:
-                SalesReportGenerator.main(self.master)
-            except Exception as error:
-                print('Unexpected Python error:\n'
-                      + str(error)
-                      + '\nPlease contact your local coder.')
-            # Clear the master selection.
-            self.master = []
-            # Turn buttons back on.
-            self.restoreButtons()
-        else:
-            print('No Running Commissions uploaded!\n'
-                  '---')
+        # Turn buttons off.
+        self.lockButtons()
+        # Run the SalesReportGenerator.py file.
+        try:
+            SalesReportGenerator.main(self.master)
+        except Exception as error:
+            print('Unexpected Python error:\n'
+                  + str(error)
+                  + '\nPlease contact your local coder.')
+        # Clear the master selection.
+        self.master = []
+        # Turn buttons back on.
+        self.restoreButtons()
 
     def fixEntriesExecute(self):
         """Copy over fixed entries to Master."""

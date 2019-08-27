@@ -120,11 +120,22 @@ def reIndex(runningCom):
     fixList[duplicates] == ''
 
 
+def runReports():
+    """
+    """
+    # Set the directory for the data input/output.
+    dataDir = 'Z:/MK Working Commissions/'
+
+    # Call this for multithreading using win32com, for some reason.
+    pythoncom.CoInitialize()
+
 
 
 
 
 def removeData(commMonth):
+    """
+    """
     # ---------------------------------------------
     # Load and prepare the Commissions Master file.
     # ---------------------------------------------

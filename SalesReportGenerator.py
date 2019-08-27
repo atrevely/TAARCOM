@@ -16,6 +16,10 @@ import shutil
 def main(runCom):
     """Generates sales reports, then appends the Running Commissions data
     to the Commissions Master.
+
+    If runCom is not supplied, then no new data is read and appended;
+    reports are run instead on the data for the most recent quarter
+    in Commissions Master.
     """
     # Set the directory for the data input/output.
     dataDir = 'Z:/MK Working Commissions/'
@@ -47,83 +51,8 @@ def main(runCom):
         return
 
     # ----------------------------------------------
-    # Load and prepare the Running Commissions file.
-    # ----------------------------------------------
-    try:
-        runningCom = pd.read_excel(runCom, 'Master', dtype=str)
-        filesProcessed = pd.read_excel(runCom, 'Files Processed').fillna('')
-    except FileNotFoundError:
-        print('No Running Commissions file found!\n'
-              '*Program Terminated*')
-        return
-    except XLRDError:
-        print('Running Commissions tab names incorrect!\n'
-              'Make sure the tabs are named Master and Files Processed.\n'
-              '*Program Terminated*')
-        return
-
-    # Convert applicable columns to numeric.
-    numCols = ['Quantity', 'Ext. Cost', 'Invoiced Dollars', 'Paid-On Revenue',
-               'Actual Comm Paid', 'Unit Cost', 'Unit Price', 'CM Split',
-               'Year', 'Sales Commission', 'Split Percentage',
-               'Commission Rate', 'Gross Rev Reduction',
-               'Shared Rev Tier Rate']
-    for col in numCols:
-        try:
-            runningCom[col] = pd.to_numeric(runningCom[col],
-                                            errors='coerce').fillna('')
-        except KeyError:
-            pass
-    # Convert individual numbers to numeric in rest of columns.
-    mixedCols = [col for col in list(runningCom) if col not in numCols]
-    # Invoice/part numbers sometimes has leading zeros we'd like to keep.
-    mixedCols.remove('Invoice Number')
-    mixedCols.remove('Part Number')
-    # The INF gets read in as infinity, so skip the principal column.
-    mixedCols.remove('Principal')
-    for col in mixedCols:
-        runningCom[col] = runningCom[col].map(
-                lambda x: pd.to_numeric(x, errors='ignore'))
-    # Now remove the nans.
-    runningCom.replace('nan', '', inplace=True)
-    # Make sure all the dates are formatted correctly.
-    runningCom['Invoice Date'] = runningCom['Invoice Date'].map(
-            lambda x: formDate(x))
-    # Make sure that the CM Splits aren't blank or zero.
-    runningCom['CM Split'] = runningCom['CM Split'].replace(['', '0', 0], 20)
-    # Strip any extra spaces that made their way into salespeople columns.
-    for col in ['CM Sales', 'Design Sales']:
-        runningCom[col] = runningCom[col].map(lambda x: x.strip())
-
-    # ---------------------------------------------
-    # Fill in the Sales Commission in the RC file.
-    # ---------------------------------------------
-    for row in runningCom.index:
-        # Get the CM and Design salespeople percentages.
-        CMSales = runningCom.loc[row, 'CM Sales']
-        DesignSales = runningCom.loc[row, 'Design Sales']
-        # Deal with the QQ lines.
-        if 'QQ' in (CMSales, DesignSales):
-            salesComm = 0.45*runningCom.loc[row, 'Actual Comm Paid']
-            runningCom.loc[row, 'Sales Commission'] = salesComm
-            continue
-        CM = salesInfo[salesInfo['Sales Initials'] == CMSales]
-        design = salesInfo[salesInfo['Sales Initials'] == DesignSales]
-        CMpct = CM['Sales Percentage']/100
-        designPct = design['Sales Percentage']/100
-        # Calculate the total sales commission
-        if CMSales and DesignSales:
-            CMpct *= runningCom.loc[row, 'CM Split']
-            designPct *= 100 - runningCom.loc[row, 'CM Split']
-            totPct = (CMpct.iloc[0] + designPct.iloc[0])/100
-        else:
-            totPct = [i.iloc[0] for i in (CMpct, designPct) if any(i)][0]
-        salesComm = totPct*runningCom.loc[row, 'Actual Comm Paid']
-        runningCom.loc[row, 'Sales Commission'] = salesComm
-
-    # ---------------------------------------------
     # Load and prepare the Commissions Master file.
-    # ---------------------------------------------
+    # ----------------------------------------------
     try:
         comMast = pd.read_excel(dataDir + 'Commissions Master.xlsx',
                                 'Master Data', dtype=str)
@@ -135,16 +64,28 @@ def main(runCom):
         return
     except XLRDError:
         print('Commissions Master tab names incorrect!\n'
-              'Make sure the tabs are named Master and Files Processed.\n'
+              'Make sure the tabs are named Master Data and Files Processed.\n'
               '*Program Terminated*')
         return
     # Convert applicable columns to numeric.
+    numCols = ['Quantity', 'Ext. Cost', 'Invoiced Dollars',
+               'Paid-On Revenue', 'Actual Comm Paid', 'Unit Cost',
+               'Unit Price', 'CM Split', 'Year', 'Sales Commission',
+               'Split Percentage', 'Commission Rate',
+               'Gross Rev Reduction', 'Shared Rev Tier Rate']
     for col in numCols:
         try:
             comMast[col] = pd.to_numeric(comMast[col],
                                          errors='coerce').fillna(0)
         except KeyError:
             pass
+    # Convert individual numbers to numeric in rest of columns.
+    mixedCols = [col for col in list(comMast) if col not in numCols]
+    # Invoice/part numbers sometimes has leading zeros we'd like to keep.
+    mixedCols.remove('Invoice Number')
+    mixedCols.remove('Part Number')
+    # The INF gets read in as infinity, so skip the principal column.
+    mixedCols.remove('Principal')
     for col in mixedCols:
         comMast[col] = comMast[col].map(
                 lambda x: pd.to_numeric(x, errors='ignore'))
@@ -155,6 +96,74 @@ def main(runCom):
         comMast[col] = comMast[col].map(lambda x: formDate(x))
     # Make sure that the CM Splits aren't blank or zero.
     comMast['CM Split'] = comMast['CM Split'].replace(['', '0', 0], 20)
+    # Column list.
+    colAppend = list(comMast)
+
+    # ------------------------------------------------------------
+    # Load and prepare the Running Commissions file, if supplied.
+    # ------------------------------------------------------------
+    if runCom:
+        try:
+            runningCom = pd.read_excel(runCom, 'Master', dtype=str)
+            filesProcessed = pd.read_excel(runCom,
+                                           'Files Processed').fillna('')
+        except FileNotFoundError:
+            print('No Running Commissions file found!\n'
+                  '*Program Terminated*')
+            return
+        except XLRDError:
+            print('Running Commissions tab names incorrect!\n'
+                  'Make sure the tabs are named Master and Files Processed.\n'
+                  '*Program Terminated*')
+            return
+        for col in numCols:
+            try:
+                runningCom[col] = pd.to_numeric(runningCom[col],
+                                                errors='coerce').fillna('')
+            except KeyError:
+                pass
+        for col in mixedCols:
+            runningCom[col] = runningCom[col].map(
+                    lambda x: pd.to_numeric(x, errors='ignore'))
+        # Now remove the nans.
+        runningCom.replace('nan', '', inplace=True)
+        # Make sure all the dates are formatted correctly.
+        runningCom['Invoice Date'] = runningCom['Invoice Date'].map(
+                lambda x: formDate(x))
+        # Make sure that the CM Splits aren't blank or zero.
+        runningCom['CM Split'] = runningCom['CM Split'].replace(['', '0', 0],
+                                                                20)
+        # Strip any extra spaces that made their way into salespeople columns.
+        for col in ['CM Sales', 'Design Sales']:
+            runningCom[col] = runningCom[col].map(lambda x: x.strip())
+
+        # ---------------------------------------------
+        # Fill in the Sales Commission in the RC file.
+        # ---------------------------------------------
+        for row in runningCom.index:
+            # Get the CM and Design salespeople percentages.
+            CMSales = runningCom.loc[row, 'CM Sales']
+            DesignSales = runningCom.loc[row, 'Design Sales']
+            # Deal with the QQ lines.
+            if 'QQ' in (CMSales, DesignSales):
+                salesComm = 0.45*runningCom.loc[row, 'Actual Comm Paid']
+                runningCom.loc[row, 'Sales Commission'] = salesComm
+                continue
+            CM = salesInfo[salesInfo['Sales Initials'] == CMSales]
+            design = salesInfo[salesInfo['Sales Initials'] == DesignSales]
+            CMpct = CM['Sales Percentage']/100
+            designPct = design['Sales Percentage']/100
+            # Calculate the total sales commission
+            if CMSales and DesignSales:
+                CMpct *= runningCom.loc[row, 'CM Split']
+                designPct *= 100 - runningCom.loc[row, 'CM Split']
+                totPct = (CMpct.iloc[0] + designPct.iloc[0])/100
+            else:
+                totPct = [i.iloc[0] for i in (CMpct, designPct) if any(i)][0]
+            salesComm = totPct*runningCom.loc[row, 'Actual Comm Paid']
+            runningCom.loc[row, 'Sales Commission'] = salesComm
+    else:
+            print('Running reports without new Running Commissions...')
 
     # ------------------------------------------------------------------
     # Determine the commission months that are currently in the Master.
@@ -167,22 +176,27 @@ def main(runCom):
               '\nPlease check that all dates are in standard formatting and '
               'try again.\n*Program Terminated*')
         return
-    # Grab the most recent month in Commissions Master
+    # Grab the most recent month in Commissions Master.
     lastMonth = max(commMonths)
-    # Increment the month.
-    currentMonth = lastMonth.month + 1
-    currentYear = lastMonth.year
-    # If current month is over 12, then it's time to go to January.
-    if currentMonth > 12:
-        currentMonth = 1
-        currentYear += 1
-    # Tag the new data as the current month/year.
-    currentYrMo = str(currentYear) + '-' + str(currentMonth)
-    runningCom['Comm Month'] = currentYrMo
+    if runCom:
+        # Increment the month.
+        currentMonth = lastMonth.month + 1
+        currentYear = lastMonth.year
+        # If current month is over 12, then it's time to go to January.
+        if currentMonth > 12:
+            currentMonth = 1
+            currentYear += 1
+        # Tag the new data as the current month/year.
+        currentYrMo = str(currentYear) + '-' + str(currentMonth)
+        runningCom['Comm Month'] = currentYrMo
+    else:
+        currentMonth = lastMonth.month
+        currentYear = lastMonth.year
+        currentYrMo = str(currentYear) + '-' + str(currentMonth)
 
-    # ---------------------------------------
+    # ----------------------------------------
     # Load and prepare the Account List file.
-    # ---------------------------------------
+    # ----------------------------------------
     try:
         acctList = pd.read_excel(lookDir + 'Master Account List.xlsx',
                                  'Allacct')
@@ -195,80 +209,69 @@ def main(runCom):
               'Make sure the main tab is named Allacct.\n'
               '*Program Terminated*')
         return
-    # -----------------------------------
-    # Load and prepare the Master Lookup.
-    # -----------------------------------
-    if os.path.exists(lookDir + 'Lookup Master - Current.xlsx'):
-        masterLookup = pd.read_excel(lookDir + 'Lookup Master - '
-                                     'Current.xlsx').fillna('')
-        # Check the column names.
-        lookupCols = ['CM Sales', 'Design Sales', 'CM Split',
-                      'Reported Customer', 'CM', 'Part Number', 'T-Name',
-                      'T-End Cust', 'Last Used', 'Principal', 'City',
-                      'Date Added']
-        missCols = [i for i in lookupCols if i not in list(masterLookup)]
-        if missCols:
-            print('The following columns were not detected in '
-                  'Lookup Master.xlsx:\n%s' %
-                  ', '.join(map(str, missCols))
-                  + '\n*Program Terminated*')
-            return
-    else:
-        print('---\n'
-              'No Lookup Master found!\n'
-              'Please make sure Lookup Master - Current.xlsx is '
-              'in the directory.\n'
-              '*Program Terminated*')
-        return
 
-    # ------------------------------------------------------------------
-    # Check to make sure new files aren't already in Commissions Master.
-    # ------------------------------------------------------------------
-    # Check if we've duplicated any files.
-    filenames = masterFiles['Filename']
-    duplicates = list(set(filenames).intersection(filesProcessed['Filename']))
-    # Don't let duplicate files get processed.
-    if duplicates:
-        # Let us know we found duplictes and removed them.
-        print('---\n'
-              'The following files are already in Commissions Master:\n%s' %
-              ', '.join(map(str, duplicates)) + '\nPlease check the files and '
-              'try again.\n*Program Terminated*')
-        return
+    if runCom:
+        # ------------------------------------
+        # Load and prepare the Master Lookup.
+        # ------------------------------------
+        if os.path.exists(lookDir + 'Lookup Master - Current.xlsx'):
+            masterLookup = pd.read_excel(lookDir + 'Lookup Master - '
+                                         'Current.xlsx').fillna('')
+            # Check the column names.
+            lookupCols = ['CM Sales', 'Design Sales', 'CM Split',
+                          'Reported Customer', 'CM', 'Part Number', 'T-Name',
+                          'T-End Cust', 'Last Used', 'Principal', 'City',
+                          'Date Added']
+            missCols = [i for i in lookupCols if i not in list(masterLookup)]
+            if missCols:
+                print('The following columns were not detected in '
+                      'Lookup Master.xlsx:\n%s' %
+                      ', '.join(map(str, missCols))
+                      + '\n*Program Terminated*')
+                return
+        else:
+            print('---\n'
+                  'No Lookup Master found!\n'
+                  'Please make sure Lookup Master - Current.xlsx is '
+                  'in the directory.\n'
+                  '*Program Terminated*')
+            return
 
     print('Preparing report data...')
-    # --------------------------------------
-    # Get the salespeople information ready.
-    # --------------------------------------
-    # Grab all of the salespeople initials.
-    salespeople = list(set().union(runningCom['CM Sales'].unique(),
-                                   runningCom['Design Sales'].unique()))
-    salespeople = [i for i in salespeople if i not in ['QQ', '']]
-    salespeople.sort()
+    if runCom:
+        # -------------------------------------------------------------------
+        # Check to make sure new files aren't already in Commissions Master.
+        # -------------------------------------------------------------------
+        # Check if we've duplicated any files.
+        filenames = masterFiles['Filename']
+        duplicates = list(set(filenames).intersection(
+                filesProcessed['Filename']))
+        # Don't let duplicate files get processed.
+        if duplicates:
+            # Let us know we found duplictes and removed them.
+            print('---\n'
+                  'The following files are already in '
+                  'Commissions Master:\n%s' %
+                  ', '.join(map(str, duplicates)) + '\nPlease check '
+                  'the files and try again.\n*Program Terminated*')
+            return
 
-    # Create the dataframe with the commission information by salesperson.
-    salesTot = pd.DataFrame(columns=['Salesperson', 'Principal',
-                                     'Paid-On Revenue', 'Actual Comm Paid',
-                                     'Sales Commission', 'Comm Pct'],
-                            index=[0])
-
-    # Columns appended from Running Commissions.
-    colAppend = list(runningCom)
-
-    # ----------------------------------------------------------------------
+    # -----------------------------------------------------------------------
     # Combine and tag revenue data for the quarters that we're reporting on.
-    # ----------------------------------------------------------------------
-    # Grab the quarters in Commission Master and Running Commissions.
-    comMastQuarters = comMast['Quarter Shipped'].unique()
-    runComQuarters = runningCom['Quarter Shipped'].unique()
-    quarters = list(set().union(comMastQuarters, runComQuarters))
+    # -----------------------------------------------------------------------
+    # Grab the quarters in Commissions Master and Running Commissions.
+    quarters = comMast['Quarter Shipped'].unique()
+    if runCom:
+        runComQuarters = runningCom['Quarter Shipped'].unique()
+        quarters = list(set().union(quarters, runComQuarters))
     quarters.sort()
     # Use the most recent five quarters of data.
     quarters = quarters[-5:]
     # Get the revenue report data ready.
     revDat = comMast[[i in quarters for i in comMast['Quarter Shipped']]]
     revDat.reset_index(drop=True, inplace=True)
-    revDat = revDat.append(runningCom, ignore_index=True, sort=False)
+    if runCom:
+        revDat = revDat.append(runningCom, ignore_index=True, sort=False)
     # Tag the data by current Design Sales.
     for cust in revDat['T-End Cust'].unique():
         # Check for a single match in Account List.
@@ -306,7 +309,29 @@ def main(runCom):
     dataMos = yearData['Comm Month'].map(lambda x: parse(str(x)).month)
     qtrData = yearData[dataMos.isin(list(months))]
     # Compile the commissions data.
-    commData = qtrData.append(runningCom, ignore_index=True, sort=False)
+    if runCom:
+        commData = qtrData.append(runningCom, ignore_index=True, sort=False)
+    else:
+        commData = qtrData
+
+    # ---------------------------------------
+    # Get the salespeople information ready.
+    # ---------------------------------------
+    # Grab all of the salespeople initials.
+    if runCom:
+        salespeople = list(set().union(runningCom['CM Sales'].unique(),
+                                       runningCom['Design Sales'].unique()))
+    else:
+        salespeople = list(set().union(revDat['CM Sales'].unique(),
+                                       revDat['Design Sales'].unique()))
+    salespeople = [i for i in salespeople if i not in ['QQ', '']]
+    salespeople.sort()
+    # Create the dataframe with the commission information by salesperson.
+    salesTot = pd.DataFrame(columns=['Salesperson', 'Principal',
+                                     'Paid-On Revenue', 'Actual Comm Paid',
+                                     'Sales Commission', 'Comm Pct'],
+                            index=[0])
+
     # ----------------------------------
     # Open Excel using the win32c tools.
     # ----------------------------------
@@ -601,49 +626,50 @@ def main(runCom):
         wb.Close(SaveChanges=1)
     # %%
     # Fill in the Sales Report Date in Running Commissions.
-    runningCom.loc[runningCom['Sales Report Date'] == '',
-                   'Sales Report Date'] = time.strftime('%m/%d/%Y')
-
-    # -----------------------------------------------------
-    # Create the tabs for the reported Running Commissions.
-    # -----------------------------------------------------
-    # Generate the table for sales numbers by principal.
-    princTab = pd.DataFrame(columns=['Principal', 'Paid-On Revenue',
-                                     'Actual Comm Paid', 'Sales Commission'])
-    row = 0
-    for principal in runningCom['Principal'].unique():
-        princSales = runningCom[runningCom['Principal'] == principal]
-        revenue = pd.to_numeric(princSales['Paid-On Revenue'],
-                                errors='coerce').fillna(0)
-        comm = pd.to_numeric(princSales['Actual Comm Paid'],
-                             errors='coerce').fillna(0)
-        salesComm = pd.to_numeric(princSales['Sales Commission'],
-                                  errors='coerce').fillna(0)
-        princInv = sum(revenue)
-        actComm = sum(comm)
-        salesComm = sum(salesComm)
-        try:
-            trueCommPct = actComm/princInv
-        except ZeroDivisionError:
-            trueCommPct = ''
-        # Fill in table with principal's totals.
-        princTab.loc[row, 'Principal'] = principal
-        princTab.loc[row, 'Paid-On Revenue'] = princInv
-        princTab.loc[row, 'Actual Comm Paid'] = actComm
-        princTab.loc[row, 'True Comm %'] = trueCommPct
-        princTab.loc[row, 'Sales Commission'] = salesComm
-        row += 1
-    # Sort principals in descending order alphabetically.
-    princTab.sort_values(by=['Principal'], inplace=True)
-    princTab.reset_index(drop=True, inplace=True)
-    # Fill in overall totals.
-    totRev = sum(princTab['Paid-On Revenue'])
-    totSalesComm = sum(princTab['Sales Commission'])
-    totComm = sum(princTab['Actual Comm Paid'])
-    princTab.loc[row, 'Paid-On Revenue'] = totRev
-    princTab.loc[row, 'Sales Commission'] = totSalesComm
-    princTab.loc[row, 'Actual Comm Paid'] = totComm
-    princTab.loc[row, 'Principal'] = 'Grand Total'
+    if runCom:
+        runningCom.loc[runningCom['Sales Report Date'] == '',
+                       'Sales Report Date'] = time.strftime('%m/%d/%Y')
+        # ------------------------------------------------------
+        # Create the tabs for the reported Running Commissions.
+        # ------------------------------------------------------
+        # Generate the table for sales numbers by principal.
+        princTab = pd.DataFrame(columns=['Principal', 'Paid-On Revenue',
+                                         'Actual Comm Paid',
+                                         'Sales Commission'])
+        row = 0
+        for principal in runningCom['Principal'].unique():
+            princSales = runningCom[runningCom['Principal'] == principal]
+            revenue = pd.to_numeric(princSales['Paid-On Revenue'],
+                                    errors='coerce').fillna(0)
+            comm = pd.to_numeric(princSales['Actual Comm Paid'],
+                                 errors='coerce').fillna(0)
+            salesComm = pd.to_numeric(princSales['Sales Commission'],
+                                      errors='coerce').fillna(0)
+            princInv = sum(revenue)
+            actComm = sum(comm)
+            salesComm = sum(salesComm)
+            try:
+                trueCommPct = actComm/princInv
+            except ZeroDivisionError:
+                trueCommPct = ''
+            # Fill in table with principal's totals.
+            princTab.loc[row, 'Principal'] = principal
+            princTab.loc[row, 'Paid-On Revenue'] = princInv
+            princTab.loc[row, 'Actual Comm Paid'] = actComm
+            princTab.loc[row, 'True Comm %'] = trueCommPct
+            princTab.loc[row, 'Sales Commission'] = salesComm
+            row += 1
+        # Sort principals in descending order alphabetically.
+        princTab.sort_values(by=['Principal'], inplace=True)
+        princTab.reset_index(drop=True, inplace=True)
+        # Fill in overall totals.
+        totRev = sum(princTab['Paid-On Revenue'])
+        totSalesComm = sum(princTab['Sales Commission'])
+        totComm = sum(princTab['Actual Comm Paid'])
+        princTab.loc[row, 'Paid-On Revenue'] = totRev
+        princTab.loc[row, 'Sales Commission'] = totSalesComm
+        princTab.loc[row, 'Actual Comm Paid'] = totComm
+        princTab.loc[row, 'Principal'] = 'Grand Total'
 
     # -----------------------------------
     # Create the overall Revenue Report.
@@ -702,135 +728,139 @@ def main(runCom):
     # Go through each line of the finished Running Commissions and use them to
     # update the Lookup Master.
     # ------------------------------------------------------------------------
-    # Don't copy over INDIVIDUAL, MISC, or ALLOWANCE.
-    noCopy = ['INDIVIDUAL', 'UNKNOWN', 'ALLOWANCE']
-    paredID = [i for i in runningCom.index
-               if not any(j in runningCom.loc[i, 'T-End Cust'].upper()
-                          for j in noCopy)]
-    for row in paredID:
-        # First match reported customer.
-        repCust = str(runningCom.loc[row, 'Reported Customer']).lower()
-        POSCust = masterLookup['Reported Customer'].map(
-                lambda x: str(x).lower())
-        custMatches = masterLookup[repCust == POSCust]
-        # Now match part number.
-        partNum = str(runningCom.loc[row, 'Part Number']).lower()
-        PPN = masterLookup['Part Number'].map(lambda x: str(x).lower())
-        fullMatches = custMatches[PPN == partNum]
-        # Figure out if this entry is a duplicate of any existing entry.
-        duplicate = False
-        for matchID in fullMatches.index:
-            matchCols = ['CM Sales', 'Design Sales', 'CM', 'T-Name',
-                         'T-End Cust']
-            duplicate = all(
-                    fullMatches.loc[matchID, i] == runningCom.loc[row, i]
-                    for i in matchCols)
-            if duplicate:
-                break
-        # If it's not an exact duplicate, add it to the Lookup Master.
-        if not duplicate:
-            lookupCols = ['CM Sales', 'Design Sales', 'CM Split', 'CM',
-                          'T-Name', 'T-End Cust', 'Reported Customer',
-                          'Principal', 'Part Number', 'City']
-            newLookup = runningCom.loc[row, lookupCols]
-            newLookup['Date Added'] = datetime.datetime.now().date()
-            newLookup['Last Used'] = datetime.datetime.now().date()
-            masterLookup = masterLookup.append(newLookup, ignore_index=True)
+    if runCom:
+        # Don't copy over INDIVIDUAL, MISC, or ALLOWANCE.
+        noCopy = ['INDIVIDUAL', 'UNKNOWN', 'ALLOWANCE']
+        paredID = [i for i in runningCom.index
+                   if not any(j in runningCom.loc[i, 'T-End Cust'].upper()
+                              for j in noCopy)]
+        for row in paredID:
+            # First match reported customer.
+            repCust = str(runningCom.loc[row, 'Reported Customer']).lower()
+            POSCust = masterLookup['Reported Customer'].map(
+                    lambda x: str(x).lower())
+            custMatches = masterLookup[repCust == POSCust]
+            # Now match part number.
+            partNum = str(runningCom.loc[row, 'Part Number']).lower()
+            PPN = masterLookup['Part Number'].map(lambda x: str(x).lower())
+            fullMatches = custMatches[PPN == partNum]
+            # Figure out if this entry is a duplicate of any existing entry.
+            duplicate = False
+            for matchID in fullMatches.index:
+                matchCols = ['CM Sales', 'Design Sales', 'CM', 'T-Name',
+                             'T-End Cust']
+                duplicate = all(
+                        fullMatches.loc[matchID, i] == runningCom.loc[row, i]
+                        for i in matchCols)
+                if duplicate:
+                    break
+            # If it's not an exact duplicate, add it to the Lookup Master.
+            if not duplicate:
+                lookupCols = ['CM Sales', 'Design Sales', 'CM Split', 'CM',
+                              'T-Name', 'T-End Cust', 'Reported Customer',
+                              'Principal', 'Part Number', 'City']
+                newLookup = runningCom.loc[row, lookupCols]
+                newLookup['Date Added'] = datetime.datetime.now().date()
+                newLookup['Last Used'] = datetime.datetime.now().date()
+                masterLookup = masterLookup.append(newLookup,
+                                                   ignore_index=True)
 
-    # --------------------------------------------------------------
-    # Append the new Running Commissions to the Commissions Master.
-    # --------------------------------------------------------------
-    comMast = comMast.append(runningCom, ignore_index=True, sort=False)
-    masterFiles = masterFiles.append(filesProcessed, ignore_index=True,
-                                     sort=False)
-    # Make sure all the dates are formatted correctly.
-    comMast['Invoice Date'] = comMast['Invoice Date'].map(
-            lambda x: formDate(x))
-    masterFiles['Date Added'] = masterFiles['Date Added'].map(
-            lambda x: formDate(x))
-    masterFiles['Paid Date'] = masterFiles['Paid Date'].map(
-            lambda x: formDate(x))
-    # Convert commission dollars to numeric.
-    masterFiles['Total Commissions'] = pd.to_numeric(
-            masterFiles['Total Commissions'], errors='coerce').fillna('')
-    # Convert applicable columns to numeric.
-    numCols = ['Quantity', 'Ext. Cost', 'Invoiced Dollars',
-               'Paid-On Revenue', 'Actual Comm Paid', 'Unit Cost',
-               'Unit Price', 'Year', 'Sales Commission',
-               'Split Percentage', 'Commission Rate',
-               'Gross Rev Reduction', 'Shared Rev Tier Rate']
-    for col in numCols:
-        try:
-            comMast[col] = pd.to_numeric(comMast[col],
-                                         errors='coerce').fillna('')
-        except KeyError:
-            pass
-    # Convert individual numbers to numeric in rest of columns.
-    mixedCols = [col for col in list(comMast) if col not in numCols]
-    # Invoice/part numbers sometimes has leading zeros we'd like to keep.
-    mixedCols.remove('Invoice Number')
-    mixedCols.remove('Part Number')
-    # The INF gets read in as infinity, so skip the principal column.
-    mixedCols.remove('Principal')
-    for col in mixedCols:
-        comMast[col] = comMast[col].map(
-                lambda x: pd.to_numeric(x, errors='ignore'))
+        # --------------------------------------------------------------
+        # Append the new Running Commissions to the Commissions Master.
+        # --------------------------------------------------------------
+        comMast = comMast.append(runningCom, ignore_index=True, sort=False)
+        masterFiles = masterFiles.append(filesProcessed, ignore_index=True,
+                                         sort=False)
+        # Make sure all the dates are formatted correctly.
+        comMast['Invoice Date'] = comMast['Invoice Date'].map(
+                lambda x: formDate(x))
+        masterFiles['Date Added'] = masterFiles['Date Added'].map(
+                lambda x: formDate(x))
+        masterFiles['Paid Date'] = masterFiles['Paid Date'].map(
+                lambda x: formDate(x))
+        # Convert commission dollars to numeric.
+        masterFiles['Total Commissions'] = pd.to_numeric(
+                masterFiles['Total Commissions'], errors='coerce').fillna('')
+        # Convert applicable columns to numeric.
+        numCols = ['Quantity', 'Ext. Cost', 'Invoiced Dollars',
+                   'Paid-On Revenue', 'Actual Comm Paid', 'Unit Cost',
+                   'Unit Price', 'Year', 'Sales Commission',
+                   'Split Percentage', 'Commission Rate',
+                   'Gross Rev Reduction', 'Shared Rev Tier Rate']
+        for col in numCols:
+            try:
+                comMast[col] = pd.to_numeric(comMast[col],
+                                             errors='coerce').fillna('')
+            except KeyError:
+                pass
+        # Convert individual numbers to numeric in rest of columns.
+        mixedCols = [col for col in list(comMast) if col not in numCols]
+        # Invoice/part numbers sometimes has leading zeros we'd like to keep.
+        mixedCols.remove('Invoice Number')
+        mixedCols.remove('Part Number')
+        # The INF gets read in as infinity, so skip the principal column.
+        mixedCols.remove('Principal')
+        for col in mixedCols:
+            comMast[col] = comMast[col].map(
+                    lambda x: pd.to_numeric(x, errors='ignore'))
 
-    # %%
-    # Save the files.
-    fname1 = dataDir + 'Commissions Master.xlsx'
-    fname2 = (dataDir + 'Running Commissions ' + currentYrMo
-              + ' Reported.xlsx')
-    fname3 = lookDir + 'Lookup Master - Current.xlsx'
+        # %%
+        # Save the files.
+        fname1 = dataDir + 'Commissions Master.xlsx'
+        fname2 = (dataDir + 'Running Commissions ' + currentYrMo
+                  + ' Reported.xlsx')
+        fname3 = lookDir + 'Lookup Master - Current.xlsx'
 
-    if saveError(fname1, fname2, fname3):
+        if saveError(fname1, fname2, fname3):
+            print('---\n'
+                  'One or more of these files are currently open in Excel:\n'
+                  'Running Commissions, Entries Need Fixing, Lookup Master.\n'
+                  'Please close these files and try again.\n'
+                  '*Program Terminated*')
+            return
+        # Write the Commissions Master file.
+        writer = pd.ExcelWriter(fname1, engine='xlsxwriter',
+                                datetime_format='mm/dd/yyyy')
+        comMast.to_excel(writer, sheet_name='Master', index=False)
+        masterFiles.to_excel(writer, sheet_name='Files Processed', index=False)
+        # Format everything in Excel.
+        tableFormat(comMast, 'Master Data', writer)
+        tableFormat(masterFiles, 'Files Processed', writer)
+
+        # Write the Running Commissions report.
+        writer1 = pd.ExcelWriter(fname2, engine='xlsxwriter',
+                                 datetime_format='mm/dd/yyyy')
+        runningCom.to_excel(writer1, sheet_name='Master', index=False)
+        filesProcessed.to_excel(writer1, sheet_name='Files Processed',
+                                index=False)
+        salesTot.to_excel(writer1, sheet_name='Salesperson Totals',
+                          index=False)
+        princTab.to_excel(writer1, sheet_name='Principal Totals',
+                          index=False)
+        # Format as table in Excel.
+        tableFormat(runningCom, 'Master Data', writer1)
+        tableFormat(filesProcessed, 'Files Processed', writer1)
+        tableFormat(salesTot, 'Salesperson Totals', writer1)
+        tableFormat(princTab, 'Principal Totals', writer1)
+
+        # Write the Lookup Master.
+        writer2 = pd.ExcelWriter(fname3, engine='xlsxwriter',
+                                 datetime_format='mm/dd/yyyy')
+        masterLookup.to_excel(writer2, sheet_name='Lookup', index=False)
+        # Format everything in Excel.
+        tableFormat(masterLookup, 'Lookup', writer2)
+
+        # Save the files.
+        writer.save()
+        writer1.save()
+        writer2.save()
         print('---\n'
-              'One or more of these files are currently open in Excel:\n'
-              'Running Commissions, Entries Need Fixing, Lookup Master.\n'
-              'Please close these files and try again.\n'
-              '*Program Terminated*')
-        return
-    # Write the Commissions Master file.
-    writer = pd.ExcelWriter(fname1, engine='xlsxwriter',
-                            datetime_format='mm/dd/yyyy')
-    comMast.to_excel(writer, sheet_name='Master', index=False)
-    masterFiles.to_excel(writer, sheet_name='Files Processed', index=False)
-    # Format everything in Excel.
-    tableFormat(comMast, 'Master Data', writer)
-    tableFormat(masterFiles, 'Files Processed', writer)
-
-    # Write the Running Commissions report.
-    writer1 = pd.ExcelWriter(fname2, engine='xlsxwriter',
-                             datetime_format='mm/dd/yyyy')
-    runningCom.to_excel(writer1, sheet_name='Master', index=False)
-    filesProcessed.to_excel(writer1, sheet_name='Files Processed',
-                            index=False)
-    salesTot.to_excel(writer1, sheet_name='Salesperson Totals',
-                      index=False)
-    princTab.to_excel(writer1, sheet_name='Principal Totals',
-                      index=False)
-    # Format as table in Excel.
-    tableFormat(runningCom, 'Master Data', writer1)
-    tableFormat(filesProcessed, 'Files Processed', writer1)
-    tableFormat(salesTot, 'Salesperson Totals', writer1)
-    tableFormat(princTab, 'Principal Totals', writer1)
-
-    # Write the Lookup Master.
-    writer2 = pd.ExcelWriter(fname3, engine='xlsxwriter',
-                             datetime_format='mm/dd/yyyy')
-    masterLookup.to_excel(writer2, sheet_name='Lookup', index=False)
-    # Format everything in Excel.
-    tableFormat(masterLookup, 'Lookup', writer2)
-
-    # Save the files.
-    writer.save()
-    writer1.save()
-    writer2.save()
-    print('---\n'
-          'Sales reports finished successfully!\n'
-          '---\n'
-          'Commissions Master updated.\n'
-          'Lookup Master updated.\n'
-          '+++')
+              'Sales reports finished successfully!\n'
+              '---\n'
+              'Commissions Master updated.\n'
+              'Lookup Master updated.\n'
+              '+++')
+    else:
+        print('Reports finished successfully!')
     # Close the Excel instance.
     excel.Application.Quit()
