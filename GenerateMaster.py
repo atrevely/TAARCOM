@@ -59,28 +59,6 @@ def tailoredPreCalc(princ, sheet, sheetName):
                           'End Customer': 'Unmapped 2', 'Item': 'Unmapped 3'}
             sheet.rename(columns=renameDict, inplace=True)
     # ----------------------------
-    # INF special pre-processing.
-    # ----------------------------
-    if princ == 'INF':
-        if 'Rep Group' in list(sheet):
-            renameDict = {'Material Number': 'Unmapped'}
-            sheet.rename(columns=renameDict, inplace=True)
-            # Drop the RunRate row(s) on this sheet.
-            try:
-                ID = sheet[sheet['Comm Type'] == 'OffShoreRunRate'].index
-                sheet.loc[ID, :] = ''
-                print('Dropping any lines with Comm Type as OffShoreRunRate.\n'
-                      '-')
-            except KeyError:
-                print('Found no Comm Type column!\n'
-                      '-')
-        else:
-            renameDict = {'Material Description': 'Unmapped1',
-                          'Sold To Name': 'Unmapped2',
-                          'Ship To Name': 'Unmapped3', 'Item': 'Unmapped4',
-                          'End Name': 'Customer Name'}
-            sheet.rename(columns=renameDict, inplace=True)
-    # ----------------------------
     # XMO special pre-processing.
     # ----------------------------
     if princ == 'XMO':
