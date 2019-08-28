@@ -170,7 +170,7 @@ def main(runCom):
     # ------------------------------------------------------------------
     commMonths = comMast['Comm Month'].unique()
     try:
-        commMonths = [parse(str(i)) for i in commMonths if i != '']
+        commMonths = [parse(str(i).strip()) for i in commMonths if i != '']
     except ValueError:
         print('Error parsing dates in Comm Month column of Commissions Master!'
               '\nPlease check that all dates are in standard formatting and '
