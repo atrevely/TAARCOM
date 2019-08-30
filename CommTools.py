@@ -117,18 +117,7 @@ def reIndex(runningCom):
     # Check for and clear collisions.
     # --------------------------------
     duplicates = fixList['Running Com Index'].duplicated()
-    fixList[duplicates] == ''
-
-
-def runReports():
-    """
-    """
-    # Set the directory for the data input/output.
-    dataDir = 'Z:/MK Working Commissions/'
-
-    # Call this for multithreading using win32com, for some reason.
-    pythoncom.CoInitialize()
-
+    
 
 
 

@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 import time
 import pythoncom
 import datetime
@@ -90,7 +91,7 @@ def main(runCom):
         comMast[col] = comMast[col].map(
                 lambda x: pd.to_numeric(x, errors='ignore'))
     # Now remove the nans.
-    comMast.replace('nan', '', inplace=True)
+    comMast.replace(['nan', np.nan], '', inplace=True)
     # Make sure all the dates are formatted correctly.
     for col in ['Invoice Date', 'Paid Date', 'Sales Report Date']:
         comMast[col] = comMast[col].map(lambda x: formDate(x))
@@ -126,7 +127,7 @@ def main(runCom):
             runningCom[col] = runningCom[col].map(
                     lambda x: pd.to_numeric(x, errors='ignore'))
         # Now remove the nans.
-        runningCom.replace('nan', '', inplace=True)
+        runningCom.replace(['nan', np.nan], '', inplace=True)
         # Make sure all the dates are formatted correctly.
         runningCom['Invoice Date'] = runningCom['Invoice Date'].map(
                 lambda x: formDate(x))
