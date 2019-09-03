@@ -57,7 +57,7 @@ def tableFormat(sheetData, sheetName, wbook):
             if sheetData.loc[row, 'Sales'] == '':
                 sheet.write(row+1, 4, sheetData.loc[row, 'Root Customer..'],
                             newFormat)
-            elif sheetData.loc[row, 'City on Acct List']:
+            elif any(sheetData.loc[row, 'City on Acct List']):
                 sheet.write(row+1, 4, sheetData.loc[row, 'Root Customer..'],
                             movedFormat)
                 sheet.write(row+1, 24, sheetData.loc[row, 'City on Acct List'],
@@ -248,10 +248,11 @@ def main(filepath):
             insFile.loc[row, 'TAARCOM Comments'] = 'Individual'
             city = insFile.loc[row, 'Customer City'].upper()
             # Check for matches to city and assign salesperson.
-            for row in salesInfo.index:
-                cities = salesInfo['Territory Cities'][row].upper().split(', ')
+            for person in salesInfo.index:
+                cities = salesInfo['Territory Cities'][person].upper().split(
+                        ', ')
                 if city in cities:
-                    insFile.loc[row, 'Sales'] = salesInfo.loc[row,
+                    insFile.loc[row, 'Sales'] = salesInfo.loc[person,
                                                               'Sales Initials']
             # Done, so move to next line in file.
             continue
