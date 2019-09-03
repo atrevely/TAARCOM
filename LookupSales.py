@@ -54,7 +54,8 @@ def tableFormat(sheetData, sheetName, wbook):
     # Highlight new root customer and moved city rows.
     try:
         for row in sheetData.index:
-            if sheetData.loc[row, 'Sales'] == '':
+            ind = sheetData.loc[row, 'TAARCOM Comments'] == 'Individual'
+            if sheetData.loc[row, 'Sales'] == '' and not ind:
                 sheet.write(row+1, 4, sheetData.loc[row, 'Root Customer..'],
                             newFormat)
             elif any(sheetData.loc[row, 'City on Acct List']):
