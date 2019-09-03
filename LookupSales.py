@@ -252,7 +252,7 @@ def main(filepath):
                 cities = salesInfo['Territory Cities'][row].upper().split(', ')
                 if city in cities:
                     insFile.loc[row, 'Sales'] = salesInfo.loc[row,
-                                                              'Salesperson']
+                                                              'Sales Initials']
             # Done, so move to next line in file.
             continue
         cust = insFile.loc[row, 'Root Customer..']

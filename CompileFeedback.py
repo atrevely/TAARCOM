@@ -233,7 +233,8 @@ def main(filepaths):
         # Get root customer and salesperson.
         cust = sheet.loc[row, 'Root Customer..']
         salesperson = sheet.loc[row, 'Sales']
-        if cust and salesperson:
+        indiv = sheet.loc[row, 'Root Customer Class'].lower() == 'individual'
+        if cust and salesperson and not indiv:
             # Find match in rootCustomerMappings.
             custMatch = rootCustMap['Root Customer'] == cust
             if sum(custMatch) == 1:

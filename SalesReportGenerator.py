@@ -625,9 +625,10 @@ def main(runCom):
                 'Sales Comm', win32c.xlSum)
         dataField.NumberFormat = '$#,##0'
         wb.Close(SaveChanges=1)
+
     # %%
-    # Fill in the Sales Report Date in Running Commissions.
     if runCom:
+        # Fill in the Sales Report Date in Running Commissions.
         runningCom.loc[runningCom['Sales Report Date'] == '',
                        'Sales Report Date'] = time.strftime('%m/%d/%Y')
         # ------------------------------------------------------
