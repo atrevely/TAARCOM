@@ -93,7 +93,7 @@ def main(filepath):
     """
 
     # Set the directory paths to the server.
-    lookDir = ''#'Z:/Commissions Lookup/'
+    lookDir = 'Z:/Commissions Lookup/'
 
     # --------------------------------------
     # Load the Root Customer Mappings file.
@@ -291,7 +291,7 @@ def main(filepath):
     insFile = insFile.loc[:, colNames].fillna('')
 
     # Try saving the files, exit with error if any file is currently open.
-    outDir = ''#'C:/Users/kerry/Documents/disty data/Digikey/'
+    outDir = 'C:/Users/kerry/Documents/disty data/Digikey/'
     fname1 = outDir + filename[:-5] + ' With Salespeople.xlsx'
     if saveError(fname1):
         print('---\n'

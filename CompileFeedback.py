@@ -10,6 +10,9 @@ def tableFormat(sheetData, sheetName, wbook):
     if sheetData.shape[0] == 0:
         return
     sheet = wbook.sheets[sheetName]
+    sheet.freeze_panes(1, 0)
+    # Set the autofilter for the sheet.
+    sheet.autofilter(0, 0, sheetData.shape[0], sheetData.shape[1]-1)
     # Set document formatting.
     docFormat = wbook.book.add_format({'font': 'Calibri',
                                        'font_size': 11})

@@ -42,7 +42,7 @@ class GenMast(QMainWindow):
               '---')
 
         # Try finding/loading the supporting files.
-        lookDir = ''#'Z:/Commissions Lookup/'
+        lookDir = 'Z:/Commissions Lookup/'
         if not os.path.exists(lookDir + 'rootCustomerMappings.xlsx'):
             print('No Root Customer Mappings found!\n'
                   'Please make sure rootCustomerMappings'
@@ -168,7 +168,7 @@ class GenMast(QMainWindow):
     def lookSalesExecute(self):
         """Runs function for looking up salespeople."""
         # Check to see if we're ready to process.
-        lookDir = ''#'Z:/Commissions Lookup/'
+        lookDir = 'Z:/Commissions Lookup/'
         mapExists = os.path.exists(lookDir + 'rootCustomerMappings.xlsx')
         if self.filename and mapExists:
             # Turn buttons off.
