@@ -282,6 +282,15 @@ def main(filepath):
             else:
                 # Record that the customer is new.
                 insFile.loc[row, 'New T-Cust'] = 'Y'
+                # Look up based on city and fill in.
+                city = insFile.loc[row, 'Customer City'].upper()
+                for person in salesInfo.index:
+                    cities = salesInfo['Territory Cities'][
+                            person].upper().split(', ')
+                    if city in cities:
+                        insFile.loc[row, 'Sales'] = salesInfo.loc[
+                                person, 'Sales Initials']
+
         # Convert applicable entries to numeric.
         for col in list(insFile):
             insFile.loc[row, col] = pd.to_numeric(insFile.loc[row, col],
