@@ -9,6 +9,9 @@ def tableFormat(sheetData, sheetName, wbook):
     if sheetData.shape[0] == 0:
         return
     sheet = wbook.sheets[sheetName]
+    sheet.freeze_panes(1, 0)
+    # Set the autofilter for the sheet.
+    sheet.autofilter(0, 0, sheetData.shape[0], sheetData.shape[1]-1)
     # Set document formatting.
     docFormat = wbook.book.add_format({'font': 'Calibri',
                                        'font_size': 11})
@@ -90,7 +93,7 @@ def main(filepath):
     """
 
     # Set the directory paths to the server.
-    lookDir = 'Z:/Commissions Lookup/'
+    lookDir = ''#'Z:/Commissions Lookup/'
 
     # --------------------------------------
     # Load the Root Customer Mappings file.
@@ -262,7 +265,7 @@ def main(filepath):
         acctMatch = mastAcct[mastAcct['ProperName'] == cust]
         if cust and len(acctMatch) == 1:
             # Check if the city is different from our account list.
-            acctCity = acctMatch['CITY'].iloc[0].upper().split(", ")
+            acctCity = acctMatch['CITY'].iloc[0].upper().split(', ')
             if insFile.loc[row, 'Customer City'].upper() not in acctCity:
                 if len(acctCity) > 1:
                     acctCity = ', '.join(acctCity)
@@ -288,7 +291,7 @@ def main(filepath):
     insFile = insFile.loc[:, colNames].fillna('')
 
     # Try saving the files, exit with error if any file is currently open.
-    outDir = 'C:/Users/kerry/Documents/disty data/Digikey/'
+    outDir = ''#'C:/Users/kerry/Documents/disty data/Digikey/'
     fname1 = outDir + filename[:-5] + ' With Salespeople.xlsx'
     if saveError(fname1):
         print('---\n'

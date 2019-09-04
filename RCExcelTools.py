@@ -8,6 +8,7 @@ def tableFormat(sheetData, sheetName, wbook):
     if sheetData.shape[0] == 0:
         return
     sheet = wbook.sheets[sheetName]
+    sheet.freeze_panes(1, 0)
     # Set default document format.
     docFormat = wbook.book.add_format({'font': 'Calibri',
                                        'font_size': 11})
