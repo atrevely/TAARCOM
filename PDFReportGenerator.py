@@ -1,8 +1,12 @@
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
+from reportlab.pdfbase.pdfmetrics import stringWidth
+import locale
 
 
 def pdfReport(salesperson, data):
+    locale.setlocale(locale.LC_ALL, '')
+
     # Initialize report pdf.
     report = canvas.Canvas("Test Report.pdf", pagesize=letter)
     report.setFont('Helvetica', 12)
@@ -36,9 +40,13 @@ def pdfReport(salesperson, data):
     report.setLineWidth(0.5)
     shift = 0
     for princ in princDict.keys():
+        princData = data[data['Principal'] == princ]
+        princComm = sum(princData['Sales Commission'])
         report.line(20, 600-shift, 600, 600-shift)
+        commStr = locale.currency(princComm, grouping=True)
+        commWidth = stringWidth(commStr, 'Helvetica', 10)
+        report.drawString(600-commWidth, 605-shift, commStr)
         report.drawString(20, 605-shift, princDict[princ])
-        shift += 40
 
     # Commission total.
     report.line(20, 640, 600, 640)

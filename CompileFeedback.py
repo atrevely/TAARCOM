@@ -236,7 +236,11 @@ def main(filepaths):
         # Get root customer and salesperson.
         cust = sheet.loc[row, 'Root Customer..']
         salesperson = sheet.loc[row, 'Sales']
-        indiv = sheet.loc[row, 'Root Customer Class'].lower() == 'individual'
+        try:
+            indiv = sheet.loc[row,
+                              'Root Customer Class'].lower() == 'individual'
+        except AttributeError:
+            indiv = False
         if cust and salesperson and not indiv:
             # Find match in rootCustomerMappings.
             custMatch = rootCustMap['Root Customer'] == cust
