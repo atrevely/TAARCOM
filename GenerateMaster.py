@@ -341,7 +341,7 @@ def main(filepaths, runningCom, fieldMappings):
     columnNames[18:18] = ['Sales Commission']
     columnNames[20:20] = ['Quarter Shipped', 'Month', 'Year']
     columnNames.extend(['CM Split', 'Paid Date', 'From File',
-                        'Sales Report Date', 'T-Notes'])
+                        'Sales Report Date'])
 
     # Set the directories for outputting data and finding lookups.
     outDir = 'Z:/MK Working Commissions/'
@@ -771,48 +771,51 @@ def main(filepaths, runningCom, fieldMappings):
         # ------------------------------------------
         # Try to find a match in the Lookup Master.
         # ------------------------------------------
-        # First match reported customer.
-        repCust = str(finalData.loc[row, 'Reported Customer']).lower()
-        POSCust = masterLookup['Reported Customer'].map(
-                lambda x: str(x).lower())
-        custMatches = masterLookup[repCust == POSCust]
-        # Now match part number.
-        partNum = str(finalData.loc[row, 'Part Number']).lower()
-        PPN = masterLookup['Part Number'].map(lambda x: str(x).lower())
-        # Reset index, but keep it around for updating usage below.
-        fullMatch = custMatches[partNum == PPN].reset_index()
-        # Record number of Lookup Master matches.
-        lookMatches = len(fullMatch)
-        # If we found one match we're good, so copy it over.
-        if lookMatches == 1:
-            fullMatch = fullMatch.iloc[0]
-            # If there are no salespeople, it means we found a "soft match."
-            # These have unknown End Customers and should go to
-            # Entries Need Fixing. So, set them to zero matches.
-            if fullMatch['CM Sales'] == fullMatch['Design Sales'] == '':
-                lookMatches = 0
-            # Grab primary and secondary sales people from Lookup Master.
-            finalData.loc[row, 'CM Sales'] = fullMatch['CM Sales']
-            finalData.loc[row, 'Design Sales'] = fullMatch['Design Sales']
-            finalData.loc[row, 'T-Name'] = fullMatch['T-Name']
-            finalData.loc[row, 'CM'] = fullMatch['CM']
-            finalData.loc[row, 'T-End Cust'] = fullMatch['T-End Cust']
-            finalData.loc[row, 'CM Split'] = fullMatch['CM Split']
-            # Update usage in lookup Master.
-            masterLookup.loc[fullMatch['index'],
-                             'Last Used'] = datetime.datetime.now().date()
-            # Update OOT city if not already filled in.
-            if fullMatch['T-Name'][0:3] == 'OOT' and not fullMatch['City']:
+        # Don't look up correction lines.
+        if 'correction' in str(finalData.loc[row, 'T-Notes']).lower():
+            # First match reported customer.
+            repCust = str(finalData.loc[row, 'Reported Customer']).lower()
+            POSCust = masterLookup['Reported Customer'].map(
+                    lambda x: str(x).lower())
+            custMatches = masterLookup[repCust == POSCust]
+            # Now match part number.
+            partNum = str(finalData.loc[row, 'Part Number']).lower()
+            PPN = masterLookup['Part Number'].map(lambda x: str(x).lower())
+            # Reset index, but keep it around for updating usage below.
+            fullMatch = custMatches[partNum == PPN].reset_index()
+            # Record number of Lookup Master matches.
+            lookMatches = len(fullMatch)
+            # If we found one match we're good, so copy it over.
+            if lookMatches == 1:
+                fullMatch = fullMatch.iloc[0]
+                # If there are no salespeople, it means we found a
+                # "soft match."
+                # These have unknown End Customers and should go to
+                # Entries Need Fixing. So, set them to zero matches.
+                if fullMatch['CM Sales'] == fullMatch['Design Sales'] == '':
+                    lookMatches = 0
+                # Grab primary and secondary sales people from Lookup Master.
+                finalData.loc[row, 'CM Sales'] = fullMatch['CM Sales']
+                finalData.loc[row, 'Design Sales'] = fullMatch['Design Sales']
+                finalData.loc[row, 'T-Name'] = fullMatch['T-Name']
+                finalData.loc[row, 'CM'] = fullMatch['CM']
+                finalData.loc[row, 'T-End Cust'] = fullMatch['T-End Cust']
+                finalData.loc[row, 'CM Split'] = fullMatch['CM Split']
+                # Update usage in lookup Master.
                 masterLookup.loc[fullMatch['index'],
-                                 'City'] = finalData.loc[row, 'City']
-        # If we found multiple matches, then fill in all the options.
-        elif lookMatches > 1:
-            lookCols = ['CM Sales', 'Design Sales', 'T-Name', 'CM',
-                        'T-End Cust', 'CM Split']
-            # Write list of all unique entries for each column.
-            for col in lookCols:
-                finalData.loc[row, col] = ', '.join(
-                        fullMatch[col].map(lambda x: str(x)).unique())
+                                 'Last Used'] = datetime.datetime.now().date()
+                # Update OOT city if not already filled in.
+                if fullMatch['T-Name'][0:3] == 'OOT' and not fullMatch['City']:
+                    masterLookup.loc[fullMatch['index'],
+                                     'City'] = finalData.loc[row, 'City']
+            # If we found multiple matches, then fill in all the options.
+            elif lookMatches > 1:
+                lookCols = ['CM Sales', 'Design Sales', 'T-Name', 'CM',
+                            'T-End Cust', 'CM Split']
+                # Write list of all unique entries for each column.
+                for col in lookCols:
+                    finalData.loc[row, col] = ', '.join(
+                            fullMatch[col].map(lambda x: str(x)).unique())
 
         # -----------------------------------------------------------
         # Format the date correctly and fill in the Quarter Shipped.
