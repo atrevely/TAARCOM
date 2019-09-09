@@ -126,13 +126,17 @@ class GenMast(QMainWindow):
 
     def lookSalesClicked(self):
         """Send the LookupSales execution to a worker thread."""
+        self.lockButtons()
         worker = Worker(self.lookSalesExecute)
-        self.threadpool.start(worker)
+        if self.threadpool.activeThreadCount() == 0:
+            self.threadpool.start(worker)
 
     def compileFeedbackClicked(self):
         """Send the WriteComments execution to a worker thread."""
+        self.lockButtons()
         worker = Worker(self.compileFeedbackExecute)
-        self.threadpool.start(worker)
+        if self.threadpool.activeThreadCount() == 0:
+            self.threadpool.start(worker)
 
     def clearAllClicked(self):
         """Clear the filename variables."""
@@ -146,8 +150,6 @@ class GenMast(QMainWindow):
         """Runs function for compiling feedback and appending to Master."""
         # Check to make sure we've selected files.
         if self.filenames:
-            # Turn buttons off.
-            self.lockButtons()
             # Run the GenerateMaster.py file.
             try:
                 CompileFeedback.main(self.filenames)
@@ -157,13 +159,11 @@ class GenMast(QMainWindow):
                       + '\nPlease contact your local coder.')
             # Clear files.
             self.filenames = []
-            # Turn buttons back on.
-            self.restoreButtons()
-
-        elif not self.filename:
+        elif not self.filenames:
             print('No finished Insight files selected!\n'
                   'Use the Select Commission Files button to select files.\n'
                   '---')
+        self.restoreButtons()
 
     def lookSalesExecute(self):
         """Runs function for looking up salespeople."""
@@ -171,8 +171,6 @@ class GenMast(QMainWindow):
         lookDir = 'Z:/Commissions Lookup/'
         mapExists = os.path.exists(lookDir + 'rootCustomerMappings.xlsx')
         if self.filename and mapExists:
-            # Turn buttons off.
-            self.lockButtons()
             # Run the GenerateMaster.py file.
             try:
                 LookupSales.main(self.filename)
@@ -182,18 +180,15 @@ class GenMast(QMainWindow):
                       + '\nPlease contact your local coder.')
             # Clear file.
             self.filename = []
-            # Turn buttons back on.
-            self.restoreButtons()
-
         elif not mapExists:
             print('File rootCustomerMappings.xlsx not found!\n'
                   'Please check file location and try again.\n'
                   '---')
-
         elif not self.filename:
             print('No Insight file selected!\n'
                   'Use the Select Commission Files button to select files.\n'
                   '---')
+        self.restoreButtons()
 
     def openInsightClicked(self):
         """Provide filepath for new data to process using LookupSales."""

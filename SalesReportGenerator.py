@@ -6,6 +6,7 @@ import datetime
 from dateutil.parser import parse
 from RCExcelTools import tableFormat, formDate, saveError
 from xlrd import XLRDError
+from PDFReportGenerator import pdfReport
 import win32com.client
 import os
 import re
@@ -625,6 +626,16 @@ def main(runCom):
                 'Sales Comm', win32c.xlSum)
         dataField.NumberFormat = '$#,##0'
         wb.Close(SaveChanges=1)
+
+        # ---------------------------------------------------------
+        # If we're at the end of a quarter, create the PDF report.
+        # ---------------------------------------------------------
+        if numPrevMos == 2:
+            fullName = sales['Salesperson'].iloc[0]
+            priorComm = sales['Prior Qtr Commission'].iloc[0]
+            priorDue = sales['Prior Qtr Due'].iloc[0]
+            salesDraw = sales['Sales Draw'].iloc[0]
+            pdfReport(fullName, finalReport, priorComm, priorDue, salesDraw)
 
     # %%
     if runCom:

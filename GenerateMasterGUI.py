@@ -158,18 +158,24 @@ class GenMast(QMainWindow):
 
     def genMastClicked(self):
         """Send the GenerateMaster execution to a worker thread."""
+        self.lockButtons()
         worker = Worker(self.genMastExecute)
-        self.threadpool.start(worker)
+        if self.threadpool.activeThreadCount() == 0:
+            self.threadpool.start(worker)
 
     def genReportsClicked(self):
         """Send the SalesReportGenerator execution to a worker thread."""
+        self.lockButtons()
         worker = Worker(self.genReportsExecute)
-        self.threadpool.start(worker)
+        if self.threadpool.activeThreadCount() == 0:
+            self.threadpool.start(worker)
 
     def fixEntriesClicked(self):
         """Send the MergeFixedEntries execution to a worker thread."""
+        self.lockButtons()
         worker = Worker(self.fixEntriesExecute)
-        self.threadpool.start(worker)
+        if self.threadpool.activeThreadCount() == 0:
+            self.threadpool.start(worker)
 
     def clearAllClicked(self):
         """Clear the filenames and master variables."""
@@ -184,8 +190,6 @@ class GenMast(QMainWindow):
         lookDir = 'Z:/Commissions Lookup/'
         mapExists = os.path.exists(lookDir + 'fieldMappings.xlsx')
         if self.filenames and mapExists:
-            # Turn buttons off.
-            self.lockButtons()
             # Run the GenerateMaster.py file.
             try:
                 GenerateMaster.main(self.filenames, self.master,
@@ -196,8 +200,6 @@ class GenMast(QMainWindow):
                       + '\nPlease contact your local coder.')
             # Clear the filename selections.
             self.filenames = []
-            # Turn buttons back on.
-            self.restoreButtons()
         elif not mapExists:
             print('File fieldMappings.xlsx not found!\n'
                   'Please check file location and try again.\n'
@@ -206,11 +208,11 @@ class GenMast(QMainWindow):
             print('No commission files selected!\n'
                   'Use the Select Commission Files button to select files.\n'
                   '---')
+        self.restoreButtons()
 
     def genReportsExecute(self):
         """Runs function for generating salesperson reports."""
         # Turn buttons off.
-        self.lockButtons()
         # Run the SalesReportGenerator.py file.
         try:
             SalesReportGenerator.main(self.master)
@@ -226,8 +228,6 @@ class GenMast(QMainWindow):
     def fixEntriesExecute(self):
         """Copy over fixed entries to Master."""
         if self.master:
-            # Turn buttons off.
-            self.lockButtons()
             # Run the GenerateMaster.py file.
             try:
                 MergeFixedEntries.main(self.master)
@@ -235,11 +235,10 @@ class GenMast(QMainWindow):
                 print('Unexpected Python error:\n'
                       + str(error)
                       + '\nPlease contact your local coder.')
-            # Turn buttons back on.
-            self.restoreButtons()
         else:
             print('Please upload the current Running Commissions file.\n'
                   '---')
+        self.restoreButtons()
 
     def uploadMastClicked(self):
         """Upload an existing Running Commissions."""
