@@ -772,6 +772,7 @@ def main(filepaths, runningCom, fieldMappings):
         # Try to find a match in the Lookup Master.
         # ------------------------------------------
         # Don't look up correction lines.
+        lookMatches = 0
         if 'correction' in str(finalData.loc[row, 'T-Notes']).lower():
             # First match reported customer.
             repCust = str(finalData.loc[row, 'Reported Customer']).lower()
