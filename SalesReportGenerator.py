@@ -124,9 +124,13 @@ def main(runCom):
                                                 errors='coerce').fillna('')
             except KeyError:
                 pass
+        # Need to drop Comm Month.
         for col in mixedCols:
-            runningCom[col] = runningCom[col].map(
-                    lambda x: pd.to_numeric(x, errors='ignore'))
+            try:
+                runningCom[col] = runningCom[col].map(
+                        lambda x: pd.to_numeric(x, errors='ignore'))
+            except KeyError:
+                pass
         # Now remove the nans.
         runningCom.replace(['nan', np.nan], '', inplace=True)
         # Make sure all the dates are formatted correctly.
@@ -834,7 +838,7 @@ def main(runCom):
         # Write the Commissions Master file.
         writer = pd.ExcelWriter(fname1, engine='xlsxwriter',
                                 datetime_format='mm/dd/yyyy')
-        comMast.to_excel(writer, sheet_name='Master', index=False)
+        comMast.to_excel(writer, sheet_name='Master Data', index=False)
         masterFiles.to_excel(writer, sheet_name='Files Processed', index=False)
         # Format everything in Excel.
         tableFormat(comMast, 'Master Data', writer)
