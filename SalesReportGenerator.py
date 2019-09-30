@@ -847,7 +847,7 @@ def main(runCom):
         # Write the Running Commissions report.
         writer1 = pd.ExcelWriter(fname2, engine='xlsxwriter',
                                  datetime_format='mm/dd/yyyy')
-        runningCom.to_excel(writer1, sheet_name='Master', index=False)
+        runningCom.to_excel(writer1, sheet_name='Data', index=False)
         filesProcessed.to_excel(writer1, sheet_name='Files Processed',
                                 index=False)
         salesTot.to_excel(writer1, sheet_name='Salesperson Totals',
@@ -855,7 +855,7 @@ def main(runCom):
         princTab.to_excel(writer1, sheet_name='Principal Totals',
                           index=False)
         # Format as table in Excel.
-        tableFormat(runningCom, 'Master Data', writer1)
+        tableFormat(runningCom, 'Data', writer1)
         tableFormat(filesProcessed, 'Files Processed', writer1)
         tableFormat(salesTot, 'Salesperson Totals', writer1)
         tableFormat(princTab, 'Principal Totals', writer1)
