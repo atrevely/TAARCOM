@@ -352,7 +352,12 @@ def main(filepaths, runningCom, fieldMappings):
     # the new data onto. If so, we need to do some work to get it ready.
     # -------------------------------------------------------------------
     if runningCom:
-        finalData = pd.read_excel(runningCom, 'Master', dtype=str)
+        try:
+            finalData = pd.read_excel(runningCom, 'Master', dtype=str)
+        except XLRDError:
+            print('No sheet named Master found in ' + runningCom + '.xlsx!\n'
+                  + '*Program terminated*')
+            return
         # Convert applicable columns to numeric.
         numCols = ['Quantity', 'Ext. Cost', 'Invoiced Dollars',
                    'Paid-On Revenue', 'Actual Comm Paid', 'Unit Cost',
@@ -374,18 +379,30 @@ def main(filepaths, runningCom, fieldMappings):
         # It's always a string anyway.
         mixedCols.remove('Principal')
         for col in mixedCols:
-            finalData[col] = finalData[col].map(
-                    lambda x: pd.to_numeric(x, errors='ignore'))
+            try:
+                finalData[col] = finalData[col].map(
+                        lambda x: pd.to_numeric(x, errors='ignore'))
+            except KeyError:
+                pass
         # Now remove the nans.
         finalData.replace('nan', '', inplace=True)
         runComLen = len(finalData)
-        filesProcessed = pd.read_excel(runningCom,
-                                       'Files Processed').fillna('')
-        print('Appending files to Running Commissions.')
+        try:
+            filesProcessed = pd.read_excel(runningCom,
+                                           'Files Processed').fillna('')
+        except XLRDError:
+            print('No sheet named Files Processed found in ' + runningCom
+                  + '.xlsx!\n*Program terminated*')
+            return
+        print('Appending files to Running Commissions...')
         # Make sure column names all match.
         if set(list(finalData)) != set(columnNames):
             missCols = [i for i in columnNames if i not in finalData]
+            if not missCols:
+                missCols = ['(None)']
             addCols = [i for i in finalData if i not in columnNames]
+            if not addCols:
+                addCols = ['(None)']
             print('---\n'
                   'Columns in Running Commissions '
                   'do not match fieldMappings.xlsx!\n'
@@ -408,8 +425,11 @@ def main(filepaths, runningCom, fieldMappings):
                 except KeyError:
                     pass
             for col in mixedCols:
-                fixList[col] = fixList[col].map(
-                        lambda x: pd.to_numeric(x, errors='ignore'))
+                try:
+                    fixList[col] = fixList[col].map(
+                            lambda x: pd.to_numeric(x, errors='ignore'))
+                except KeyError:
+                    pass
             # Now remove the nans.
             fixList.replace('nan', '', inplace=True)
         except FileNotFoundError:
@@ -439,9 +459,7 @@ def main(filepaths, runningCom, fieldMappings):
     # -------------------------------------------------------------------
     # Strip the root off of the filepaths and leave just the filenames.
     filenames = [os.path.basename(val) for val in filepaths]
-    # Check if we've duplicated any files.
     duplicates = list(set(filenames).intersection(filesProcessed['Filename']))
-    # Don't let duplicate files get processed.
     filenames = [val for val in filenames if val not in duplicates]
     if duplicates:
         # Let us know we found duplictes and removed them.
@@ -533,12 +551,13 @@ def main(filepaths, runningCom, fieldMappings):
         principal = filename[0:3]
         print('Principal detected as: ' + principal)
         princList = ['ABR', 'ATP', 'ATS', 'ATO', 'COS', 'EVE', 'GLO', 'INF',
-                     'ISS', 'LAT', 'MIL', 'OSR', 'QRF', 'SUR', 'TRI', 'TRU']
+                     'ISS', 'LAT', 'MIL', 'OSR', 'QRF', 'SUR', 'TRI', 'TRU',
+                     'XMO']
         if principal not in princList:
             print('Principal supplied is not valid!\n'
                   'Current valid principals: '
                   + ', '.join(map(str, princList))
-                  + '\nRemember to capitalize the principal abbreviation at'
+                  + '\nRemember to capitalize the principal abbreviation at '
                   'start of filename.'
                   '\n*Program terminated*')
             return
@@ -550,11 +569,9 @@ def main(filepaths, runningCom, fieldMappings):
         for sheetName in list(newData):
             # Rework the index just in case it got read in wrong.
             sheet = newData[sheetName].reset_index(drop=True)
-            # Remove the 'nan' strings that got read in.
-            sheet.replace('nan', '', inplace=True)
-            # Make sure index is an integer, not a string.
             sheet.index = sheet.index.map(int)
-            # Create a duplicate of the sheet that stays unchanged aside
+            sheet.replace('nan', '', inplace=True)
+            # Create a duplicate of the sheet that stays unchanged, aside
             # from recording matches.
             rawSheet = sheet.copy(deep=True)
             # Figure out if we've already added in the matches row.
