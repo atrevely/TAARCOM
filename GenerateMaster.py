@@ -790,7 +790,7 @@ def main(filepaths, runningCom, fieldMappings):
         # ------------------------------------------
         # Don't look up correction lines.
         lookMatches = 0
-        if 'correction' in str(finalData.loc[row, 'T-Notes']).lower():
+        if 'correction' not in str(finalData.loc[row, 'T-Notes']).lower():
             # First match reported customer.
             repCust = str(finalData.loc[row, 'Reported Customer']).lower()
             POSCust = masterLookup['Reported Customer'].map(
