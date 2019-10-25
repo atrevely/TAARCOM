@@ -123,8 +123,9 @@ class GenMast(QMainWindow):
                                       'date at the end of the filename.')
 
         # Button for generating sales reports.
-        self.btnGenReports = QPushButton('Generate Reports\nand Migrate Data\n'
-                                         'to Comm Master', self)
+        self.btnGenReports = QPushButton('Run Reports\n(and Migrate Data\n'
+                                         'to Comm Master,\nif applicable)',
+                                         self)
         self.btnGenReports.move(650, 30)
         self.btnGenReports.resize(150, 150)
         self.btnGenReports.clicked.connect(self.genReportsClicked)
@@ -132,7 +133,10 @@ class GenMast(QMainWindow):
                                       'reports from a finished '
                                       'Running Commissions file,\nthen '
                                       'migrate the Running Commissions data '
-                                      'over to the Commissions Master.')
+                                      'over to the Commissions Master.\nIf no '
+                                      'Running Commissions is provided, will '
+                                      'run reports on most recent data in '
+                                      'the Commissions Master.')
 
         # Button for clearing filename and master choices.
         self.btnClearAll = QPushButton('Clear\nSelections', self)

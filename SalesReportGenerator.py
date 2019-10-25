@@ -403,29 +403,32 @@ def main(runCom):
         dataRange = dataSheet.Range('A1').CurrentRegion
         pivotRange = pivotSheet.Range('A1')
         # Create the pivot table and deploy it on the sheet.
-        pivCache = wb.PivotCaches().Create(
-                SourceType=win32c.xlDatabase,
-                SourceData=dataRange,
-                Version=win32c.xlPivotTableVersion14)
-        pivTable = pivCache.CreatePivotTable(
-                TableDestination=pivotRange,
-                TableName='Revenue Data',
-                DefaultVersion=win32c.xlPivotTableVersion14)
-        # Drop the data fields into the pivot table.
-        pivTable.PivotFields('T-End Cust').Orientation = win32c.xlRowField
-        pivTable.PivotFields('T-End Cust').Position = 1
-        pivTable.PivotFields('Part Number').Orientation = win32c.xlRowField
-        pivTable.PivotFields('Part Number').Position = 2
-        pivTable.PivotFields('CM').Orientation = win32c.xlRowField
-        pivTable.PivotFields('CM').Position = 3
-        pivTable.PivotFields('Quarter Shipped').Orientation = win32c.xlColumnField
-        pivTable.PivotFields('Principal').Orientation = win32c.xlPageField
-        # Add the sum of Paid-On Revenue as the data field.
-        dataField = pivTable.AddDataField(
-                pivTable.PivotFields('Paid-On Revenue'),
-                'Revenue', win32c.xlSum)
-        dataField.NumberFormat = '$#,##0'
-        wb.Close(SaveChanges=1)
+        try:
+            pivCache = wb.PivotCaches().Create(
+                    SourceType=win32c.xlDatabase,
+                    SourceData=dataRange,
+                    Version=win32c.xlPivotTableVersion14)
+            pivTable = pivCache.CreatePivotTable(
+                    TableDestination=pivotRange,
+                    TableName='Revenue Data',
+                    DefaultVersion=win32c.xlPivotTableVersion14)
+            # Drop the data fields into the pivot table.
+            pivTable.PivotFields('T-End Cust').Orientation = win32c.xlRowField
+            pivTable.PivotFields('T-End Cust').Position = 1
+            pivTable.PivotFields('Part Number').Orientation = win32c.xlRowField
+            pivTable.PivotFields('Part Number').Position = 2
+            pivTable.PivotFields('CM').Orientation = win32c.xlRowField
+            pivTable.PivotFields('CM').Position = 3
+            pivTable.PivotFields('Quarter Shipped').Orientation = win32c.xlColumnField
+            pivTable.PivotFields('Principal').Orientation = win32c.xlPageField
+            # Add the sum of Paid-On Revenue as the data field.
+            dataField = pivTable.AddDataField(
+                    pivTable.PivotFields('Paid-On Revenue'),
+                    'Revenue', win32c.xlSum)
+            dataField.NumberFormat = '$#,##0'
+        except:
+            print('Error creating pivot table in file: ' + filename)
+            wb.Close(SaveChanges=1)
 
         # ---------------------------------------------------------------------
         # Create the commissions reports for each salesperson, using all data.
@@ -610,26 +613,29 @@ def main(runCom):
         dataRange = dataSheet.Range('A1').CurrentRegion
         pivotRange = pivotSheet.Range('A1')
         # Create the pivot table and deploy it on the sheet.
-        pivCache = wb.PivotCaches().Create(
-                SourceType=win32c.xlDatabase,
-                SourceData=dataRange,
-                Version=win32c.xlPivotTableVersion14)
-        pivTable = pivCache.CreatePivotTable(
-                TableDestination=pivotRange,
-                TableName='Commission Data',
-                DefaultVersion=win32c.xlPivotTableVersion14)
-        # Drop the data fields into the pivot table.
-        pivTable.PivotFields('T-End Cust').Orientation = win32c.xlRowField
-        pivTable.PivotFields('T-End Cust').Position = 1
-        pivTable.PivotFields('Principal').Orientation = win32c.xlRowField
-        pivTable.PivotFields('Principal').Position = 2
-        pivTable.PivotFields('Comm Month').Orientation = win32c.xlColumnField
-        # Add the sum of Sales Commissions as the data field.
-        dataField = pivTable.AddDataField(
-                pivTable.PivotFields('Sales Commission'),
-                'Sales Comm', win32c.xlSum)
-        dataField.NumberFormat = '$#,##0'
-        wb.Close(SaveChanges=1)
+        try:
+            pivCache = wb.PivotCaches().Create(
+                    SourceType=win32c.xlDatabase,
+                    SourceData=dataRange,
+                    Version=win32c.xlPivotTableVersion14)
+            pivTable = pivCache.CreatePivotTable(
+                    TableDestination=pivotRange,
+                    TableName='Commission Data',
+                    DefaultVersion=win32c.xlPivotTableVersion14)
+            # Drop the data fields into the pivot table.
+            pivTable.PivotFields('T-End Cust').Orientation = win32c.xlRowField
+            pivTable.PivotFields('T-End Cust').Position = 1
+            pivTable.PivotFields('Principal').Orientation = win32c.xlRowField
+            pivTable.PivotFields('Principal').Position = 2
+            pivTable.PivotFields('Comm Month').Orientation = win32c.xlColumnField
+            # Add the sum of Sales Commissions as the data field.
+            dataField = pivTable.AddDataField(
+                    pivTable.PivotFields('Sales Commission'),
+                    'Sales Comm', win32c.xlSum)
+            dataField.NumberFormat = '$#,##0'
+        except:
+            print('Error creating pivot table in file: ' + filename)
+            wb.Close(SaveChanges=1)
 
         # ---------------------------------------------------------
         # If we're at the end of a quarter, create the PDF report.
@@ -719,6 +725,7 @@ def main(runCom):
     dataRange = dataSheet.Range('A1').CurrentRegion
     pivotRange = pivotSheet.Range('A1')
     # Create the pivot table and deploy it on the sheet.
+    try:
     pivCache = wb.PivotCaches().Create(SourceType=win32c.xlDatabase,
                                        SourceData=dataRange,
                                        Version=win32c.xlPivotTableVersion14)
