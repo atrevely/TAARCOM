@@ -428,7 +428,7 @@ def main(runCom):
             dataField.NumberFormat = '$#,##0'
         except:
             print('Error creating pivot table in file: ' + filename)
-            wb.Close(SaveChanges=1)
+        wb.Close(SaveChanges=1)
 
         # ---------------------------------------------------------------------
         # Create the commissions reports for each salesperson, using all data.
@@ -635,7 +635,7 @@ def main(runCom):
             dataField.NumberFormat = '$#,##0'
         except:
             print('Error creating pivot table in file: ' + filename)
-            wb.Close(SaveChanges=1)
+        wb.Close(SaveChanges=1)
 
         # ---------------------------------------------------------
         # If we're at the end of a quarter, create the PDF report.
@@ -726,9 +726,10 @@ def main(runCom):
     pivotRange = pivotSheet.Range('A1')
     # Create the pivot table and deploy it on the sheet.
     try:
-        pivCache = wb.PivotCaches().Create(SourceType=win32c.xlDatabase,
-                                           SourceData=dataRange,
-                                           Version=win32c.xlPivotTableVersion14)
+        pivCache = wb.PivotCaches().Create(
+                SourceType=win32c.xlDatabase,
+                SourceData=dataRange,
+                Version=win32c.xlPivotTableVersion14)
         pivTable = pivCache.CreatePivotTable(
                 TableDestination=pivotRange,
                 TableName='Revenue Data',
@@ -743,8 +744,9 @@ def main(runCom):
         pivTable.PivotFields('Quarter Shipped').Orientation = win32c.xlColumnField
         pivTable.PivotFields('Principal').Orientation = win32c.xlPageField
         # Add the sum of Paid-On Revenue as the data field.
-        dataField = pivTable.AddDataField(pivTable.PivotFields('Paid-On Revenue'),
-                                          'Revenue', win32c.xlSum)
+        dataField = pivTable.AddDataField(
+                pivTable.PivotFields('Paid-On Revenue'),
+                'Revenue', win32c.xlSum)
         dataField.NumberFormat = '$#,##0'
     except:
         pass
