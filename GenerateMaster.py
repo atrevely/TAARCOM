@@ -65,6 +65,11 @@ def tailoredPreCalc(princ, sheet, sheetName):
         renameDict = {'Amount': 'Commission', 'Commission Due': 'Unmapped'}
         sheet.rename(columns=renameDict, inplace=True)
     # Return the renameDict for future use in the matched raw file.
+    if renameDict:
+        print('The following columns were renamed automatically '
+              'on this sheet:')
+        [print(i + ' --> ' + j) for i, j
+         in (renameDict.keys(), renameDict.values())]
     return renameDict
 
 
@@ -587,9 +592,6 @@ def main(filepaths, runningCom, fieldMappings):
                 pass
             # Do specialized pre-processing tailored to principlal.
             renameDict = tailoredPreCalc(principal, sheet, sheetName)
-            totalRows = sheet.shape[0]
-            print('Found ' + str(totalRows) + ' entries in the tab '
-                  + sheetName + '\n----------------------------------')
             # Iterate over each column of data that we want to append.
             for dataName in list(fieldMappings):
                 # Grab list of names that the data could potentially be under.
@@ -613,6 +615,12 @@ def main(filepaths, runningCom, fieldMappings):
                         columnName[0] = [i for i in renameDict.keys()
                                          if renameDict[i] == columnName[0]][0]
                     rawSheet.loc[0, columnName[0]] = dataName
+
+            # Report the number of rows that have part numbers.
+            totalRows = sum(sheet['Part Number'] != '')
+            print('Found ' + str(totalRows) + ' entries in the tab '
+                  + sheetName + ' with valid part numbers.'
+                  '\n----------------------------------')
 
             # Replace the old raw data sheet with the new one.
             rawSheet.sort_index(inplace=True)

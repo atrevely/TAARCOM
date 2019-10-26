@@ -427,7 +427,7 @@ def main(runCom):
                     'Revenue', win32c.xlSum)
             dataField.NumberFormat = '$#,##0'
         except:
-            print('Error creating pivot table in file: ' + filename)
+            print('Pivot table could not be created in file: ' + filename)
         wb.Close(SaveChanges=1)
 
         # ---------------------------------------------------------------------
@@ -497,7 +497,6 @@ def main(runCom):
         qqCondensed.loc[0, 'Design Sales'] = 'QQ'
         qqCondensed.loc[0, 'Principal'] = 'VARIOUS (MISC POOL)'
         qqCondensed.loc[0, 'Comm Month'] = currentYrMo
-        qqCondensed.loc[0, 'Actual Comm Paid'] = sum(qqDat['Actual Comm Paid'])
         # Scale down the QQ entries based on the salesperson's share.
         QQperson = salesInfo[salesInfo['Sales Initials'] == person]
         try:
@@ -529,7 +528,7 @@ def main(runCom):
         # Total up the Paid-On Revenue and Actual/Sales Commission.
         reportTot = pd.DataFrame(columns=['Salesperson', 'Paid-On Revenue',
                                           'Actual Comm Paid',
-                                          'Sales Commission', 'Comm Pct'],
+                                          'Sales Commission'],
                                  index=[0])
         reportTot['Salesperson'] = person
         reportTot['Principal'] = ''
@@ -538,7 +537,6 @@ def main(runCom):
         reportTot['Paid-On Revenue'] = sum(finalReport['Paid-On Revenue'])
         reportTot['Actual Comm Paid'] = actComm
         reportTot['Sales Commission'] = salesComm
-        reportTot['Comm Pct'] = salesComm/actComm
         # Append to Sales Totals.
         salesTot = salesTot.append(reportTot, ignore_index=True, sort=False)
         # Build table of sales by principal.
@@ -577,7 +575,6 @@ def main(runCom):
         princTab.loc[row, 'Paid-On Revenue'] = totInv
         princTab.loc[row, 'Actual Comm Paid'] = totAct
         princTab.loc[row, 'Sales Commission'] = totComm
-        princTab.loc[row, 'Comm Pct'] = totComm/totAct
         # Replace zeros with blanks.
         for col in numCols:
             try:
@@ -634,7 +631,7 @@ def main(runCom):
                     'Sales Comm', win32c.xlSum)
             dataField.NumberFormat = '$#,##0'
         except:
-            print('Error creating pivot table in file: ' + filename)
+            print('Pivot table could not be created in file: ' + filename)
         wb.Close(SaveChanges=1)
 
         # ---------------------------------------------------------

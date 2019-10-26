@@ -157,7 +157,7 @@ class GenMast(QMainWindow):
 
         # Set window size and title, then show the window.
         self.setGeometry(300, 300, 900, 600)
-        self.setWindowTitle('Commissions Manager 2.0')
+        self.setWindowTitle('Commissions Manager 2.1 Stable Version')
         self.show()
 
     def genMastClicked(self):
