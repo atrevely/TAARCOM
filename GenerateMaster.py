@@ -675,12 +675,12 @@ def main(filepaths, runningCom, fieldMappings):
                 return
             elif 'Actual Comm Paid' not in list(sheet):
                 # Tab has no commission data, so it is ignored.
-                print('No commission dollars found on this tab.\n'
+                print('No commission dollars column found on this tab.\n'
                       'Skipping tab.\n'
                       '-')
             elif 'Part Number' not in list(sheet):
                 # Tab has no paart number data, so it is ignored.
-                print('No part numbers found on this tab.\n'
+                print('No part number column found on this tab.\n'
                       'Skipping tab.\n'
                       '-')
             elif 'Invoice Date' not in list(sheet):
@@ -927,9 +927,9 @@ def main(filepaths, runningCom, fieldMappings):
             fixList.loc[row, 'Lookup Master Matches'] = lookMatches
             fixList.loc[row, 'Date Added'] = datetime.datetime.now().date()
 
-        # Update progress every 1,000 rows.
-        if row % 1000 == 0 and row > 0:
-            print('Done with row ' '{:,.0f}'.format(row))
+        # Update progress every 100 rows.
+        if (row - runComLen) % 100 == 0 and row > runComLen:
+            print('Done with row ' '{:,.0f}'.format(row - runComLen))
     # %% Clean up the finalized data.
     # Reorder columns to match the desired layout in columnNames.
     finalData.fillna('', inplace=True)

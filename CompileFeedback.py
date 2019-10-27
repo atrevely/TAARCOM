@@ -114,8 +114,7 @@ def main(filepaths):
             print('The following columns were not detected in '
                   'Master Account List.xlsx:\n%s' %
                   ', '.join(map(str, missCols))
-                  + '\nRemember to delete lines before the column '
-                  'headers.\n*Program Terminated*')
+                  + '\n*Program Terminated*')
             return
     else:
         print('---\n'

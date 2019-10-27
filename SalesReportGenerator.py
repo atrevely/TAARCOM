@@ -169,7 +169,8 @@ def main(runCom):
             salesComm = totPct*runningCom.loc[row, 'Actual Comm Paid']
             runningCom.loc[row, 'Sales Commission'] = salesComm
     else:
-            print('Running reports without new Running Commissions...')
+            print('Running reports from Commissions Master '
+                  'without new Running Commissions...')
 
     # ------------------------------------------------------------------
     # Determine the commission months that are currently in the Master.
@@ -281,10 +282,17 @@ def main(runCom):
     # Tag the data by current Design Sales.
     for cust in revDat['T-End Cust'].unique():
         # Check for a single match in Account List.
-        if sum(acctList['ProperName'] == cust) == 1:
-            sales = acctList[acctList['ProperName'] == cust]['SLS'].iloc[0]
-            custID = revDat[revDat['T-End Cust'] == cust].index
-            revDat.loc[custID, 'CDS'] = sales
+        try:
+            if sum(acctList['ProperName'] == cust) == 1:
+                sales = acctList[acctList['ProperName'] == cust]['SLS'].iloc[0]
+                custID = revDat[revDat['T-End Cust'] == cust].index
+                revDat.loc[custID, 'CDS'] = sales
+        except KeyError:
+            print('Error reading column names in Account List!\n'
+                  'Please make sure the columns ProperName and SLS are in '
+                  'the Account List.\n'
+                  '*Program Terminated*')
+            return
     # Fill in the CDS (current design sales) for missing entries as simply the
     # Design Sales for that line.
     for row in revDat[pd.isna(revDat['CDS'])].index:
@@ -447,10 +455,7 @@ def main(runCom):
             CMOnly['Sales Commission'] = commPct*CMOnly['Actual Comm Paid']
             CMWithDesign = CMSales[CMSales['Design Sales'] != '']
             if not CMWithDesign.empty:
-                try:
-                    split = CMWithDesign['CM Split']/100
-                except TypeError:
-                    split = 0.2
+                split = CMWithDesign['CM Split']/100
                 # Need to calculate sales commission from start for these.
                 actComm = split*CMWithDesign['Actual Comm Paid']
                 CMWithDesign['Actual Comm Paid'] = actComm
@@ -468,10 +473,7 @@ def main(runCom):
             designOnly['Sales Commission'] = desSalesComm
             designWithCM = designSales[designSales['CM Sales'] != '']
             if not designWithCM.empty:
-                try:
-                    split = (100 - designWithCM['CM Split'])/100
-                except TypeError:
-                    split = 0.8
+                split = (100 - designWithCM['CM Split'])/100
                 # Need to calculate sales commission from start for these.
                 actComm = split*designWithCM['Actual Comm Paid']
                 designWithCM['Actual Comm Paid'] = actComm
@@ -746,7 +748,7 @@ def main(runCom):
                 'Revenue', win32c.xlSum)
         dataField.NumberFormat = '$#,##0'
     except:
-        pass
+        print('Could not create pivot table in Revenue Report.')
     wb.Close(SaveChanges=1)
 
     # ------------------------------------------------------------------------

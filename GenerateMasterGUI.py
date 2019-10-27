@@ -38,7 +38,7 @@ class GenMast(QMainWindow):
         self.filenames = []
         self.master = []
         # Show welcome message.
-        print('Welcome to the TAARCOM Commissions Manager.\n'
+        print('Welcome to the TAARCOM Commissions Manager stable v2.1.\n'
               'Messages and updates will display below.\n'
               '______________________________________________________\n'
               'REMINDER: Did you check for updates on GitHub?\n'
@@ -196,8 +196,7 @@ class GenMast(QMainWindow):
         if self.filenames and mapExists:
             # Run the GenerateMaster.py file.
             try:
-                GenerateMaster.main(self.filenames, self.master,
-                                    fieldMappings)
+                GenerateMaster.main(self.filenames, self.master, fieldMappings)
             except Exception as error:
                 print('Unexpected Python error:\n'
                       + str(error)
