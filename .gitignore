@@ -1,6 +1,7 @@
 *.xlsx
 *.xls
 *.pyc
+*xml
 __pycache__/
 LookupMasterIntegrator2.py
 RevReportTester.py
