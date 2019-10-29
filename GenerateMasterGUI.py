@@ -120,7 +120,7 @@ class GenMast(QMainWindow):
                                       'A Running Commissions needs to be '
                                       'selected and will be matched to '
                                       'the Entries Needs Fixing by the '
-                                      'date at the end of the filename.')
+                                      'date at the end of the filenames.')
 
         # Button for generating sales reports.
         self.btnGenReports = QPushButton('Run Reports\n(and Migrate Data\n'
@@ -130,13 +130,13 @@ class GenMast(QMainWindow):
         self.btnGenReports.resize(150, 150)
         self.btnGenReports.clicked.connect(self.genReportsClicked)
         self.btnGenReports.setToolTip('Generate commission and revenue '
-                                      'reports from a finished '
-                                      'Running Commissions file,\nthen '
-                                      'migrate the Running Commissions data '
-                                      'over to the Commissions Master.\nIf no '
-                                      'Running Commissions is provided, will '
-                                      'run reports on most recent data in '
-                                      'the Commissions Master.')
+                                      'reports,\nthen migrate the Running '
+                                      'Commissions data over to the '
+                                      'Commissions Master.'
+                                      '\nIf no Running Commissions is '
+                                      'provided, will run reports on most '
+                                      'recent quarter of data in the '
+                                      'Commissions Master.')
 
         # Button for clearing filename and master choices.
         self.btnClearAll = QPushButton('Clear\nSelections', self)
@@ -300,8 +300,9 @@ class GenMast(QMainWindow):
 class Worker(QtCore.QRunnable):
     """Inherits from QRunnable to handle worker thread.
 
-    param args -- Arguments to pass to the callback function.
-    param kwargs -- Keywords to pass to the callback function.
+    fn -- Function for the worker to run.
+    args -- Arguments to pass to the callback function.
+    kwargs -- Keywords to pass to the callback function.
     """
     def __init__(self, fn, *args, **kwargs):
         super(Worker, self).__init__()
