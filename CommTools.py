@@ -1,7 +1,7 @@
 import pandas as pd
 from RCExcelTools import tableFormat, formDate, saveError
 import datetime
-from dateutil.parser import parse
+import os
 
 
 def extractLookups(runningCom):
@@ -14,7 +14,7 @@ def extractLookups(runningCom):
     # ----------------------------------------------
     # Load up the current Running Commissions file.
     # ----------------------------------------------
-    runningCom = pd.read_excel(runCom, 'Master', dtype=str)
+    runningCom = pd.read_excel(runningCom, 'Master', dtype=str)
     # Convert numeric entries in columns that could have numbers in them.
     mixedCols = ['Reported Customer', 'CM', 'Part Number', 'T-Name',
                  'T-End Cust']
@@ -60,12 +60,12 @@ def extractLookups(runningCom):
     for row in paredID:
         # First match reported customer.
         repCust = str(runningCom.loc[row, 'Reported Customer']).lower()
-        POSCust = masterLookup['Reported Customer'].map(
+        POSCust = mastLook['Reported Customer'].map(
                 lambda x: str(x).lower())
-        custMatches = masterLookup[repCust == POSCust]
+        custMatches = mastLook[repCust == POSCust]
         # Now match part number.
         partNum = str(runningCom.loc[row, 'Part Number']).lower()
-        PPN = masterLookup['Part Number'].map(lambda x: str(x).lower())
+        PPN = mastLook['Part Number'].map(lambda x: str(x).lower())
         fullMatches = custMatches[PPN == partNum]
         # Figure out if this entry is a duplicate of any existing entry.
         duplicate = False
@@ -85,8 +85,7 @@ def extractLookups(runningCom):
             newLookup = runningCom.loc[row, lookupCols]
             newLookup['Date Added'] = datetime.datetime.now().date()
             newLookup['Last Used'] = datetime.datetime.now().date()
-            masterLookup = masterLookup.append(newLookup,
-                                               ignore_index=True)
+            mastLook = mastLook.append(newLookup, ignore_index=True)
 
     # Save the Lookup Master.
     fname = lookDir + 'Lookup Master - Current.xlsx'
@@ -100,9 +99,9 @@ def extractLookups(runningCom):
     # Write the Lookup Master.
     writer = pd.ExcelWriter(fname, engine='xlsxwriter',
                             datetime_format='mm/dd/yyyy')
-    masterLookup.to_excel(writer, sheet_name='Lookup', index=False)
+    mastLook.to_excel(writer, sheet_name='Lookup', index=False)
     # Format everything in Excel.
-    tableFormat(masterLookup, 'Lookup', writer)
+    tableFormat(mastLook, 'Lookup', writer)
     writer.save()
     print('---\n'
           'Lookup Master updated successfully!\n'
