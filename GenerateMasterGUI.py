@@ -8,6 +8,9 @@ from PyQt5.QtCore import pyqtSlot
 import GenerateMaster
 import MergeFixedEntries
 import SalesReportGenerator
+import CommTools
+
+VERSION = 'Development v2.2'
 
 
 class Stream(QtCore.QObject):
@@ -38,10 +41,12 @@ class GenMast(QMainWindow):
         self.filenames = []
         self.master = []
         # Show welcome message.
-        print('Welcome to the TAARCOM Commissions Manager stable v2.1.\n'
+        print('Welcome to the TAARCOM Commissions Manager ' + VERSION + '!\n'
               'Messages and updates will display below.\n'
-              '______________________________________________________\n'
-              'REMINDER: Did you check for updates on GitHub?\n'
+              '_______________________________________________________________'
+              '\nREMINDER: Did you check for updates on GitHub?\n'
+              'REMINDER: If new code was pulled or the branch changed, please '
+              'close and relaunch the program.\n'
               '---')
         # Initialize global variables.
         global fieldMappings
@@ -83,7 +88,7 @@ class GenMast(QMainWindow):
         # Button for generating the master list.
         self.btnGenMast = QPushButton('Process Raw Files\nto '
                                       'Running\nCommissions', self)
-        self.btnGenMast.move(650, 430)
+        self.btnGenMast.move(750, 430)
         self.btnGenMast.resize(150, 150)
         self.btnGenMast.clicked.connect(self.genMastClicked)
         self.btnGenMast.setToolTip('Process selected raw data files and '
@@ -111,7 +116,7 @@ class GenMast(QMainWindow):
         # Button for writing fixed entries.
         self.btnFixEntries = QPushButton('Copy Fixed ENF\nEntries to\n'
                                          'Running\nCommissions', self)
-        self.btnFixEntries.move(650, 230)
+        self.btnFixEntries.move(750, 230)
         self.btnFixEntries.resize(150, 150)
         self.btnFixEntries.clicked.connect(self.fixEntriesClicked)
         self.btnFixEntries.setToolTip('Migrate finished lines in the Entries '
@@ -126,7 +131,7 @@ class GenMast(QMainWindow):
         self.btnGenReports = QPushButton('Run Reports\n(and Migrate Data\n'
                                          'to Comm Master,\nif applicable)',
                                          self)
-        self.btnGenReports.move(650, 30)
+        self.btnGenReports.move(750, 30)
         self.btnGenReports.resize(150, 150)
         self.btnGenReports.clicked.connect(self.genReportsClicked)
         self.btnGenReports.setToolTip('Generate commission and revenue '
@@ -146,18 +151,27 @@ class GenMast(QMainWindow):
         self.btnClearAll.setToolTip('Clear all selected files from the '
                                     'workspace.')
 
+        # Button for updating Lookup Master.
+        self.btnUpdateLookup = QPushButton('Update Lookup\nMaster from RC',
+                                           self)
+        self.btnUpdateLookup.move(50, 610)
+        self.btnUpdateLookup.resize(180, 80)
+        self.btnUpdateLookup.clicked.connect(self.updateLookupsClicked)
+        self.btnUpdateLookup.setToolTip('Update the Lookup Master using a\n'
+                                        'Running Commissions file.')
+
         # Create the text output widget.
         self.textBox = QTextEdit(self, readOnly=True)
         self.textBox.ensureCursorVisible()
-        self.textBox.setLineWrapColumnOrWidth(500)
+        self.textBox.setLineWrapColumnOrWidth(600)
         self.textBox.setLineWrapMode(QTextEdit.FixedPixelWidth)
-        self.textBox.setFixedWidth(550)
-        self.textBox.setFixedHeight(400)
+        self.textBox.setFixedWidth(650)
+        self.textBox.setFixedHeight(450)
         self.textBox.move(50, 150)
 
         # Set window size and title, then show the window.
-        self.setGeometry(300, 300, 900, 600)
-        self.setWindowTitle('Commissions Manager 2.1 Stable Version')
+        self.setGeometry(100, 100, 1000, 700)
+        self.setWindowTitle('Commissions Manager ' + VERSION)
         self.show()
 
     def genMastClicked(self):
@@ -178,6 +192,13 @@ class GenMast(QMainWindow):
         """Send the MergeFixedEntries execution to a worker thread."""
         self.lockButtons()
         worker = Worker(self.fixEntriesExecute)
+        if self.threadpool.activeThreadCount() == 0:
+            self.threadpool.start(worker)
+
+    def updateLookupsClicked(self):
+        """Send the UpdateLookups execution to a worker thread."""
+        self.lockButtons()
+        worker = Worker(self.updateLookupsExecute)
         if self.threadpool.activeThreadCount() == 0:
             self.threadpool.start(worker)
 
@@ -243,6 +264,21 @@ class GenMast(QMainWindow):
                   '---')
         self.restoreButtons()
 
+    def updateLookupExecute(self):
+        """Update the Lookup Master using a Running Commissions."""
+        if self.master:
+            # Run the GenerateMaster.py file.
+            try:
+                CommTools.extractLookups(self.master)
+            except Exception as error:
+                print('Unexpected Python error:\n'
+                      + str(error)
+                      + '\nPlease contact your local coder.')
+        else:
+            print('Please upload a Running Commissions file.\n'
+                  '---')
+        self.restoreButtons()
+
     def uploadMastClicked(self):
         """Upload an existing Running Commissions."""
         # Grab an existing Running Commissions to append to.
@@ -287,6 +323,7 @@ class GenMast(QMainWindow):
         self.btnClearAll.setEnabled(False)
         self.btnFixEntries.setEnabled(False)
         self.btnGenReports.setEnabled(False)
+        self.btnUpdateLookup.setEnabled(False)
 
     def restoreButtons(self):
         self.btnGenMast.setEnabled(True)
@@ -295,6 +332,7 @@ class GenMast(QMainWindow):
         self.btnClearAll.setEnabled(True)
         self.btnFixEntries.setEnabled(True)
         self.btnGenReports.setEnabled(True)
+        self.btnUpdateLookup.setEnabled(True)
 
 
 class Worker(QtCore.QRunnable):
