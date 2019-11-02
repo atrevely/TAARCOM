@@ -156,7 +156,7 @@ class GenMast(QMainWindow):
                                            self)
         self.btnUpdateLookup.move(50, 610)
         self.btnUpdateLookup.resize(180, 80)
-        self.btnUpdateLookup.clicked.connect(self.updateLookupsClicked)
+        self.btnUpdateLookup.clicked.connect(self.updateLookupClicked)
         self.btnUpdateLookup.setToolTip('Update the Lookup Master using a\n'
                                         'Running Commissions file.')
 
@@ -195,10 +195,10 @@ class GenMast(QMainWindow):
         if self.threadpool.activeThreadCount() == 0:
             self.threadpool.start(worker)
 
-    def updateLookupsClicked(self):
+    def updateLookupClicked(self):
         """Send the UpdateLookups execution to a worker thread."""
         self.lockButtons()
-        worker = Worker(self.updateLookupsExecute)
+        worker = Worker(self.updateLookupExecute)
         if self.threadpool.activeThreadCount() == 0:
             self.threadpool.start(worker)
 
