@@ -1,5 +1,6 @@
 import pandas as pd
 from RCExcelTools import tableFormat, formDate, saveError
+from xlrd import XLRDError
 import datetime
 import os
 
@@ -14,7 +15,11 @@ def extractLookups(runningCom):
     # ----------------------------------------------
     # Load up the current Running Commissions file.
     # ----------------------------------------------
-    runningCom = pd.read_excel(runningCom, 'Master', dtype=str)
+    try:
+        runningCom = pd.read_excel(runningCom, 'Master', dtype=str)
+    except XLRDError:
+        # If it's a finished RC file the main tab is named Data.
+        runningCom = pd.read_excel(runningCom, 'Data', dtype=str)
     # Convert numeric entries in columns that could have numbers in them.
     mixedCols = ['Reported Customer', 'CM', 'Part Number', 'T-Name',
                  'T-End Cust']
