@@ -343,7 +343,7 @@ def main(filepaths, runningCom, fieldMappings):
     columnNames[0:0] = ['CM Sales', 'Design Sales']
     columnNames[3:3] = ['T-Name', 'CM', 'T-End Cust']
     columnNames[7:7] = ['Principal', 'Distributor']
-    columnNames[18:20] = ['CM Sales Comm', 'Design Sales Comm',
+    columnNames[18:18] = ['CM Sales Comm', 'Design Sales Comm',
                           'Sales Commission']
     columnNames[22:22] = ['Quarter Shipped', 'Month', 'Year']
     columnNames.extend(['CM Split', 'Paid Date', 'From File',
