@@ -35,7 +35,8 @@ def tableFormat(sheetData, sheetName, wbook):
         acctCols = ['Unit Price', 'Paid-On Revenue', 'Actual Comm Paid',
                     'Total NDS', 'Post-Split NDS', 'Cust Revenue YTD',
                     'Ext. Cost', 'Unit Cost', 'Total Commissions',
-                    'Sales Commission', 'Invoiced Dollars']
+                    'Sales Commission', 'Invoiced Dollars',
+                    'CM Sales Comm', 'Design Sales Comm']
         pctCols = ['Split Percentage', 'Commission Rate',
                    'Gross Rev Reduction', 'Shared Rev Tier Rate',
                    'True Comm %', 'Comm Pct']
