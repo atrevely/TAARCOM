@@ -343,8 +343,9 @@ def main(filepaths, runningCom, fieldMappings):
     columnNames[0:0] = ['CM Sales', 'Design Sales']
     columnNames[3:3] = ['T-Name', 'CM', 'T-End Cust']
     columnNames[7:7] = ['Principal', 'Distributor']
-    columnNames[18:18] = ['Sales Commission']
-    columnNames[20:20] = ['Quarter Shipped', 'Month', 'Year']
+    columnNames[18:20] = ['CM Sales Comm', 'Design Sales Comm',
+                          'Sales Commission']
+    columnNames[22:22] = ['Quarter Shipped', 'Month', 'Year']
     columnNames.extend(['CM Split', 'Paid Date', 'From File',
                         'Sales Report Date'])
 
@@ -368,7 +369,8 @@ def main(filepaths, runningCom, fieldMappings):
                    'Paid-On Revenue', 'Actual Comm Paid', 'Unit Cost',
                    'Unit Price', 'CM Split', 'Year', 'Sales Commission',
                    'Split Percentage', 'Commission Rate',
-                   'Gross Rev Reduction', 'Shared Rev Tier Rate']
+                   'Gross Rev Reduction', 'Shared Rev Tier Rate',
+                   'CM Sales Comm', 'Design Sales Comm']
         for col in numCols:
             try:
                 finalData[col] = pd.to_numeric(finalData[col],
@@ -793,11 +795,18 @@ def main(filepaths, runningCom, fieldMappings):
 
     # Iterate over each row of the newly appended data.
     for row in range(runComLen, len(finalData)):
+        # Fill in the Sales Commission info.
+        salesComm = 0.45*finalData.loc[row, 'Actual Comm Paid']
+        finalData.loc[row, 'Sales Commission'] = salesComm
+        # Grab split with default to 20.
+        split = finalData.loc[row, 'CM Split'] or 20
+        finalData.loc[row, 'CM Sales Comm'] = split*salesComm/100
+        finalData.loc[row, 'Design Sales Comm'] = (1 - split)*salesComm/100
         # ------------------------------------------
         # Try to find a match in the Lookup Master.
         # ------------------------------------------
-        # Don't look up correction lines.
         lookMatches = 0
+        # Don't look up correction lines.
         if 'correction' not in str(finalData.loc[row, 'T-Notes']).lower():
             # First match reported customer.
             repCust = str(finalData.loc[row, 'Reported Customer']).lower()
