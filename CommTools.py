@@ -128,7 +128,7 @@ def removeData(commMonth):
     # ---------------------------------------------
     # Load and prepare the Commissions Master file.
     # ---------------------------------------------
-     dataDir = 'Z:/MK Working Commissions/'
+    dataDir = 'Z:/MK Working Commissions/'
     try:
         comMast = pd.read_excel(dataDir + 'Commissions Master.xlsx',
                                 'Master Data', dtype=str)
@@ -164,4 +164,4 @@ def removeData(commMonth):
     # -----------------------------------------------------
     # Now remove the data that matches the provided month.
     # -----------------------------------------------------
-    
+

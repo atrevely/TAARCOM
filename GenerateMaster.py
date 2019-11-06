@@ -618,12 +618,6 @@ def main(filepaths, runningCom, fieldMappings):
                                          if renameDict[i] == columnName[0]][0]
                     rawSheet.loc[0, columnName[0]] = dataName
 
-            # Report the number of rows that have part numbers.
-            totalRows = sum(sheet['Part Number'] != '')
-            print('Found ' + str(totalRows) + ' entries in the tab '
-                  + sheetName + ' with valid part numbers.'
-                  '\n----------------------------------')
-
             # Replace the old raw data sheet with the new one.
             rawSheet.sort_index(inplace=True)
             newData[sheetName] = rawSheet
@@ -692,6 +686,11 @@ def main(filepaths, runningCom, fieldMappings):
                       '*Program terminated*')
                 return
             else:
+                # Report the number of rows that have part numbers.
+                totalRows = sum(sheet['Part Number'] != '')
+                print('Found ' + str(totalRows) + ' entries in the tab '
+                      + sheetName + ' with valid part numbers.'
+                      '\n----------------------------------')
                 # Remove entries with no commissions dollars.
                 # Coerce entries with bad data (non-numeric gets 0).
                 sheet['Actual Comm Paid'] = pd.to_numeric(

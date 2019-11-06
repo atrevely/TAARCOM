@@ -277,7 +277,7 @@ class GenMast(QMainWindow):
         if self.filenames:
             print('Files selected:')
             for file in self.filenames:
-                print(file)
+                print(os.path.basename(file))
             print('---')
 
     def lockButtons(self):
