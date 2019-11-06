@@ -69,7 +69,7 @@ def tailoredPreCalc(princ, sheet, sheetName):
         print('The following columns were renamed automatically '
               'on this sheet:')
         [print(i + ' --> ' + j) for i, j
-         in (renameDict.keys(), renameDict.values())]
+         in zip(renameDict.keys(), renameDict.values())]
     return renameDict
 
 
