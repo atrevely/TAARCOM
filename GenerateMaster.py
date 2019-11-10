@@ -800,7 +800,7 @@ def main(filepaths, runningCom, fieldMappings):
         # Grab split with default to 20.
         split = finalData.loc[row, 'CM Split'] or 20
         finalData.loc[row, 'CM Sales Comm'] = split*salesComm/100
-        finalData.loc[row, 'Design Sales Comm'] = (1 - split)*salesComm/100
+        finalData.loc[row, 'Design Sales Comm'] = (100 - split)*salesComm/100
         # ------------------------------------------
         # Try to find a match in the Lookup Master.
         # ------------------------------------------
