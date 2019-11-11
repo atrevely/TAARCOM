@@ -794,13 +794,6 @@ def main(filepaths, runningCom, fieldMappings):
 
     # Iterate over each row of the newly appended data.
     for row in range(runComLen, len(finalData)):
-        # Fill in the Sales Commission info.
-        salesComm = 0.45*finalData.loc[row, 'Actual Comm Paid']
-        finalData.loc[row, 'Sales Commission'] = salesComm
-        # Grab split with default to 20.
-        split = finalData.loc[row, 'CM Split'] or 20
-        finalData.loc[row, 'CM Sales Comm'] = split*salesComm/100
-        finalData.loc[row, 'Design Sales Comm'] = (100 - split)*salesComm/100
         # ------------------------------------------
         # Try to find a match in the Lookup Master.
         # ------------------------------------------
