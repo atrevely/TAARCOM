@@ -163,6 +163,17 @@ def main(runCom):
     print('Writing fixed entries...')
     # Go through each entry that's fixed and replace it in Running Commissions.
     for row in fixed.index:
+        # Fill in the Sales Commission info.
+        salesComm = 0.45*finalData.loc[row, 'Actual Comm Paid']
+        finalData.loc[row, 'Sales Commission'] = salesComm
+        if finalData.loc[row, 'CM Sales']:
+            # Grab split with default to 20.
+            split = finalData.loc[row, 'CM Split'] or 20
+        else:
+            # No CM Sales, so no split.
+            split = 0
+        finalData.loc[row, 'CM Sales Comm'] = split*salesComm/100
+        finalData.loc[row, 'Design Sales Comm'] = (100 - split)*salesComm/100
         # -------------------------------
         # Make sure the date makes sense.
         # -------------------------------
