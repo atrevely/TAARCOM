@@ -559,7 +559,7 @@ def main(filepaths, runningCom, fieldMappings):
         print('Principal detected as: ' + principal)
         princList = ['ABR', 'ATP', 'ATS', 'ATO', 'COS', 'EVE', 'GLO', 'INF',
                      'ISS', 'LAT', 'MIL', 'OSR', 'QRF', 'SUR', 'TRI', 'TRU',
-                     'XMO', 'MPS']
+                     'XMO', 'MPS', 'NET']
         if principal not in princList:
             print('Principal supplied is not valid!\n'
                   'Current valid principals: '
