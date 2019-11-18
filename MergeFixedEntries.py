@@ -37,7 +37,8 @@ def main(runCom):
                'Paid-On Revenue', 'Actual Comm Paid', 'Unit Cost',
                'Unit Price', 'CM Split', 'Year', 'Sales Commission',
                'Split Percentage', 'Commission Rate',
-               'Gross Rev Reduction', 'Shared Rev Tier Rate']
+               'Gross Rev Reduction', 'Shared Rev Tier Rate',
+               'CM Sales Comm', 'Design Sales Comm']
     for col in numCols:
         try:
             runningCom[col] = pd.to_numeric(runningCom[col],
