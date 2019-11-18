@@ -430,13 +430,19 @@ def main(filepaths, runningCom, fieldMappings):
                     fixList[col] = pd.to_numeric(fixList[col],
                                                  errors='coerce').fillna('')
                 except KeyError:
-                    pass
+                    print('The following column was not found in ENF: '
+                          + col + '\nPlease check the column names '
+                          'and try again.\n*Program Terminated*')
+                    return
             for col in mixedCols:
                 try:
                     fixList[col] = fixList[col].map(
                             lambda x: pd.to_numeric(x, errors='ignore'))
                 except KeyError:
-                    pass
+                    print('The following column was not found in ENF: '
+                          + col + '\nPlease check the column names '
+                          'and try again.\n*Program Terminated*')
+                    return
             # Now remove the nans.
             fixList.replace('nan', '', inplace=True)
         except FileNotFoundError:
