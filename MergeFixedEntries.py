@@ -200,21 +200,21 @@ def main(runCom):
         # --------------------------------------------------------------
         # If no error found in date, finish filling out the fixed entry.
         # --------------------------------------------------------------
+        # Make sure the date actually makes sense.
+        currentYear = int(time.strftime('%Y'))
+        if currentYear - date.year not in [0, 1]:
+            dateError = True
+        else:
+            # Cast date format into mm/dd/yyyy.
+            fixed.loc[row, 'Invoice Date'] = date
+            # Fill in quarter/year/month data.
+            fixed.loc[row, 'Year'] = date.year
+            fixed.loc[row, 'Month'] = calendar.month_name[date.month][0:3]
+            Qtr = str(math.ceil(date.month/3))
+            fixed.loc[row, 'Quarter Shipped'] = (str(date.year) + 'Q'
+                                                 + Qtr)
         if not dateError:
             date = parse(dateGiven).date()
-            # Make sure the date actually makes sense.
-            currentYear = int(time.strftime('%Y'))
-            if currentYear - date.year not in [0, 1]:
-                dateError = True
-            else:
-                # Cast date format into mm/dd/yyyy.
-                fixed.loc[row, 'Invoice Date'] = date
-                # Fill in quarter/year/month data.
-                fixed.loc[row, 'Year'] = date.year
-                fixed.loc[row, 'Month'] = calendar.month_name[date.month][0:3]
-                Qtr = str(math.ceil(date.month/3))
-                fixed.loc[row, 'Quarter Shipped'] = (str(date.year) + 'Q'
-                                                     + Qtr)
             # Check for match in commission dollars.
             try:
                 RCIndex = pd.to_numeric(fixed.loc[row, 'Running Com Index'],
