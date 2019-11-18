@@ -37,7 +37,8 @@ def main(runCom):
                'Paid-On Revenue', 'Actual Comm Paid', 'Unit Cost',
                'Unit Price', 'CM Split', 'Year', 'Sales Commission',
                'Split Percentage', 'Commission Rate',
-               'Gross Rev Reduction', 'Shared Rev Tier Rate']
+               'Gross Rev Reduction', 'Shared Rev Tier Rate',
+               'CM Sales Comm', 'Design Sales Comm']
     for col in numCols:
         try:
             runningCom[col] = pd.to_numeric(runningCom[col],
@@ -200,21 +201,24 @@ def main(runCom):
         # --------------------------------------------------------------
         # If no error found in date, finish filling out the fixed entry.
         # --------------------------------------------------------------
+        # Make sure the date actually makes sense.
+        currentYear = int(time.strftime('%Y'))
+        if currentYear - date.year not in [0, 1]:
+            dateError = True
+            print('Invoice Dates over a year old detected!'
+                  'These will not be copied to Running Commissions.'
+                  '\n---')
+        else:
+            # Cast date format into mm/dd/yyyy.
+            fixed.loc[row, 'Invoice Date'] = date
+            # Fill in quarter/year/month data.
+            fixed.loc[row, 'Year'] = date.year
+            fixed.loc[row, 'Month'] = calendar.month_name[date.month][0:3]
+            Qtr = str(math.ceil(date.month/3))
+            fixed.loc[row, 'Quarter Shipped'] = (str(date.year) + 'Q'
+                                                 + Qtr)
         if not dateError:
             date = parse(dateGiven).date()
-            # Make sure the date actually makes sense.
-            currentYear = int(time.strftime('%Y'))
-            if currentYear - date.year not in [0, 1]:
-                dateError = True
-            else:
-                # Cast date format into mm/dd/yyyy.
-                fixed.loc[row, 'Invoice Date'] = date
-                # Fill in quarter/year/month data.
-                fixed.loc[row, 'Year'] = date.year
-                fixed.loc[row, 'Month'] = calendar.month_name[date.month][0:3]
-                Qtr = str(math.ceil(date.month/3))
-                fixed.loc[row, 'Quarter Shipped'] = (str(date.year) + 'Q'
-                                                     + Qtr)
             # Check for match in commission dollars.
             try:
                 RCIndex = pd.to_numeric(fixed.loc[row, 'Running Com Index'],
