@@ -80,6 +80,9 @@ def main(runCom):
             fixList = pd.read_excel(outDir + 'Entries Need Fixing ' + comDate,
                                     'Data', dtype=str)
             # Convert entries to proper types, like above.
+            ENFnumCols = ['Distributor Matches', 'Lookup Master Matches',
+                          'Running Com Index']
+            numCols.extend(ENFnumCols)
             for col in numCols:
                 try:
                     fixList[col] = pd.to_numeric(fixList[col],
@@ -143,14 +146,14 @@ def main(runCom):
               '*Program Teminated*')
         return
 
-    # -----------------------------------------
+    # ------------------------------------------
     # Get the data that's ready to be migrated.
-    # -----------------------------------------
+    # ------------------------------------------
     # Grab the lines that have an End Customer.
     endCustFixed = fixList[fixList['T-End Cust'] != '']
     # Grab entries where salespeople are filled in.
-    CMSales = endCustFixed['CM Sales'] != ''
-    DesignSales = endCustFixed['Design Sales'] != ''
+    CMSales = endCustFixed['CM Sales'].map(lambda x: len(x.strip()) == 2)
+    DesignSales = endCustFixed['Design Sales'].map(lambda x: len(x.strip()) == 2)
     fixed = endCustFixed[[x or y for x, y in zip(CMSales, DesignSales)]]
     # Return if there's nothing fixed.
     if fixed.shape[0] == 0:
@@ -187,8 +190,21 @@ def main(runCom):
         # If so, turn it back into a string (a bit roundabout, oh well).
         elif isinstance(dateGiven, (pd.Timestamp,  datetime.datetime)):
             dateGiven = str(dateGiven)
+        # Try parsing the date.
         try:
-            parse(dateGiven)
+            date = parse(dateGiven).date()
+            # Make sure the date actually makes sense.
+            currentYear = int(time.strftime('%Y'))
+            if currentYear - date.year not in [0, 1]:
+                dateError = True
+            else:
+                # Cast date format into mm/dd/yyyy.
+                fixed.loc[row, 'Invoice Date'] = date
+                # Fill in quarter/year/month data.
+                fixed.loc[row, 'Year'] = date.year
+                fixed.loc[row, 'Month'] = calendar.month_name[date.month][0:3]
+                Qtr = str(math.ceil(date.month/3))
+                fixed.loc[row, 'Quarter Shipped'] = (str(date.year) + 'Q' + Qtr)
         except (ValueError, TypeError):
             # The date isn't recognized by the parser.
             dateError = True
@@ -201,24 +217,7 @@ def main(runCom):
         # --------------------------------------------------------------
         # If no error found in date, finish filling out the fixed entry.
         # --------------------------------------------------------------
-        # Make sure the date actually makes sense.
-        currentYear = int(time.strftime('%Y'))
-        if currentYear - date.year not in [0, 1]:
-            dateError = True
-            print('Invoice Dates over a year old detected!'
-                  'These will not be copied to Running Commissions.'
-                  '\n---')
-        else:
-            # Cast date format into mm/dd/yyyy.
-            fixed.loc[row, 'Invoice Date'] = date
-            # Fill in quarter/year/month data.
-            fixed.loc[row, 'Year'] = date.year
-            fixed.loc[row, 'Month'] = calendar.month_name[date.month][0:3]
-            Qtr = str(math.ceil(date.month/3))
-            fixed.loc[row, 'Quarter Shipped'] = (str(date.year) + 'Q'
-                                                 + Qtr)
         if not dateError:
-            date = parse(dateGiven).date()
             # Check for match in commission dollars.
             try:
                 RCIndex = pd.to_numeric(fixed.loc[row, 'Running Com Index'],
