@@ -11,6 +11,7 @@ import SalesReportGenerator
 import CommTools
 
 VERSION = 'Development v2.2'
+lookDir = 'Z:/Commissions Lookup/'
 
 
 class Stream(QtCore.QObject):
@@ -50,7 +51,6 @@ class GenMast(QMainWindow):
               '---')
         # Initialize global variables.
         global fieldMappings
-        lookDir = 'Z:/Commissions Lookup/'
         # Try loading/finding the supporting files.
         if os.path.exists(lookDir + 'fieldMappings.xlsx'):
             fieldMappings = pd.read_excel(lookDir + 'fieldMappings.xlsx',
@@ -212,7 +212,6 @@ class GenMast(QMainWindow):
     def genMastExecute(self):
         """Runs function for processing new files to master."""
         # Check to see if we're ready to process.
-        lookDir = 'Z:/Commissions Lookup/'
         mapExists = os.path.exists(lookDir + 'fieldMappings.xlsx')
         if self.filenames and mapExists:
             # Run the GenerateMaster.py file.

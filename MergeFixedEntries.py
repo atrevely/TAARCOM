@@ -80,6 +80,9 @@ def main(runCom):
             fixList = pd.read_excel(outDir + 'Entries Need Fixing ' + comDate,
                                     'Data', dtype=str)
             # Convert entries to proper types, like above.
+            ENFnumCols = ['Distributor Matches', 'Lookup Master Matches',
+                          'Running Com Index']
+            numCols.extend(ENFnumCols)
             for col in numCols:
                 try:
                     fixList[col] = pd.to_numeric(fixList[col],
@@ -143,14 +146,14 @@ def main(runCom):
               '*Program Teminated*')
         return
 
-    # -----------------------------------------
+    # ------------------------------------------
     # Get the data that's ready to be migrated.
-    # -----------------------------------------
+    # ------------------------------------------
     # Grab the lines that have an End Customer.
     endCustFixed = fixList[fixList['T-End Cust'] != '']
     # Grab entries where salespeople are filled in.
-    CMSales = endCustFixed['CM Sales'] != ''
-    DesignSales = endCustFixed['Design Sales'] != ''
+    CMSales = endCustFixed['CM Sales'].map(lambda x: len(x.strip()) == 2)
+    DesignSales = endCustFixed['Design Sales'].map(lambda x: len(x.strip()) == 2)
     fixed = endCustFixed[[x or y for x, y in zip(CMSales, DesignSales)]]
     # Return if there's nothing fixed.
     if fixed.shape[0] == 0:

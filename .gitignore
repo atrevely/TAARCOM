@@ -5,3 +5,5 @@ __pycache__/
 LookupMasterIntegrator2.py
 RevReportTester.py
 *.pdf
+*.iml
+*.xml
