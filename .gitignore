@@ -7,3 +7,4 @@ LookupMasterIntegrator2.py
 RevReportTester.py
 *.pdf
 .idea/TAARCOM.iml
+*.xml~
