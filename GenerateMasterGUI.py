@@ -10,8 +10,11 @@ import MergeFixedEntries
 import SalesReportGenerator
 import CommTools
 
-VERSION = 'Development v2.2'
-lookDir = 'Z:/Commissions Lookup/'
+VERSION = 'Development v2.3'
+if os.path.exists('Z:\\Commissions Lookup'):
+    lookDir = 'Z:\\Commissions Lookup'
+else:
+    lookDir = os.getcwd()
 
 
 class Stream(QtCore.QObject):
@@ -49,25 +52,28 @@ class GenMast(QMainWindow):
               'REMINDER: If new code was pulled or the branch changed, please '
               'close and relaunch the program.\n'
               '---')
-        # Initialize global variables.
-        global fieldMappings
         # Try loading/finding the supporting files.
-        if os.path.exists(lookDir + 'fieldMappings.xlsx'):
-            fieldMappings = pd.read_excel(lookDir + 'fieldMappings.xlsx',
-                                          index_col=False)
+        if os.path.exists(lookDir):
+            if os.path.exists(lookDir + '\\fieldMappings.xlsx'):
+                self.fieldMappings = pd.read_excel(lookDir + '\\fieldMappings.xlsx',
+                                                   index_col=False)
+            else:
+                print('No field mappings found!\n'
+                      'Please make sure fieldMappings.xlsx is in the directory.\n'
+                      '***')
+            if not os.path.exists(lookDir + '\\Lookup Master - Current.xlsx'):
+                print('No Lookup Master found!\n'
+                      'Please make sure Lookup Master is in the directory.\n'
+                      '***')
+            if not os.path.exists(lookDir + '\\distributorLookup.xlsx'):
+                print('No distributor lookup found!\n'
+                      'Please make sure distributorLookup.xlsx '
+                      'is in the directory.\n'
+                      '***')
         else:
-            print('No field mappings found!\n'
-                  'Please make sure fieldMappings.xlsx is in the directory.\n'
-                  '***')
-        if not os.path.exists(lookDir + 'Lookup Master - Current.xlsx'):
-            print('No Lookup Master found!\n'
-                  'Please make sure Lookup Master is in the directory.\n'
-                  '***')
-        if not os.path.exists(lookDir + 'distributorLookup.xlsx'):
-            print('No distributor lookup found!\n'
-                  'Please make sure distributorLookup.xlsx '
-                  'is in the directory.\n'
-                  '***')
+            print('Could not find route to ' + lookDir + '\nPlease make sure you '
+                  'are connected to the TAARCOM server, then relaunch the program.'
+                  '\n***')
 
     def onUpdateText(self, text):
         """Write console output to text widget."""
@@ -212,11 +218,11 @@ class GenMast(QMainWindow):
     def genMastExecute(self):
         """Runs function for processing new files to master."""
         # Check to see if we're ready to process.
-        mapExists = os.path.exists(lookDir + 'fieldMappings.xlsx')
+        mapExists = os.path.exists(lookDir + '\\fieldMappings.xlsx')
         if self.filenames and mapExists:
             # Run the GenerateMaster.py file.
             try:
-                GenerateMaster.main(self.filenames, self.master, fieldMappings)
+                GenerateMaster.main(self.filenames, self.master, self.fieldMappings)
             except Exception as error:
                 print('Unexpected Python error:\n'
                       + str(error)
@@ -285,7 +291,7 @@ class GenMast(QMainWindow):
                 self, filter="Excel files (*.xls *.xlsx *.xlsm)")
         if self.master:
             print('Current Running Commissions selected:\n'
-                  + self.master
+                  + os.path.basename(self.master)
                   + '\n---')
             if 'Running Commissions' not in self.master:
                 print('Caution!\n'
@@ -303,8 +309,8 @@ class GenMast(QMainWindow):
                 self, filter="Excel files (*.xls *.xlsx *.xlsm)")
         # Check if the current master got uploaded as a new file.
         for name in self.filenames:
-            if 'Running Master' in name:
-                print('Master uploaded as new file.\n'
+            if 'Running Commissions' in name:
+                print('RC uploaded as raw file.\n'
                       'Try uploading files again.\n'
                       '---')
                 return
