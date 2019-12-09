@@ -3,6 +3,14 @@ import os
 import time
 from xlrd import XLRDError
 
+# Set the directory for the data input/output.
+if os.path.exists('Z:\\'):
+    dataDir = 'W:\\'
+    lookDir = 'Z:\\Commissions Lookup'
+else:
+    outDir = os.getcwd()
+    lookDir = os.getcwd()
+
 
 def tableFormat(sheetData, sheetName, wbook):
     """Formats the Excel output as a table with correct column formatting."""
@@ -74,18 +82,13 @@ def main(filepaths):
     Arguments:
     filepaths -- The filepaths to the files with new comments.
     """
-
-    # Set the directory paths to the server.
-    lookDir = 'Z:/Commissions Lookup/'
-    dataDir = 'W:/'
-
     # ---------------------------------------
     # Load the Digikey Insights Master file.
     # ---------------------------------------
-    if os.path.exists(lookDir + 'Digikey Insight Master.xlsx'):
-        insMast = pd.read_excel(lookDir + 'Digikey Insight Master.xlsx',
+    if os.path.exists(lookDir + '\\Digikey Insight Master.xlsx'):
+        insMast = pd.read_excel(lookDir + '\\Digikey Insight Master.xlsx',
                                 'Master').fillna('')
-        filesProcessed = pd.read_excel(lookDir + 'Digikey Insight Master.xlsx',
+        filesProcessed = pd.read_excel(lookDir + '\\Digikey Insight Master.xlsx',
                                        'Files Processed').fillna('')
     else:
         print('---\n'
@@ -97,9 +100,9 @@ def main(filepaths):
     # -----------------------------------
     # Load the Master Account List file.
     # -----------------------------------
-    if os.path.exists(lookDir + 'Master Account List.xlsx'):
+    if os.path.exists(lookDir + '\\Master Account List.xlsx'):
         try:
-            mastAcct = pd.read_excel(lookDir + 'Master Account List.xlsx',
+            mastAcct = pd.read_excel(lookDir + '\\Master Account List.xlsx',
                                      'Allacct').fillna('')
         except XLRDError:
             print('---\n'
@@ -111,7 +114,7 @@ def main(filepaths):
         mastCols = ['ProperName', 'SLS', 'CITY']
         missCols = [i for i in mastCols if i not in list(mastAcct)]
         if missCols:
-            print('The following columns were not detected in '
+            print('The following columns were not detected in the '
                   'Master Account List.xlsx:\n%s' %
                   ', '.join(map(str, missCols))
                   + '\n*Program Terminated*')
@@ -127,9 +130,9 @@ def main(filepaths):
     # --------------------------------------
     # Load the Root Customer Mappings file.
     # --------------------------------------
-    if os.path.exists(lookDir + 'rootCustomerMappings.xlsx'):
+    if os.path.exists(lookDir + '\\rootCustomerMappings.xlsx'):
         try:
-            rootCustMap = pd.read_excel(lookDir + 'rootCustomerMappings.xlsx',
+            rootCustMap = pd.read_excel(lookDir + '\\rootCustomerMappings.xlsx',
                                         'Sales Lookup').fillna('')
         except XLRDError:
             print('---\n'
@@ -157,9 +160,9 @@ def main(filepaths):
     # --------------------------------
     # Load the Salesperson Info file.
     # --------------------------------
-    if os.path.exists(lookDir + 'Salespeople Info.xlsx'):
+    if os.path.exists(lookDir + '\\Salespeople Info.xlsx'):
         try:
-            salesInfo = pd.read_excel(lookDir + 'Salespeople Info.xlsx',
+            salesInfo = pd.read_excel(lookDir + '\\Salespeople Info.xlsx',
                                       'Info')
         except XLRDError:
             print('---\n'
@@ -280,22 +283,26 @@ def main(filepaths):
         # Next try rootCustomerMappings.
         mapMatch = rootCustMap[rootCustMap['Root Customer'] == cust]
         if acctMatch.empty and not mapMatch.empty:
-            currentSales = mapMatch['Current Sales'].iloc[0]
-        # Update current salesperson.
-        matchID = insMast[insMast['Root Customer..'] == cust].index
-        insMast.loc[matchID, 'Current Sales'] = currentSales
+            try:
+                currentSales = mapMatch['Current Sales'].iloc[0]
+            except KeyError:
+                pass
+        # Update current salesperson, if a new one is found.
+        if currentSales:
+            matchID = insMast[insMast['Root Customer..'] == cust].index
+            insMast.loc[matchID, 'Current Sales'] = currentSales
 
     # ---------------------------------------------------------------------
     # Try saving the files, exit with error if any file is currently open.
     # ---------------------------------------------------------------------
     currentTime = time.strftime('%Y-%m-%d')
-    fname1 = dataDir + 'Digikey Insight Final ' + currentTime + '.xlsx'
+    fname1 = dataDir + '\\Digikey Insight Final ' + currentTime + '.xlsx'
     # Append the new file to files processed.
     newFile = pd.DataFrame(columns=filesProcessed.columns)
     newFile.loc[0, 'Filename'] = fname1
     filesProcessed = filesProcessed.append(newFile, ignore_index=True,
                                            sort=False)
-    fname2 = lookDir + 'Digikey Insight Master.xlsx'
+    fname2 = lookDir + '\\Digikey Insight Master.xlsx'
     if saveError(fname1, fname2):
         print('---\n'
               'Insight Master and/or Final is currently open in Excel!\n'
