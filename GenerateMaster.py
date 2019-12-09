@@ -196,9 +196,8 @@ def tailoredCalc(princ, sheet, sheetName, distMap):
             sheet['Comm Source'] = 'Cost'
         elif 'Part Number' not in list(sheet) and invNum:
             # We need to load in the part number log.
-            lookDir = 'Z:/Commissions Lookup/'
-            if os.path.exists(lookDir + 'Mill-Max Invoice Log.xlsx'):
-                MMaxLog = pd.read_excel(lookDir + 'Mill-Max Invoice Log.xlsx',
+            if os.path.exists(lookDir + '\\Mill-Max Invoice Log.xlsx'):
+                MMaxLog = pd.read_excel(lookDir + '\\Mill-Max Invoice Log.xlsx',
                                         dtype=str).fillna('')
                 print('Looking up part numbers from invoice log.\n'
                       '---')
@@ -337,6 +336,16 @@ def main(filepaths, runningCom, fieldMappings):
     fieldMappings -- dataframe which links Running Commissions columns to
                      file data columns.
     """
+    # Set the directory for the data input/output.
+    if os.path.exists('Z:\\'):
+        outDir = 'Z:\\MK Working Commissions'
+        lookDir = 'Z:\\Commissions Lookup'
+        matchDir = 'Z:\\Matched Raw Data Files/'
+    else:
+        outDir = os.getcwd()
+        lookDir = os.getcwd()
+        matchDir = os.getcwd()
+
     # Grab lookup table data names.
     columnNames = list(fieldMappings)
     # Add in non-lookup'd data names.
@@ -348,10 +357,6 @@ def main(filepaths, runningCom, fieldMappings):
     columnNames[22:22] = ['Quarter Shipped', 'Month', 'Year']
     columnNames.extend(['CM Split', 'Paid Date', 'From File',
                         'Sales Report Date'])
-
-    # Set the directories for outputting data and finding lookups.
-    outDir = 'Z:/MK Working Commissions/'
-    lookDir = 'Z:/Commissions Lookup/'
 
     # -------------------------------------------------------------------
     # Check to see if there's an existing Running Commissions to append
@@ -421,7 +426,7 @@ def main(filepaths, runningCom, fieldMappings):
             return
         # Load in the matching Entries Need Fixing file.
         comDate = runningCom[-20:]
-        fixName = outDir + 'Entries Need Fixing ' + comDate
+        fixName = outDir + '\\Entries Need Fixing ' + comDate
         try:
             fixList = pd.read_excel(fixName, 'Data', dtype=str)
             # Convert entries to proper types, like above.
@@ -495,9 +500,9 @@ def main(filepaths, runningCom, fieldMappings):
     # --------------------------------------------------------------
     # Read in distMap. Terminate if not found or if errors in file.
     # --------------------------------------------------------------
-    if os.path.exists(lookDir + 'distributorLookup.xlsx'):
+    if os.path.exists(lookDir + '\\distributorLookup.xlsx'):
         try:
-            distMap = pd.read_excel(lookDir + 'distributorLookup.xlsx',
+            distMap = pd.read_excel(lookDir + '\\distributorLookup.xlsx',
                                     'Distributors')
         except XLRDError:
             print('---\n'
@@ -524,8 +529,8 @@ def main(filepaths, runningCom, fieldMappings):
     # ------------------------------------------------------------------------
     # Read in the Lookup Master. Terminate if not found or if errors in file.
     # ------------------------------------------------------------------------
-    if os.path.exists(lookDir + 'Lookup Master - Current.xlsx'):
-        masterLookup = pd.read_excel(lookDir + 'Lookup Master - '
+    if os.path.exists(lookDir + '\\Lookup Master - Current.xlsx'):
+        masterLookup = pd.read_excel(lookDir + '\\Lookup Master - '
                                      'Current.xlsx').fillna('')
         # Check the column names.
         lookupCols = ['CM Sales', 'Design Sales', 'CM Split',
@@ -757,8 +762,7 @@ def main(filepaths, runningCom, fieldMappings):
                   '*Program terminated*')
             return
         # Write the raw data file with matches.
-        matchDir = 'Z:/Matched Raw Data Files/'
-        writer = pd.ExcelWriter(matchDir + fname, engine='xlsxwriter',
+        writer = pd.ExcelWriter(matchDir + '\\' + fname, engine='xlsxwriter',
                                 datetime_format='mm/dd/yyyy')
         for tab in list(newData):
             newData[tab].to_excel(writer, sheet_name=tab, index=False)
@@ -960,9 +964,9 @@ def main(filepaths, runningCom, fieldMappings):
     # %% Get ready to save files.
     # Check if the files we're going to save are open already.
     currentTime = time.strftime('%Y-%m-%d-%H%M')
-    fname1 = outDir + 'Running Commissions ' + currentTime + '.xlsx'
-    fname2 = outDir + 'Entries Need Fixing ' + currentTime + '.xlsx'
-    fname3 = lookDir + 'Lookup Master - Current.xlsx'
+    fname1 = outDir + '\\Running Commissions ' + currentTime + '.xlsx'
+    fname2 = outDir + '\\Entries Need Fixing ' + currentTime + '.xlsx'
+    fname3 = lookDir + '\\Lookup Master - Current.xlsx'
     if saveError(fname1, fname2, fname3):
         print('---\n'
               'One or more of these files are currently open in Excel:\n'

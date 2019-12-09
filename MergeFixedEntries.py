@@ -23,10 +23,13 @@ def main(runCom):
     entries when needed, and quarantining old entries that have not been
     used in 2+ years.
     """
-
-    # Set the directory for saving output files.
-    outDir = 'Z:/MK Working Commissions/'
-    lookDir = 'Z:/Commissions Lookup/'
+    # Set the directory for the data input/output.
+    if os.path.exists('Z:\\'):
+        outDir = 'Z:\\MK Working Commissions'
+        lookDir = 'Z:\\Commissions Lookup'
+    else:
+        outDir = os.getcwd()
+        lookDir = os.getcwd()
 
     # ----------------------------------------------
     # Load up the current Running Commissions file.
@@ -75,9 +78,9 @@ def main(runCom):
     # --------------------------------------
     # Load up the Entries Need Fixing file.
     # --------------------------------------
-    if os.path.exists(outDir + 'Entries Need Fixing ' + comDate):
+    if os.path.exists(outDir + '\\Entries Need Fixing ' + comDate):
         try:
-            fixList = pd.read_excel(outDir + 'Entries Need Fixing ' + comDate,
+            fixList = pd.read_excel(outDir + '\\Entries Need Fixing ' + comDate,
                                     'Data', dtype=str)
             # Convert entries to proper types, like above.
             ENFnumCols = ['Distributor Matches', 'Lookup Master Matches',
@@ -111,9 +114,9 @@ def main(runCom):
     # ----------------------------------------------
     # Read in the Master Lookup. Exit if not found.
     # ----------------------------------------------
-    if os.path.exists(lookDir + 'Lookup Master - Current.xlsx'):
+    if os.path.exists(lookDir + '\\Lookup Master - Current.xlsx'):
         mastLook = pd.read_excel(lookDir +
-                                 'Lookup Master - Current.xlsx').fillna('')
+                                 '\\Lookup Master - Current.xlsx').fillna('')
         # Check the column names.
         lookupCols = ['CM Sales', 'Design Sales', 'CM Split',
                       'Reported Customer', 'CM', 'Part Number', 'T-Name',
@@ -136,9 +139,9 @@ def main(runCom):
     # ------------------------------
     # Load the Quarantined Lookups.
     # ------------------------------
-    if os.path.exists(lookDir + 'Quarantined Lookups.xlsx'):
+    if os.path.exists(lookDir + '\\Quarantined Lookups.xlsx'):
         quarantined = pd.read_excel(lookDir +
-                                    'Quarantined Lookups.xlsx').fillna('')
+                                    '\\Quarantined Lookups.xlsx').fillna('')
     else:
         print('No Quarantied Lookups file found!\n'
               'Please make sure Quarantined Lookups.xlsx '
@@ -214,9 +217,9 @@ def main(runCom):
                   'Note: Spelling, whitespace, and capitalization matter.\n'
                   '---')
             dateError = True
-        # --------------------------------------------------------------
+        # ---------------------------------------------------------------
         # If no error found in date, finish filling out the fixed entry.
-        # --------------------------------------------------------------
+        # ---------------------------------------------------------------
         if not dateError:
             # Check for match in commission dollars.
             try:
@@ -297,10 +300,10 @@ def main(runCom):
               '---')
 
     # Check if the files we're going to save are open already.
-    fname1 = outDir + 'Running Commissions ' + comDate
-    fname2 = outDir + 'Entries Need Fixing ' + comDate
-    fname3 = lookDir + 'Lookup Master - Current.xlsx'
-    fname4 = lookDir + 'Quarantined Lookups.xlsx'
+    fname1 = outDir + '\\Running Commissions ' + comDate
+    fname2 = outDir + '\\Entries Need Fixing ' + comDate
+    fname3 = lookDir + '\\Lookup Master - Current.xlsx'
+    fname4 = lookDir + '\\Quarantined Lookups.xlsx'
     if saveError(fname1, fname2, fname3, fname4):
         print('---\n'
               'One or more files are currently open in Excel!\n'

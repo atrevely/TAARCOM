@@ -52,6 +52,9 @@ class GenMast(QMainWindow):
               'REMINDER: If new code was pulled or the branch changed, please '
               'close and relaunch the program.\n'
               '---')
+        if not os.path.exists('Z:/'):
+            print('No connection to Z:/ drive established! Working locally.'
+                  '\n---')
         # Try loading/finding the supporting files.
         if os.path.exists(lookDir):
             if os.path.exists(lookDir + '\\fieldMappings.xlsx'):

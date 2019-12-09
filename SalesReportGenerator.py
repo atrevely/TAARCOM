@@ -402,10 +402,10 @@ def main(runCom):
     # Go through each salesperson and prepare their reports.
     print('Running reports...')
     for person in salespeople:
-        # -----------------------------------------------------------
+        # ------------------------------------------------------------
         # Create the revenue reports for each salesperson, using only
         # design data.
-        # -----------------------------------------------------------
+        # ------------------------------------------------------------
         # Grab the raw data for this salesperson's design sales.
         designDat = revDat[revDat['CDS'] == person]
         # Also grab any nonstandard splits.
