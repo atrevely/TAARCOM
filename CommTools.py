@@ -1,7 +1,116 @@
 import pandas as pd
 from RCExcelTools import tableFormat, formDate, saveError
+from xlrd import XLRDError
 import datetime
-from dateutil.parser import parse
+import os
+
+
+def extractLookups(runningCom):
+    """Scans a Running Commissions file for new Lookup Master entries and
+    copies them over.
+    """
+    # Set the directory for saving output files.
+    lookDir = 'Z:/Commissions Lookup/'
+
+    # ----------------------------------------------
+    # Load up the current Running Commissions file.
+    # ----------------------------------------------
+    try:
+        runningCom = pd.read_excel(runningCom, 'Master', dtype=str)
+    except XLRDError:
+        # If it's a finished RC file the main tab is named Data.
+        runningCom = pd.read_excel(runningCom, 'Data', dtype=str)
+    # Convert numeric entries in columns that could have numbers in them.
+    mixedCols = ['Reported Customer', 'CM', 'Part Number', 'T-Name',
+                 'T-End Cust']
+    for col in mixedCols:
+        runningCom[col] = runningCom[col].map(
+                lambda x: pd.to_numeric(x, errors='ignore'))
+    runningCom.replace('nan', '', inplace=True)
+
+    # ----------------------------------------------
+    # Read in the Master Lookup. Exit if not found.
+    # ----------------------------------------------
+    if os.path.exists(lookDir + 'Lookup Master - Current.xlsx'):
+        mastLook = pd.read_excel(lookDir +
+                                 'Lookup Master - Current.xlsx').fillna('')
+        # Check the column names.
+        lookupCols = ['CM Sales', 'Design Sales', 'CM Split',
+                      'Reported Customer', 'CM', 'Part Number', 'T-Name',
+                      'T-End Cust', 'Last Used', 'Principal', 'City',
+                      'Date Added']
+        missCols = [i for i in lookupCols if i not in list(mastLook)]
+        if missCols:
+            print('The following columns were not detected in '
+                  'Lookup Master - Current.xlsx:\n%s' %
+                  ', '.join(map(str, missCols))
+                  + '\n*Program Teminated*')
+            return
+    else:
+        print('No Lookup Master found!\n'
+              'Please make sure Lookup Master - Current.xlsx is '
+              'in the directory.\n'
+              '*Program Teminated*')
+        return
+
+    # ------------------------------------------------------------------------
+    # Go through each line of the finished Running Commissions and use them to
+    # update the Lookup Master.
+    # ------------------------------------------------------------------------
+    # Don't copy over INDIVIDUAL, MISC, or ALLOWANCE.
+    noCopy = ['INDIVIDUAL', 'UNKNOWN', 'ALLOWANCE']
+    paredID = [i for i in runningCom.index
+               if not any(j in runningCom.loc[i, 'T-End Cust'].upper()
+                          for j in noCopy)]
+    for row in paredID:
+        # First match reported customer.
+        repCust = str(runningCom.loc[row, 'Reported Customer']).lower()
+        POSCust = mastLook['Reported Customer'].map(
+                lambda x: str(x).lower())
+        custMatches = mastLook[repCust == POSCust]
+        # Now match part number.
+        partNum = str(runningCom.loc[row, 'Part Number']).lower()
+        PPN = mastLook['Part Number'].map(lambda x: str(x).lower())
+        fullMatches = custMatches[PPN == partNum]
+        # Figure out if this entry is a duplicate of any existing entry.
+        duplicate = False
+        for matchID in fullMatches.index:
+            matchCols = ['CM Sales', 'Design Sales', 'CM', 'T-Name',
+                         'T-End Cust']
+            duplicate = all(
+                    fullMatches.loc[matchID, i] == runningCom.loc[row, i]
+                    for i in matchCols)
+            if duplicate:
+                break
+        # If it's not an exact duplicate, add it to the Lookup Master.
+        if not duplicate:
+            lookupCols = ['CM Sales', 'Design Sales', 'CM Split', 'CM',
+                          'T-Name', 'T-End Cust', 'Reported Customer',
+                          'Principal', 'Part Number', 'City']
+            newLookup = runningCom.loc[row, lookupCols]
+            newLookup['Date Added'] = datetime.datetime.now().date()
+            newLookup['Last Used'] = datetime.datetime.now().date()
+            mastLook = mastLook.append(newLookup, ignore_index=True)
+
+    # Save the Lookup Master.
+    fname = lookDir + 'Lookup Master - Current.xlsx'
+    if saveError(fname):
+        print('---\n'
+              'One or more of these files are currently open in Excel:\n'
+              'Running Commissions, Entries Need Fixing, Lookup Master.\n'
+              'Please close these files and try again.\n'
+              '*Program Terminated*')
+        return
+    # Write the Lookup Master.
+    writer = pd.ExcelWriter(fname, engine='xlsxwriter',
+                            datetime_format='mm/dd/yyyy')
+    mastLook.to_excel(writer, sheet_name='Lookup', index=False)
+    # Format everything in Excel.
+    tableFormat(mastLook, 'Lookup', writer)
+    writer.save()
+    print('---\n'
+          'Lookup Master updated successfully!\n'
+          '+++')
 
 
 def reIndex(runningCom):

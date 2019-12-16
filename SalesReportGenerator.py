@@ -24,8 +24,12 @@ def main(runCom):
     in Commissions Master.
     """
     # Set the directory for the data input/output.
-    dataDir = 'Z:/MK Working Commissions/'
-    lookDir = 'Z:/Commissions Lookup/'
+    if os.path.exists('Z:\\'):
+        dataDir = 'Z:\\MK Working Commissions'
+        lookDir = 'Z:\\Commissions Lookup'
+    else:
+        dataDir = os.getcwd()
+        lookDir = os.getcwd()
 
     # Call this for multithreading using win32com, for some reason.
     pythoncom.CoInitialize()
@@ -35,9 +39,9 @@ def main(runCom):
     # -----------------------------------------------------------------------
     # Read in Salespeople Info. Terminate if not found or if errors in file.
     # -----------------------------------------------------------------------
-    if os.path.exists(lookDir + 'Salespeople Info.xlsx'):
+    if os.path.exists(lookDir + '\\Salespeople Info.xlsx'):
         try:
-            salesInfo = pd.read_excel(lookDir + 'Salespeople Info.xlsx',
+            salesInfo = pd.read_excel(lookDir + '\\Salespeople Info.xlsx',
                                       'Info')
         except XLRDError:
             print('---\n'
@@ -56,9 +60,9 @@ def main(runCom):
     # Load and prepare the Commissions Master file.
     # ----------------------------------------------
     try:
-        comMast = pd.read_excel(dataDir + 'Commissions Master.xlsx',
+        comMast = pd.read_excel(dataDir + '\\Commissions Master.xlsx',
                                 'Master Data', dtype=str)
-        masterFiles = pd.read_excel(dataDir + 'Commissions Master.xlsx',
+        masterFiles = pd.read_excel(dataDir + '\\Commissions Master.xlsx',
                                     'Files Processed').fillna('')
     except FileNotFoundError:
         print('No Commissions Master file found!\n'
@@ -159,18 +163,36 @@ def main(runCom):
             design = salesInfo[salesInfo['Sales Initials'] == DesignSales]
             CMpct = CM['Sales Percentage']/100
             designPct = design['Sales Percentage']/100
-            # Calculate the total sales commission
+            # Calculate the total sales commission.
             if CMSales and DesignSales:
-                CMpct *= runningCom.loc[row, 'CM Split']
-                designPct *= 100 - runningCom.loc[row, 'CM Split']
-                totPct = (CMpct.iloc[0] + designPct.iloc[0])/100
+                try:
+                    CMpct *= runningCom.loc[row, 'CM Split']
+                    designPct *= 100 - runningCom.loc[row, 'CM Split']
+                    totPct = (CMpct.iloc[0] + designPct.iloc[0])/100
+                except IndexError:
+                    print('Error finding sales percentages on line '
+                          + str(row + 2) + ' in Running Commissions.')
             else:
-                totPct = [i.iloc[0] for i in (CMpct, designPct) if any(i)][0]
+                try:
+                    totPct = [i.iloc[0] for i in (CMpct, designPct) if any(i)][0]
+                except IndexError:
+                    totPct = 0
+                    print('No salesperson found on line ' + str(row + 2)
+                          + ' in Running Commissions.')
             salesComm = totPct*runningCom.loc[row, 'Actual Comm Paid']
             runningCom.loc[row, 'Sales Commission'] = salesComm
+        RCaddon = ''
     else:
-            print('Running reports from Commissions Master '
-                  'without new Running Commissions...')
+        # Load in the most recent report as the Running Commissions.
+        filledMonths = comMast[comMast['Comm Month'] != '']
+        comMonths = filledMonths['Comm Month'].map(lambda x: parse(x))
+        latestMo = max(comMonths)
+        latestMo = str(latestMo.year) + '-' + str(latestMo.month)
+        runningCom = comMast[comMast['Comm Month'] == latestMo]
+        runCom = True
+        RCaddon = ' (Rerun)'
+        print('Running reports using latest month in Commissions Master '
+              'as Running Commissions.')
 
     # ------------------------------------------------------------------
     # Determine the commission months that are currently in the Master.
@@ -185,7 +207,7 @@ def main(runCom):
         return
     # Grab the most recent month in Commissions Master.
     lastMonth = max(commMonths)
-    if runCom:
+    if runCom and not RCaddon:
         # Increment the month.
         currentMonth = lastMonth.month + 1
         currentYear = lastMonth.year
@@ -196,6 +218,10 @@ def main(runCom):
         # Tag the new data as the current month/year.
         currentYrMo = str(currentYear) + '-' + str(currentMonth)
         runningCom['Comm Month'] = currentYrMo
+    elif runCom:
+        currentMonth = lastMonth.month
+        currentYear = lastMonth.year
+        currentYrMo = latestMo
     else:
         currentMonth = lastMonth.month
         currentYear = lastMonth.year
@@ -205,7 +231,7 @@ def main(runCom):
     # Load and prepare the Account List file.
     # ----------------------------------------
     try:
-        acctList = pd.read_excel(lookDir + 'Master Account List.xlsx',
+        acctList = pd.read_excel(lookDir + '\\Master Account List.xlsx',
                                  'Allacct')
     except FileNotFoundError:
         print('No Account List file found!\n'
@@ -221,8 +247,8 @@ def main(runCom):
         # ------------------------------------
         # Load and prepare the Master Lookup.
         # ------------------------------------
-        if os.path.exists(lookDir + 'Lookup Master - Current.xlsx'):
-            masterLookup = pd.read_excel(lookDir + 'Lookup Master - '
+        if os.path.exists(lookDir + '\\Lookup Master - Current.xlsx'):
+            masterLookup = pd.read_excel(lookDir + '\\Lookup Master - '
                                          'Current.xlsx').fillna('')
             # Check the column names.
             lookupCols = ['CM Sales', 'Design Sales', 'CM Split',
@@ -245,7 +271,7 @@ def main(runCom):
             return
 
     print('Preparing report data...')
-    if runCom:
+    if runCom and not RCaddon:
         # -------------------------------------------------------------------
         # Check to make sure new files aren't already in Commissions Master.
         # -------------------------------------------------------------------
@@ -277,7 +303,7 @@ def main(runCom):
     # Get the revenue report data ready.
     revDat = comMast[[i in quarters for i in comMast['Quarter Shipped']]]
     revDat.reset_index(drop=True, inplace=True)
-    if runCom:
+    if runCom and not RCaddon:
         revDat = revDat.append(runningCom, ignore_index=True, sort=False)
     # Tag the data by current Design Sales.
     for cust in revDat['T-End Cust'].unique():
@@ -303,9 +329,9 @@ def main(runCom):
     # Also grab the section of the data that aren't 80/20 splits.
     splitDat = revDat[revDat['CM Split'] > 20]
 
-    # --------------------------------------------------------
+    # ---------------------------------------------------------
     # Combine and tag commission data for the current quarter.
-    # --------------------------------------------------------
+    # ---------------------------------------------------------
     # Figure out what slice of commissions data is in the current quarter.
     comMastTracked = comMast[comMast['Comm Month'] != '']
     try:
@@ -339,6 +365,15 @@ def main(runCom):
         salespeople = list(set().union(revDat['CM Sales'].unique(),
                                        revDat['Design Sales'].unique()))
     salespeople = [i for i in salespeople if i not in ['QQ', '']]
+    salesInfoError = False
+    for person in salespeople:
+        if person not in salesInfo['Sales Initials'].values:
+            print(person + ' not found in Salespeople Info file. Please '
+                  'add their information to the file and try again.')
+            salesInfoError = True
+    if salesInfoError:
+        print('*Program Terminated*')
+        return
     salespeople.sort()
     # Create the dataframe with the commission information by salesperson.
     salesTot = pd.DataFrame(columns=['Salesperson', 'Principal',
@@ -346,9 +381,9 @@ def main(runCom):
                                      'Sales Commission', 'Comm Pct'],
                             index=[0])
 
-    # ----------------------------------
+    # -----------------------------------
     # Open Excel using the win32c tools.
-    # ----------------------------------
+    # -----------------------------------
     try:
         excel = win32com.client.gencache.EnsureDispatch('Excel.Application')
     except AttributeError:
@@ -367,10 +402,10 @@ def main(runCom):
     # Go through each salesperson and prepare their reports.
     print('Running reports...')
     for person in salespeople:
-        # -----------------------------------------------------------
+        # ------------------------------------------------------------
         # Create the revenue reports for each salesperson, using only
         # design data.
-        # -----------------------------------------------------------
+        # ------------------------------------------------------------
         # Grab the raw data for this salesperson's design sales.
         designDat = revDat[revDat['CDS'] == person]
         # Also grab any nonstandard splits.
@@ -697,7 +732,7 @@ def main(runCom):
     # Create the overall Revenue Report.
     # -----------------------------------
     # Write the raw data to a file.
-    filename = ('Revenue Report - ' + currentYrMo + '.xlsx')
+    filename = ('Revenue Report - ' + currentYrMo + RCaddon + '.xlsx')
     writer = pd.ExcelWriter(filename, engine='xlsxwriter',
                             datetime_format='mm/dd/yyyy')
     revDat.to_excel(writer, sheet_name='Raw Data', index=False)
@@ -751,10 +786,10 @@ def main(runCom):
         print('Could not create pivot table in Revenue Report.')
     wb.Close(SaveChanges=1)
 
-    # ------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     # Go through each line of the finished Running Commissions and use them to
     # update the Lookup Master.
-    # ------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     if runCom:
         # Don't copy over INDIVIDUAL, MISC, or ALLOWANCE.
         noCopy = ['INDIVIDUAL', 'UNKNOWN', 'ALLOWANCE']
@@ -795,9 +830,10 @@ def main(runCom):
         # --------------------------------------------------------------
         # Append the new Running Commissions to the Commissions Master.
         # --------------------------------------------------------------
-        comMast = comMast.append(runningCom, ignore_index=True, sort=False)
-        masterFiles = masterFiles.append(filesProcessed, ignore_index=True,
-                                         sort=False)
+        if not RCaddon:
+            comMast = comMast.append(runningCom, ignore_index=True, sort=False)
+            masterFiles = masterFiles.append(filesProcessed, ignore_index=True,
+                                             sort=False)
         # Make sure all the dates are formatted correctly.
         comMast['Invoice Date'] = comMast['Invoice Date'].map(
                 lambda x: formDate(x))
@@ -833,10 +869,10 @@ def main(runCom):
 
         # %%
         # Save the files.
-        fname1 = dataDir + 'Commissions Master.xlsx'
-        fname2 = (dataDir + 'Running Commissions ' + currentYrMo
-                  + ' Reported.xlsx')
-        fname3 = lookDir + 'Lookup Master - Current.xlsx'
+        fname1 = dataDir + '\\Commissions Master.xlsx'
+        fname2 = (dataDir + '\\Running Commissions ' + currentYrMo
+                  + ' Reported' + RCaddon + '.xlsx')
+        fname3 = lookDir + '\\Lookup Master - Current.xlsx'
 
         if saveError(fname1, fname2, fname3):
             print('---\n'
@@ -846,27 +882,29 @@ def main(runCom):
                   '*Program Terminated*')
             return
         # Write the Commissions Master file.
-        writer = pd.ExcelWriter(fname1, engine='xlsxwriter',
-                                datetime_format='mm/dd/yyyy')
-        comMast.to_excel(writer, sheet_name='Master Data', index=False)
-        masterFiles.to_excel(writer, sheet_name='Files Processed', index=False)
-        # Format everything in Excel.
-        tableFormat(comMast, 'Master Data', writer)
-        tableFormat(masterFiles, 'Files Processed', writer)
+        if not RCaddon:
+            writer = pd.ExcelWriter(fname1, engine='xlsxwriter',
+                                    datetime_format='mm/dd/yyyy')
+            comMast.to_excel(writer, sheet_name='Master Data', index=False)
+            masterFiles.to_excel(writer, sheet_name='Files Processed', index=False)
+            # Format everything in Excel.
+            tableFormat(comMast, 'Master Data', writer)
+            tableFormat(masterFiles, 'Files Processed', writer)
 
         # Write the Running Commissions report.
         writer1 = pd.ExcelWriter(fname2, engine='xlsxwriter',
                                  datetime_format='mm/dd/yyyy')
         runningCom.to_excel(writer1, sheet_name='Data', index=False)
-        filesProcessed.to_excel(writer1, sheet_name='Files Processed',
-                                index=False)
+        if not RCaddon:
+            filesProcessed.to_excel(writer1, sheet_name='Files Processed',
+                                    index=False)
+            tableFormat(filesProcessed, 'Files Processed', writer1)
         salesTot.to_excel(writer1, sheet_name='Salesperson Totals',
                           index=False)
         princTab.to_excel(writer1, sheet_name='Principal Totals',
                           index=False)
         # Format as table in Excel.
         tableFormat(runningCom, 'Data', writer1)
-        tableFormat(filesProcessed, 'Files Processed', writer1)
         tableFormat(salesTot, 'Salesperson Totals', writer1)
         tableFormat(princTab, 'Principal Totals', writer1)
 

@@ -6,5 +6,5 @@ __pycache__/
 LookupMasterIntegrator2.py
 RevReportTester.py
 *.pdf
-.idea/TAARCOM.iml
-*.xml~
+*.iml
+*.xml
