@@ -16,6 +16,8 @@ if os.path.exists('Z:\\Commissions Lookup'):
 else:
     lookDir = os.getcwd()
 
+lookDir = 'Z:/Commissions Lookup/'
+
 
 class Stream(QtCore.QObject):
     """Redirects console output to text widget."""
