@@ -273,4 +273,4 @@ def removeData(commMonth):
     # -----------------------------------------------------
     # Now remove the data that matches the provided month.
     # -----------------------------------------------------
-    
+

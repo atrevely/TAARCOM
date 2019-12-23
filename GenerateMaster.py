@@ -10,7 +10,17 @@ import re
 import datetime
 from RCExcelTools import table_format, save_error, form_date
 
+# Set the directory for the data input/output.
+if os.path.exists('Z:\\'):
+    outDir = 'Z:\\MK Working Commissions'
+    lookDir = 'Z:\\Commissions Lookup'
+    matchDir = 'Z:\\Matched Raw Data Files/'
+else:
+    outDir = os.getcwd()
+    lookDir = os.getcwd()
+    matchDir = os.getcwd()
 
+    
 def tailoredPreCalc(princ, sheet, sheetName):
     """Do special pre-processing tailored to the principal input. Primarily,
     this involves renaming columns that would get looked up incorrectly
@@ -336,16 +346,6 @@ def main(filepaths, runningCom, fieldMappings):
     fieldMappings -- dataframe which links Running Commissions columns to
                      file data columns.
     """
-    # Set the directory for the data input/output.
-    if os.path.exists('Z:\\'):
-        outDir = 'Z:\\MK Working Commissions'
-        lookDir = 'Z:\\Commissions Lookup'
-        matchDir = 'Z:\\Matched Raw Data Files/'
-    else:
-        outDir = os.getcwd()
-        lookDir = os.getcwd()
-        matchDir = os.getcwd()
-
     # Grab lookup table data names.
     columnNames = list(fieldMappings)
     # Add in non-lookup'd data names.
