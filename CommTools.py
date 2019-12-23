@@ -1,5 +1,5 @@
 import pandas as pd
-from RCExcelTools import tableFormat, formDate, saveError
+from RCExcelTools import table_format, form_date, save_error
 from xlrd import XLRDError
 import datetime
 import os
@@ -94,7 +94,7 @@ def extractLookups(runningCom):
 
     # Save the Lookup Master.
     fname = lookDir + 'Lookup Master - Current.xlsx'
-    if saveError(fname):
+    if save_error(fname):
         print('---\n'
               'One or more of these files are currently open in Excel:\n'
               'Running Commissions, Entries Need Fixing, Lookup Master.\n'
@@ -106,7 +106,7 @@ def extractLookups(runningCom):
                             datetime_format='mm/dd/yyyy')
     mastLook.to_excel(writer, sheet_name='Lookup', index=False)
     # Format everything in Excel.
-    tableFormat(mastLook, 'Lookup', writer)
+    table_format(mastLook, 'Lookup', writer)
     writer.save()
     print('---\n'
           'Lookup Master updated successfully!\n'
@@ -266,7 +266,7 @@ def removeData(commMonth):
     comMast.replace('nan', '', inplace=True)
     # Make sure all the dates are formatted correctly.
     for col in ['Invoice Date', 'Paid Date', 'Sales Report Date']:
-        comMast[col] = comMast[col].map(lambda x: formDate(x))
+        comMast[col] = comMast[col].map(lambda x: form_date(x))
     # Make sure that the CM Splits aren't blank or zero.
     comMast['CM Split'] = comMast['CM Split'].replace(['', '0', 0], 20)
 

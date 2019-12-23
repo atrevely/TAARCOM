@@ -6,10 +6,10 @@ import calendar
 import math
 import os.path
 from xlrd import XLRDError
-from RCExcelTools import tableFormat, saveError, formDate
+from RCExcelTools import table_format, save_error, form_date
 
 
-# %% The main function.
+# The main function.
 def main(runCom):
     """Replaces incomplete entries in Running Commissions with final versions.
 
@@ -248,11 +248,11 @@ def main(runCom):
     # %%
     # Make sure all the dates are formatted correctly.
     runningCom['Invoice Date'] = runningCom['Invoice Date'].map(
-            lambda x: formDate(x))
+            lambda x: form_date(x))
     fixList['Invoice Date'] = fixList['Invoice Date'].map(
-            lambda x: formDate(x))
-    mastLook['Last Used'] = mastLook['Last Used'].map(lambda x: formDate(x))
-    mastLook['Date Added'] = mastLook['Date Added'].map(lambda x: formDate(x))
+            lambda x: form_date(x))
+    mastLook['Last Used'] = mastLook['Last Used'].map(lambda x: form_date(x))
+    mastLook['Date Added'] = mastLook['Date Added'].map(lambda x: form_date(x))
     # Go through each column and convert applicable entries to numeric.
     cols = list(runningCom)
     # Invoice number sometimes has leading zeros we'd like to keep.
@@ -304,7 +304,7 @@ def main(runCom):
     fname2 = outDir + '\\Entries Need Fixing ' + comDate
     fname3 = lookDir + '\\Lookup Master - Current.xlsx'
     fname4 = lookDir + '\\Quarantined Lookups.xlsx'
-    if saveError(fname1, fname2, fname3, fname4):
+    if save_error(fname1, fname2, fname3, fname4):
         print('---\n'
               'One or more files are currently open in Excel!\n'
               'Please close the files and try again.\n'
@@ -318,29 +318,29 @@ def main(runCom):
     filesProcessed.to_excel(writer1, sheet_name='Files Processed',
                             index=False)
     # Format as table in Excel.
-    tableFormat(runningCom, 'Master', writer1)
-    tableFormat(filesProcessed, 'Files Processed', writer1)
+    table_format(runningCom, 'Master', writer1)
+    table_format(filesProcessed, 'Files Processed', writer1)
 
     # Write the Needs Fixing file.
     writer2 = pd.ExcelWriter(fname2, engine='xlsxwriter',
                              datetime_format='mm/dd/yyyy')
     fixList.to_excel(writer2, sheet_name='Data', index=False)
     # Format as table in Excel.
-    tableFormat(fixList, 'Data', writer2)
+    table_format(fixList, 'Data', writer2)
 
     # Write the Lookup Master file.
     writer3 = pd.ExcelWriter(fname3, engine='xlsxwriter',
                              datetime_format='mm/dd/yyyy')
     mastLook.to_excel(writer3, sheet_name='Lookup', index=False)
     # Format as table in Excel.
-    tableFormat(mastLook, 'Lookup', writer3)
+    table_format(mastLook, 'Lookup', writer3)
 
     # Write the Quarantined Lookups file.
     writer4 = pd.ExcelWriter(fname4, engine='xlsxwriter',
                              datetime_format='mm/dd/yyyy')
     quarantined.to_excel(writer4, sheet_name='Lookup', index=False)
     # Format as table in Excel.
-    tableFormat(quarantined, 'Lookup', writer4)
+    table_format(quarantined, 'Lookup', writer4)
 
     # Save the files.
     writer1.save()
