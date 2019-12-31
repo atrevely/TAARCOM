@@ -5,28 +5,31 @@ from xlrd import XLRDError
 from RCExcelTools import form_date
 
 # Set the numerical columns.
-num_cols = ['Quantity', 'Ext. Cost', 'Invoiced Dollars',
-            'Paid-On Revenue', 'Actual Comm Paid', 'Unit Cost',
-            'Unit Price', 'CM Split', 'Year', 'Sales Commission',
-            'Split Percentage', 'Commission Rate',
+num_cols = ['Quantity', 'Ext. Cost', 'Invoiced Dollars', 'Paid-On Revenue',
+            'Actual Comm Paid', 'Unit Cost', 'Unit Price', 'CM Split', 'Year',
+            'Sales Commission', 'Split Percentage', 'Commission Rate',
             'Gross Rev Reduction', 'Shared Rev Tier Rate']
 
 
 def load_salespeople_info(file_dir):
     """Read in Salespeople Info. Return empty series if not found."""
     sales_info = pd.Series([])
-    if os.path.exists(file_dir + '\\Salespeople Info.xlsx'):
-        try:
-            sales_info = pd.read_excel(file_dir + '\\Salespeople Info.xlsx',
-                                       'Info')
-        except XLRDError:
-            print('---\n'
-                  'Error reading sheet name for Salespeople Info.xlsx!\n'
-                  'Please make sure the main tab is named Info.\n')
-    else:
-        print('---\n'
-              'No Salespeople Info file found!\n'
-              'Please make sure Salespeople Info.xlsx is in the directory.\n')
+    try:
+        sales_info = pd.read_excel(file_dir + '\\Salespeople Info.xlsx', 'Info')
+        # Make sure the required columns are present.
+        cols = ['Salesperson', 'Sales Initials', 'Sales Percentage', 'Territory Cities',
+                'QQ Split']
+        missing_cols = [i for i in cols if i not in list(sales_info)]
+        if missing_cols:
+            print('---\nThe following columns were not found in Salespeople Info: '
+                  + ', '.join(missing_cols) + '\nPlease check for these column '
+                  'names and try again.')
+    except FileNotFoundError:
+        print('---\nNo Salespeople Info file found!\n'
+              'Please make sure Salespeople Info.xlsx is in the directory:\n' + file_dir)
+    except XLRDError:
+        print('---\nError reading sheet name for Salespeople Info.xlsx!\n'
+              'Please make sure the main tab is named Info.')
     return sales_info
 
 
@@ -39,38 +42,31 @@ def load_com_master(file_dir):
                                  'Master Data', dtype=str)
         master_files = pd.read_excel(file_dir + '\\Commissions Master.xlsx',
                                      'Files Processed').fillna('')
+        # Force numerical columns to be numeric.
+        for col in num_cols:
+            try:
+                com_mast[col] = pd.to_numeric(com_mast[col], errors='coerce').fillna(0)
+            except KeyError:
+                pass
+        # Convert individual numbers to numeric in rest of columns.
+        # Invoice/part numbers sometimes have leading zeros we'd like to keep, and
+        # the INF gets read in as infinity, so remove these.
+        mixed_cols = [col for col in list(com_mast) if col not in num_cols
+                      and col not in ['Invoice Number', 'Part Number', 'Principal']]
+        for col in mixed_cols:
+            com_mast[col] = com_mast[col].map(lambda x: pd.to_numeric(x, errors='ignore'))
+        # Now remove the nans.
+        com_mast.replace(['nan', np.nan], '', inplace=True)
+        # Make sure all the dates are formatted correctly.
+        for col in ['Invoice Date', 'Paid Date', 'Sales Report Date']:
+            com_mast[col] = com_mast[col].map(lambda x: form_date(x))
+        # Make sure that the CM Splits aren't blank or zero.
+        com_mast['CM Split'] = com_mast['CM Split'].replace(['', '0', 0], 20)
     except FileNotFoundError:
-        print('No Commissions Master file found!\n'
-              '*Program Terminated*')
-        return com_mast, master_files
+        print('---\nNo Commissions Master file found!')
     except XLRDError:
-        print('Commissions Master tab names incorrect!\n'
-              'Make sure the tabs are named Master Data and Files Processed.\n')
-        return com_mast, master_files
-    # Force numerical columns to be numeric.
-    for col in num_cols:
-        try:
-            com_mast[col] = pd.to_numeric(com_mast[col],
-                                          errors='coerce').fillna(0)
-        except KeyError:
-            pass
-    # Convert individual numbers to numeric in rest of columns.
-    mixed_cols = [col for col in list(com_mast) if col not in num_cols]
-    # Invoice/part numbers sometimes have leading zeros we'd like to keep.
-    mixed_cols.remove('Invoice Number')
-    mixed_cols.remove('Part Number')
-    # The INF gets read in as infinity, so skip the principal column.
-    mixed_cols.remove('Principal')
-    for col in mixed_cols:
-        com_mast[col] = com_mast[col].map(
-            lambda x: pd.to_numeric(x, errors='ignore'))
-    # Now remove the nans.
-    com_mast.replace(['nan', np.nan], '', inplace=True)
-    # Make sure all the dates are formatted correctly.
-    for col in ['Invoice Date', 'Paid Date', 'Sales Report Date']:
-        com_mast[col] = com_mast[col].map(lambda x: form_date(x))
-    # Make sure that the CM Splits aren't blank or zero.
-    com_mast['CM Split'] = com_mast['CM Split'].replace(['', '0', 0], 20)
+        print('---\nCommissions Master tab names incorrect!\n'
+              'Make sure the tabs are named Master Data and Files Processed.')
     return com_mast, master_files
 
 
@@ -83,57 +79,61 @@ def load_run_com(file_path):
     try:
         running_com = pd.read_excel(file_path, 'Master', dtype=str)
         files_processed = pd.read_excel(file_path, 'Files Processed').fillna('')
+        for col in num_cols:
+            try:
+                running_com[col] = pd.to_numeric(running_com[col],
+                                                 errors='coerce').fillna(0)
+            except KeyError:
+                pass
+        # Convert individual numbers to numeric in rest of columns.
+        mixed_cols = [col for col in list(running_com) if col not in num_cols]
+        # Invoice/part numbers sometimes has leading zeros we'd like to keep.
+        mixed_cols.remove('Invoice Number')
+        mixed_cols.remove('Part Number')
+        # The INF gets read in as infinity, so skip the principal column.
+        mixed_cols.remove('Principal')
+        for col in mixed_cols:
+            try:
+                running_com[col] = running_com[col].map(
+                    lambda x: pd.to_numeric(x, errors='ignore'))
+            except KeyError:
+                pass
+        # Now remove the nans.
+        running_com.replace(['nan', np.nan], '', inplace=True)
+        # Make sure all the dates are formatted correctly.
+        running_com['Invoice Date'] = running_com['Invoice Date'].map(
+            lambda x: form_date(x))
+        # Make sure that the CM Splits aren't blank or zero.
+        running_com['CM Split'] = running_com['CM Split'].replace(['', '0', 0], 20)
+        # Strip any extra spaces that made their way into salespeople columns.
+        for col in ['CM Sales', 'Design Sales']:
+            running_com[col] = running_com[col].map(lambda x: x.strip())
     except FileNotFoundError:
-        print('No Running Commissions file found!\n')
-        return running_com, files_processed
+        print('---\nNo Running Commissions file found!')
     except XLRDError:
-        print('Running Commissions tab names incorrect!\n'
-              'Make sure the tabs are named Master and Files Processed.\n')
-        return running_com, files_processed
-    for col in num_cols:
-        try:
-            running_com[col] = pd.to_numeric(running_com[col],
-                                             errors='coerce').fillna(0)
-        except KeyError:
-            pass
-    # Convert individual numbers to numeric in rest of columns.
-    mixed_cols = [col for col in list(running_com) if col not in num_cols]
-    # Invoice/part numbers sometimes has leading zeros we'd like to keep.
-    mixed_cols.remove('Invoice Number')
-    mixed_cols.remove('Part Number')
-    # The INF gets read in as infinity, so skip the principal column.
-    mixed_cols.remove('Principal')
-    for col in mixed_cols:
-        try:
-            running_com[col] = running_com[col].map(
-                lambda x: pd.to_numeric(x, errors='ignore'))
-        except KeyError:
-            pass
-    # Now remove the nans.
-    running_com.replace(['nan', np.nan], '', inplace=True)
-    # Make sure all the dates are formatted correctly.
-    running_com['Invoice Date'] = running_com['Invoice Date'].map(
-        lambda x: form_date(x))
-    # Make sure that the CM Splits aren't blank or zero.
-    running_com['CM Split'] = running_com['CM Split'].replace(['', '0', 0], 20)
-    # Strip any extra spaces that made their way into salespeople columns.
-    for col in ['CM Sales', 'Design Sales']:
-        running_com[col] = running_com[col].map(lambda x: x.strip())
+        print('---\nRunning Commissions tab names incorrect!\n'
+              'Make sure the tabs are named Master and Files Processed.')
     return running_com, files_processed
 
 
 def load_acct_list(file_dir):
     """Load and prepare the Account List file."""
-    acctList = pd.Series([])
+    acct_list = pd.Series([])
     try:
-        acctList = pd.read_excel(file_dir + '\\Master Account List.xlsx',
-                                 'Allacct')
+        acct_list = pd.read_excel(file_dir + '\\Master Account List.xlsx', 'Allacct')
+        # Make sure the required columns are present.
+        cols = ['SLS', 'ProperName']
+        missing_cols = [i for i in cols if i not in list(acct_list)]
+        if missing_cols:
+            print('---\nThe following columns were not found in the Account List: '
+                  + ', '.join(missing_cols) + '\nPlease check for these column '
+                  'names and try again.')
     except FileNotFoundError:
-        print('No Account List file found!\n')
+        print('---\nNo Account List file found!')
     except XLRDError:
-        print('Account List tab names incorrect!\n'
-              'Make sure the main tab is named Allacct.\n')
-    return acctList
+        print('---\nAccount List tab names incorrect!\n'
+              'Make sure the main tab is named Allacct.')
+    return acct_list
 
 
 def load_lookup_master(file_dir):
@@ -142,19 +142,18 @@ def load_lookup_master(file_dir):
     if os.path.exists(file_dir + '\\Lookup Master - Current.xlsx'):
         master_lookup = pd.read_excel(file_dir + '\\Lookup Master - '
                                       'Current.xlsx').fillna('')
-        # Check the column names.
+        # Make sure the required columns are present.
         lookup_cols = ['CM Sales', 'Design Sales', 'CM Split',
                        'Reported Customer', 'CM', 'Part Number', 'T-Name',
                        'T-End Cust', 'Last Used', 'Principal', 'City',
                        'Date Added']
-        miss_cols = [i for i in lookup_cols if i not in list(master_lookup)]
-        if miss_cols:
-            print('The following columns were not detected in '
-                  'Lookup Master.xlsx:\n%s' %
-                  ', '.join(map(str, missCols)))
+        missing_cols = [i for i in lookup_cols if i not in list(master_lookup)]
+        if missing_cols:
+            print('---\nThe following columns were not found in the Lookup Master: '
+                  + ', '.join(missing_cols) + '\nPlease check for these column '
+                  'names and try again.')
     else:
-        print('---\n'
-              'No Lookup Master found!\n'
+        print('---\nNo Lookup Master found!\n'
               'Please make sure Lookup Master - Current.xlsx is '
-              'in the directory.\n')
+              'in the directory.')
     return master_lookup

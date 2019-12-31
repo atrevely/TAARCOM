@@ -23,8 +23,7 @@ class PivotTables:
             for module in module_list:
                 if re.match(r'win32com\.gen_py\..+', module):
                     del sys.modules[module]
-            shutil.rmtree(os.path.join(os.environ.get('LOCALAPPDATA'), 'Temp',
-                                       'gen_py'))
+            shutil.rmtree(os.path.join(os.environ.get('LOCALAPPDATA'), 'Temp', 'gen_py'))
             # Now try again.
             self.excel = win32com.client.gencache.EnsureDispatch('Excel.Application')
         self.win32c = win32com.client.constants
@@ -101,8 +100,7 @@ def table_format(sheet_data, sheet_name, wbook):
                                          'font_size': 11,
                                          'num_format': 14})
     # Format and fit each column.
-    index = 0
-    for col in sheet_data.columns:
+    for index, col in enumerate(sheet_data.columns):
         # Match the correct formatting to each column.
         acct_cols = ['Unit Price', 'Paid-On Revenue', 'Actual Comm Paid',
                      'Total NDS', 'Post-Split NDS', 'Cust Revenue YTD',
@@ -123,6 +121,9 @@ def table_format(sheet_data, sheet_name, wbook):
                      'Product Category', 'Shared Rev Tier Rate',
                      'Cust Revenue YTD', 'Total NDS', 'Post-Split NDS',
                      'Cust Part Number', 'End Market', 'Q Number', 'CM Split']
+        # Remove zeros in columns that aren't commission related.
+        if col not in ['Actual Comm Paid', 'Sales Commission']:
+            sheet_data[col].replace(0, '', inplace=True)
         if col in acct_cols:
             formatting = acct_format
         elif col in pct_cols:
@@ -150,9 +151,7 @@ def table_format(sheet_data, sheet_name, wbook):
                     sheet.write_number(row+1, index, inv_num, inv_format)
                 except TypeError:
                     pass
-            # Move to the next column, as we're now done formatting
-            # the Invoice/Part Numbers.
-            index += 1
+            # Move to the next column.
             continue
         else:
             formatting = doc_format
@@ -172,7 +171,6 @@ def table_format(sheet_data, sheet_name, wbook):
         if (col in acct_cols or col in pct_cols) and col not in hide_cols:
             max_width += 2
         sheet.set_column(index, index, max_width+0.8, formatting)
-        index += 1
     # Set the auto-filter for the sheet.
     sheet.autofilter(0, 0, sheet_data.shape[0], sheet_data.shape[1]-1)
 
@@ -190,15 +188,9 @@ def save_error(*excel_files):
 
 
 def form_date(input_date):
-    """Attemps to format a string as a date, otherwise ignores it."""
+    """Attempts to format a string as a date, otherwise ignores it."""
     try:
         output_date = parse(str(input_date)).date()
         return output_date
     except (ValueError, OverflowError):
         return input_date
-
-
-def prep_file_save(filename, tab_data, tab_names):
-    """Mount the data in an Excel file and prepare to save it."""
-
-
