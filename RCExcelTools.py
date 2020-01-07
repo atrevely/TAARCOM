@@ -121,9 +121,6 @@ def table_format(sheet_data, sheet_name, wbook):
                      'Product Category', 'Shared Rev Tier Rate',
                      'Cust Revenue YTD', 'Total NDS', 'Post-Split NDS',
                      'Cust Part Number', 'End Market', 'Q Number', 'CM Split']
-        # Remove zeros in columns that aren't commission related.
-        if col not in ['Actual Comm Paid', 'Sales Commission']:
-            sheet_data[col].replace(0, '', inplace=True)
         if col in acct_cols:
             formatting = acct_format
         elif col in pct_cols:
@@ -194,3 +191,25 @@ def form_date(input_date):
         return output_date
     except (ValueError, OverflowError):
         return input_date
+
+
+def tab_save_prep(writer, data, sheet_name):
+    """Prepares a file for being saved."""
+    # Replace zeros in non-commission columns with blanks.
+    num_cols = ['Quantity', 'Ext. Cost', 'Invoiced Dollars', 'Paid-On Revenue',
+                'Unit Cost', 'Unit Price', 'CM Split', 'Year', 'Split Percentage',
+                'Commission Rate', 'Gross Rev Reduction', 'Shared Rev Tier Rate']
+    for col in num_cols:
+        try:
+            data[col].replace(0, '', inplace=True)
+        except KeyError:
+            pass
+    date_cols = ['Invoice Date', 'Date Added', 'Paid Date']
+    for col in date_cols:
+        try:
+            data[col] = data[col].map(lambda x: form_date(x))
+        except KeyError:
+            pass
+    data.to_excel(writer, sheet_name=sheet_name, index=False)
+    # Do the Excel formatting.
+    table_format(sheet_data=data, sheet_name=sheet_name, wbook=writer)

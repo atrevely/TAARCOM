@@ -253,11 +253,9 @@ def main(filepath):
             city = insFile.loc[row, 'Customer City'].upper()
             # Check for matches to city and assign salesperson.
             for person in salesInfo.index:
-                cities = salesInfo['Territory Cities'][person].upper().split(
-                        ', ')
+                cities = salesInfo['Territory Cities'][person].upper().split(', ')
                 if city in cities:
-                    insFile.loc[row, 'Sales'] = salesInfo.loc[person,
-                                                              'Sales Initials']
+                    insFile.loc[row, 'Sales'] = salesInfo.loc[person, 'Sales Initials']
             # Done, so move to next line in file.
             continue
         cust = insFile.loc[row, 'Root Customer..']
