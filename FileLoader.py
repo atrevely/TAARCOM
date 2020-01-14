@@ -5,10 +5,9 @@ from xlrd import XLRDError
 from RCExcelTools import form_date
 
 # Set the numerical columns.
-num_cols = ['Quantity', 'Ext. Cost', 'Invoiced Dollars', 'Paid-On Revenue',
-            'Actual Comm Paid', 'Unit Cost', 'Unit Price', 'CM Split', 'Year',
-            'Sales Commission', 'Split Percentage', 'Commission Rate',
-            'Gross Rev Reduction', 'Shared Rev Tier Rate']
+num_cols = ['Quantity', 'Ext. Cost', 'Invoiced Dollars', 'Paid-On Revenue', 'Actual Comm Paid',
+            'Unit Cost', 'Unit Price', 'CM Split', 'Year', 'Sales Commission', 'Split Percentage',
+            'Commission Rate', 'Gross Rev Reduction', 'Shared Rev Tier Rate']
 
 
 def load_salespeople_info(file_dir):
@@ -17,8 +16,7 @@ def load_salespeople_info(file_dir):
     try:
         sales_info = pd.read_excel(file_dir + '\\Salespeople Info.xlsx', 'Info')
         # Make sure the required columns are present.
-        cols = ['Salesperson', 'Sales Initials', 'Sales Percentage', 'Territory Cities',
-                'QQ Split']
+        cols = ['Salesperson', 'Sales Initials', 'Sales Percentage', 'Territory Cities', 'QQ Split']
         missing_cols = [i for i in cols if i not in list(sales_info)]
         if missing_cols:
             print('---\nThe following columns were not found in Salespeople Info: '
@@ -54,7 +52,7 @@ def load_com_master(file_dir):
         mixed_cols = [col for col in list(com_mast) if col not in num_cols
                       and col not in ['Invoice Number', 'Part Number', 'Principal']]
         for col in mixed_cols:
-            com_mast[col] = com_mast[col].map(lambda x: pd.to_numeric(x, errors='ignore'))
+            com_mast[col] = pd.to_numeric(com_mast[col], errors='ignore')
         # Now remove the nans.
         com_mast.replace(['nan', np.nan], '', inplace=True)
         # Make sure all the dates are formatted correctly.
@@ -81,8 +79,7 @@ def load_run_com(file_path):
         files_processed = pd.read_excel(file_path, 'Files Processed').fillna('')
         for col in num_cols:
             try:
-                running_com[col] = pd.to_numeric(running_com[col],
-                                                 errors='coerce').fillna(0)
+                running_com[col] = pd.to_numeric(running_com[col], errors='coerce').fillna(0)
             except KeyError:
                 pass
         # Convert individual numbers to numeric in rest of columns.
@@ -94,15 +91,13 @@ def load_run_com(file_path):
         mixed_cols.remove('Principal')
         for col in mixed_cols:
             try:
-                running_com[col] = running_com[col].map(
-                    lambda x: pd.to_numeric(x, errors='ignore'))
+                running_com[col] = pd.to_numeric(running_com[col], errors='ignore')
             except KeyError:
                 pass
         # Now remove the nans.
         running_com.replace(['nan', np.nan], '', inplace=True)
         # Make sure all the dates are formatted correctly.
-        running_com['Invoice Date'] = running_com['Invoice Date'].map(
-            lambda x: form_date(x))
+        running_com['Invoice Date'] = running_com['Invoice Date'].map(lambda x: form_date(x))
         # Make sure that the CM Splits aren't blank or zero.
         running_com['CM Split'] = running_com['CM Split'].replace(['', '0', 0], 20)
         # Strip any extra spaces that made their way into salespeople columns.
@@ -140,13 +135,10 @@ def load_lookup_master(file_dir):
     """Load and prepare the Lookup master."""
     master_lookup = pd.Series([])
     if os.path.exists(file_dir + '\\Lookup Master - Current.xlsx'):
-        master_lookup = pd.read_excel(file_dir + '\\Lookup Master - '
-                                      'Current.xlsx').fillna('')
+        master_lookup = pd.read_excel(file_dir + '\\Lookup Master - Current.xlsx').fillna('')
         # Make sure the required columns are present.
-        lookup_cols = ['CM Sales', 'Design Sales', 'CM Split',
-                       'Reported Customer', 'CM', 'Part Number', 'T-Name',
-                       'T-End Cust', 'Last Used', 'Principal', 'City',
-                       'Date Added']
+        lookup_cols = ['CM Sales', 'Design Sales', 'CM Split', 'Reported Customer', 'CM', 'Part Number',
+                       'T-Name', 'T-End Cust', 'Last Used', 'Principal', 'City', 'Date Added']
         missing_cols = [i for i in lookup_cols if i not in list(master_lookup)]
         if missing_cols:
             print('---\nThe following columns were not found in the Lookup Master: '

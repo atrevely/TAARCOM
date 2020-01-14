@@ -45,8 +45,7 @@ def get_sales_comm_data(salesperson, input_data, sales_info):
     design = input_data['Design Sales'] == salesperson
     sales_data = input_data[np.logical_or(CM, design)]
     # Get the lines that are shared with other salespeople.
-    shared_sales = np.logical_and(sales_data['CM Sales'] != '',
-                                  sales_data['Design Sales'] != '')
+    shared_sales = np.logical_and(sales_data['CM Sales'] != '', sales_data['Design Sales'] != '')
     # Scale the commission data by split percentage.
     for row in shared_sales[shared_sales].index:
         if CM.loc[row] and not design.loc[row]:
@@ -62,7 +61,7 @@ def get_sales_comm_data(salesperson, input_data, sales_info):
 
 
 def data_by_princ_tab(input_data):
-    """Builds an Excel tab of the provided data broken down by principal."""
+    """Builds a DataFrame of the provided data broken down by principal."""
     princ_tab = pd.DataFrame(columns=['Principal', 'Paid-On Revenue', 'Actual Comm Paid',
                                       'Sales Commission'])
     # Tally up totals for each principal.
@@ -129,7 +128,6 @@ def create_quarterly_report(comm_data, comm_qtr, salespeople, sales_info):
         print('Error saving quarter commission report.')
 
 
-# The main function.
 def main(run_com):
     """Generates sales reports, then appends the Running Commissions data
     to the Commissions Master.
@@ -457,8 +455,7 @@ def main(run_com):
     try:
         writer.save()
     except IOError:
-        print('---\n'
-              'Revenue report file is open in Excel!\n'
+        print('---\nRevenue report file is open in Excel!\n'
               'Please close the file(s) and try again.\n'
               '*Program Terminated*')
         return
@@ -511,24 +508,6 @@ def main(run_com):
         # Convert commission dollars to numeric.
         master_files['Total Commissions'] = pd.to_numeric(master_files['Total Commissions'],
                                                           errors='coerce').fillna(0)
-        for col in num_cols:
-            try:
-                if col not in ['Actual Comm Paid', 'Sales Commission']:
-                    fill = ''
-                else:
-                    fill = 0
-                com_mast[col] = pd.to_numeric(com_mast[col], errors='coerce').fillna(fill)
-            except KeyError:
-                pass
-        # Convert individual numbers to numeric in rest of columns.
-        mixed_cols = [col for col in list(com_mast) if col not in num_cols]
-        # Invoice/part numbers sometimes has leading zeros we'd like to keep.
-        mixed_cols.remove('Invoice Number')
-        mixed_cols.remove('Part Number')
-        # The INF gets read in as infinity, so skip the principal column.
-        mixed_cols.remove('Principal')
-        for col in mixed_cols:
-            com_mast[col] = pd.to_numeric(com_mast[col], errors='ignore')
 
     # ----------------
     # Save the files.

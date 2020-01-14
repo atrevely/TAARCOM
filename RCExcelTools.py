@@ -7,6 +7,11 @@ from dateutil.parser import parse
 import win32com.client
 import pythoncom
 
+# Set the numerical columns.
+num_cols = ['Quantity', 'Ext. Cost', 'Invoiced Dollars', 'Paid-On Revenue', 'Actual Comm Paid',
+            'Unit Cost', 'Unit Price', 'CM Split', 'Year', 'Sales Commission',
+            'Split Percentage', 'Commission Rate', 'Gross Rev Reduction', 'Shared Rev Tier Rate']
+
 
 class PivotTables:
     """A class that builds pivot tables in Excel."""
@@ -30,7 +35,7 @@ class PivotTables:
 
     def create_pivot_table(self, excel_file, data_sheet_name, pivot_sheet_name,
                            row_fields, col_field, data_field, page_field=None):
-        """Creates a pivot table in the provided file."""
+        """Creates a pivot table in the provided file using the specified fields."""
         # Create the workbook and add the report sheet as the rightmost tab.
         wb = self.excel.Workbooks.Open(excel_file)
         if wb is None:
@@ -48,14 +53,12 @@ class PivotTables:
             row_fields = [row_fields]
         # Create the pivot table and deploy it on the sheet.
         try:
-            piv_cache = wb.PivotCaches().Create(
-                SourceType=self.win32c.xlDatabase,
-                SourceData=data_range,
-                Version=self.win32c.xlPivotTableVersion14)
-            piv_table = piv_cache.CreatePivotTable(
-                TableDestination=pivot_range,
-                TableName=data_sheet_name,
-                DefaultVersion=self.win32c.xlPivotTableVersion14)
+            piv_cache = wb.PivotCaches().Create(SourceType=self.win32c.xlDatabase,
+                                                SourceData=data_range,
+                                                Version=self.win32c.xlPivotTableVersion14)
+            piv_table = piv_cache.CreatePivotTable(TableDestination=pivot_range,
+                                                   TableName=data_sheet_name,
+                                                   DefaultVersion=self.win32c.xlPivotTableVersion14)
             # Drop the row fields into the pivot table.
             for index, row in enumerate(row_fields):
                 piv_table.PivotFields(row).Orientation = self.win32c.xlRowField
@@ -68,59 +71,43 @@ class PivotTables:
             piv_data_field = piv_table.AddDataField(piv_table.PivotFields(data_field),
                                                     'Sum of ' + data_field, self.win32c.xlSum)
             piv_data_field.NumberFormat = '$#,##0'
-        except:
+        except Exception:
             print('Pivot table could not be created in file: ' + excel_file)
         wb.Close(SaveChanges=1)
 
 
-def table_format(sheet_data, sheet_name, wbook):
+def table_format(sheet_data, sheet_name, workbook):
     """Formats the Excel output as a table with correct column formatting."""
     # Nothing to format, so return.
     if sheet_data.shape[0] == 0:
         return
-    sheet = wbook.sheets[sheet_name]
+    sheet = workbook.sheets[sheet_name]
     sheet.freeze_panes(1, 0)
     # Set default document format.
-    doc_format = wbook.book.add_format({'font': 'Calibri',
-                                        'font_size': 11})
+    doc_format = workbook.book.add_format({'font': 'Calibri', 'font_size': 11})
     # Currency format ($XX.XX).
-    acct_format = wbook.book.add_format({'font': 'Calibri',
-                                         'font_size': 11,
-                                         'num_format': 7})
+    acct_format = workbook.book.add_format({'font': 'Calibri', 'font_size': 11, 'num_format': 7})
     # Comma format (XX,XXX).
-    comma_format = wbook.book.add_format({'font': 'Calibri',
-                                          'font_size': 11,
-                                          'num_format': 3})
+    comma_format = workbook.book.add_format({'font': 'Calibri', 'font_size': 11, 'num_format': 3})
     # Percent format, one decimal (XX.X%).
-    pct_format = wbook.book.add_format({'font': 'Calibri',
-                                        'font_size': 11,
-                                        'num_format': '0.0%'})
+    pct_format = workbook.book.add_format({'font': 'Calibri', 'font_size': 11, 'num_format': '0.0%'})
     # Date format (YYYY-MM-DD).
-    date_format = wbook.book.add_format({'font': 'Calibri',
-                                         'font_size': 11,
-                                         'num_format': 14})
+    date_format = workbook.book.add_format({'font': 'Calibri', 'font_size': 11, 'num_format': 14})
     # Format and fit each column.
     for index, col in enumerate(sheet_data.columns):
         # Match the correct formatting to each column.
-        acct_cols = ['Unit Price', 'Paid-On Revenue', 'Actual Comm Paid',
-                     'Total NDS', 'Post-Split NDS', 'Cust Revenue YTD',
-                     'Ext. Cost', 'Unit Cost', 'Total Commissions',
-                     'Sales Commission', 'Invoiced Dollars',
-                     'CM Sales Comm', 'Design Sales Comm']
-        pct_cols = ['Split Percentage', 'Commission Rate',
-                    'Gross Rev Reduction', 'Shared Rev Tier Rate',
+        acct_cols = ['Unit Price', 'Paid-On Revenue', 'Actual Comm Paid', 'Total NDS', 'Post-Split NDS',
+                     'Cust Revenue YTD', 'Ext. Cost', 'Unit Cost', 'Total Commissions',
+                     'Sales Commission', 'Invoiced Dollars', 'CM Sales Comm', 'Design Sales Comm']
+        pct_cols = ['Split Percentage', 'Commission Rate', 'Gross Rev Reduction', 'Shared Rev Tier Rate',
                     'True Comm %', 'Comm Pct']
-        core_cols = ['CM Sales', 'Design Sales', 'T-End Cust', 'T-Name',
-                     'CM', 'Invoice Date']
-        date_cols = ['Invoice Date', 'Paid Date', 'Sales Report Date',
-                     'Date Added']
-        hide_cols = ['Quarter Shipped', 'Month', 'Year', 'Reported Distributor',
-                     'PO Number', 'Sales Order #', 'Unit Cost', 'Unit Price',
-                     'Comm Source', 'On/Offshore', 'INF Comm Type', 'PL',
-                     'Division', 'Gross Rev Reduction', 'Project',
-                     'Product Category', 'Shared Rev Tier Rate',
-                     'Cust Revenue YTD', 'Total NDS', 'Post-Split NDS',
-                     'Cust Part Number', 'End Market', 'Q Number', 'CM Split']
+        core_cols = ['CM Sales', 'Design Sales', 'T-End Cust', 'T-Name', 'CM', 'Invoice Date']
+        date_cols = ['Invoice Date', 'Paid Date', 'Sales Report Date', 'Date Added']
+        hide_cols = ['Quarter Shipped', 'Month', 'Year', 'Reported Distributor', 'PO Number', 'Sales Order #',
+                     'Unit Cost', 'Unit Price', 'Comm Source', 'On/Offshore', 'INF Comm Type', 'PL',
+                     'Division', 'Gross Rev Reduction', 'Project', 'Product Category', 'Shared Rev Tier Rate',
+                     'Cust Revenue YTD', 'Total NDS', 'Post-Split NDS', 'Cust Part Number', 'End Market',
+                     'Q Number', 'CM Split']
         if col in acct_cols:
             formatting = acct_format
         elif col in pct_cols:
@@ -135,15 +122,13 @@ def table_format(sheet_data, sheet_name, wbook):
                 inv_len = len(str(sheet_data.loc[row, col]))
                 # Figure out how many places the number goes to.
                 num_padding = '0'*inv_len
-                inv_num = pd.to_numeric(sheet_data.loc[row, col],
-                                        errors='ignore')
+                inv_num = pd.to_numeric(sheet_data.loc[row, col], errors='ignore')
                 # The only way to continually preserve leading zeros is by
                 # adding the apostrophe label tag in front.
                 if len(num_padding) > len(str(inv_num)):
                     inv_num = "'" + str(inv_num)
-                inv_format = wbook.book.add_format({'font': 'Calibri',
-                                                    'font_size': 11,
-                                                    'num_format': num_padding})
+                inv_format = workbook.book.add_format({'font': 'Calibri', 'font_size': 11,
+                                                       'num_format': num_padding})
                 try:
                     sheet.write_number(row+1, index, inv_num, inv_format)
                 except TypeError:
@@ -195,16 +180,25 @@ def form_date(input_date):
 
 def tab_save_prep(writer, data, sheet_name):
     """Prepares a file for being saved."""
-    # Replace zeros in non-commission columns with blanks.
-    num_cols = ['Quantity', 'Ext. Cost', 'Invoiced Dollars', 'Paid-On Revenue',
-                'Unit Cost', 'Unit Price', 'CM Split', 'Year', 'Split Percentage',
-                'Commission Rate', 'Gross Rev Reduction', 'Shared Rev Tier Rate']
+    # Make sure desired columns are numeric, and replace zeros in non-commission columns with blanks.
     for col in num_cols:
         try:
-            data[col].replace(0, '', inplace=True)
+            if col not in ['Actual Comm Paid', 'Sales Commission']:
+                fill = ''
+                data[col].replace(0, '', inplace=True)
+            else:
+                fill = 0
+            com_mast[col] = pd.to_numeric(com_mast[col], errors='coerce').fillna(fill)
         except KeyError:
             pass
+    # Convert individual numbers to numeric in rest of columns.
+    mixed_cols = [col for col in list(com_mast) if col not in num_cols]
+    skip_cols = ['Invoice Number', 'Part Number', 'Principal']
+    mixed_cols = [i for i in mixed_cols if i not in skip_cols]
+    for col in mixed_cols:
+        com_mast[col] = pd.to_numeric(com_mast[col], errors='ignore')
     date_cols = ['Invoice Date', 'Date Added', 'Paid Date']
+    # Format the dates correctly where possible.
     for col in date_cols:
         try:
             data[col] = data[col].map(lambda x: form_date(x))
@@ -212,4 +206,4 @@ def tab_save_prep(writer, data, sheet_name):
             pass
     data.to_excel(writer, sheet_name=sheet_name, index=False)
     # Do the Excel formatting.
-    table_format(sheet_data=data, sheet_name=sheet_name, wbook=writer)
+    table_format(sheet_data=data, sheet_name=sheet_name, workbook=writer)
