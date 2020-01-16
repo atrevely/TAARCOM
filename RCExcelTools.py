@@ -8,9 +8,10 @@ import win32com.client
 import pythoncom
 
 # Set the numerical columns.
-num_cols = ['Quantity', 'Ext. Cost', 'Invoiced Dollars', 'Paid-On Revenue', 'Actual Comm Paid',
-            'Unit Cost', 'Unit Price', 'CM Split', 'Year', 'Sales Commission',
-            'Split Percentage', 'Commission Rate', 'Gross Rev Reduction', 'Shared Rev Tier Rate']
+num_cols = ['Quantity', 'Ext. Cost', 'Invoiced Dollars', 'Paid-On Revenue', 'Split Percentage',
+            'Commission Rate', 'Actual Comm Paid', 'Sales Commission', 'Year', 'Unit Cost',
+            'Unit Price', 'Gross Rev Reduction', 'Shared Rev Tier Rate', 'Cust Revenue YTD',
+            'Total NDS', 'Post-Split NDS', 'CM Split', 'CM Sales Comm', 'Design Sales Comm']
 
 
 class PivotTables:
@@ -107,7 +108,7 @@ def table_format(sheet_data, sheet_name, workbook):
                      'Unit Cost', 'Unit Price', 'Comm Source', 'On/Offshore', 'INF Comm Type', 'PL',
                      'Division', 'Gross Rev Reduction', 'Project', 'Product Category', 'Shared Rev Tier Rate',
                      'Cust Revenue YTD', 'Total NDS', 'Post-Split NDS', 'Cust Part Number', 'End Market',
-                     'Q Number', 'CM Split']
+                     'Q Number', 'CM Split', 'Zip Code']
         if col in acct_cols:
             formatting = acct_format
         elif col in pct_cols:
@@ -196,7 +197,7 @@ def tab_save_prep(writer, data, sheet_name):
     skip_cols = ['Invoice Number', 'Part Number', 'Principal']
     mixed_cols = [i for i in mixed_cols if i not in skip_cols]
     for col in mixed_cols:
-        data[col] = pd.to_numeric(data[col], errors='ignore')
+        data[col] = data[col].map(lambda x: pd.to_numeric(x, errors='ignore')).fillna('')
     date_cols = ['Invoice Date', 'Date Added', 'Paid Date']
     # Format the dates correctly where possible.
     for col in date_cols:

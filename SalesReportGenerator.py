@@ -382,9 +382,6 @@ def main(run_com):
                                            sales_info=sales_info)
         # Append the data.
         final_report = final_report.append(qq_condensed, ignore_index=True, sort=False)
-        # Make sure columns are numeric.
-        for col in ['Paid-On Revenue', 'Actual Comm Paid', 'Sales Commission']:
-            final_report[col] = pd.to_numeric(final_report[col], errors='coerce').fillna(0)
         # Total up the Paid-On Revenue and Actual/Sales Commission.
         reportTot = pd.DataFrame(columns=['Salesperson', 'Paid-On Revenue',
                                           'Actual Comm Paid', 'Sales Commission'], index=[0])
