@@ -188,15 +188,15 @@ def tab_save_prep(writer, data, sheet_name):
                 data[col].replace(0, '', inplace=True)
             else:
                 fill = 0
-            com_mast[col] = pd.to_numeric(com_mast[col], errors='coerce').fillna(fill)
+            data[col] = pd.to_numeric(data[col], errors='coerce').fillna(fill)
         except KeyError:
             pass
     # Convert individual numbers to numeric in rest of columns.
-    mixed_cols = [col for col in list(com_mast) if col not in num_cols]
+    mixed_cols = [col for col in list(data) if col not in num_cols]
     skip_cols = ['Invoice Number', 'Part Number', 'Principal']
     mixed_cols = [i for i in mixed_cols if i not in skip_cols]
     for col in mixed_cols:
-        com_mast[col] = pd.to_numeric(com_mast[col], errors='ignore')
+        data[col] = pd.to_numeric(data[col], errors='ignore')
     date_cols = ['Invoice Date', 'Date Added', 'Paid Date']
     # Format the dates correctly where possible.
     for col in date_cols:
