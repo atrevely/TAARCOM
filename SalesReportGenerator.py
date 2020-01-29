@@ -320,7 +320,7 @@ def main(run_com):
     print('Found the following sales initials in the Salespeople Info file: ' + ', '.join(salespeople))
     # Create the dataframe with the commission information by salesperson.
     sales_tot = pd.DataFrame(columns=['Salesperson', 'Principal', 'Paid-On Revenue', 'Actual Comm Paid',
-                                      'Sales Commission'], index=[0])
+                                      'Sales Commission'])
 
     # Go through each salesperson and prepare their reports.
     print('Running reports...')
@@ -392,10 +392,15 @@ def main(run_com):
         reportTot['Paid-On Revenue'] = sum(final_report['Paid-On Revenue'])
         reportTot['Actual Comm Paid'] = actComm
         reportTot['Sales Commission'] = sales_comm
-        # Append to Sales Totals.
-        sales_tot = sales_tot.append(reportTot, ignore_index=True, sort=False)
         # Build table of sales by principal.
         princ_tab = data_by_princ_tab(input_data=final_report)
+        # Append to Sales Totals.
+        person_total = princ_tab[princ_tab['Principal'] == 'Grand Total']
+        person_total['Salesperson'] = person
+        person_total['Principal'] = ''
+        sales_tot = sales_tot.append(person_total, ignore_index=True, sort=False)
+        sales_tot = sales_tot.append(princ_tab[princ_tab['Principal'] != 'Grand Total'],
+                                     ignore_index=True, sort=False)
         # Write report to file.
         filename = (reports_dir + '\\' + person + ' Commission Report - ' + currentYrMo + '.xlsx')
         writer = pd.ExcelWriter(filename, engine='xlsxwriter', datetime_format='mm/dd/yyyy')
@@ -543,7 +548,7 @@ def main(run_com):
         writer1.save()
         writer2.save()
     writer3.save()
-    print('---\nSales reports finished successfully!\n')
+    print('---\nSales reports finished successfully!')
     if run_com:
         print('---\nCommissions Master updated.\nLookup Master updated.')
     print('+++')
