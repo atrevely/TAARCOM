@@ -307,8 +307,7 @@ def main(filepath):
         return
 
     # Write the Digikey Insight file, which now contains salespeople.
-    writer1 = pd.ExcelWriter(fname1, engine='xlsxwriter',
-                             datetime_format='mm/dd/yyyy')
+    writer1 = pd.ExcelWriter(fname1, engine='xlsxwriter', datetime_format='mm/dd/yyyy')
     insFile.to_excel(writer1, sheet_name='Data', index=False)
     # Format in Excel.
     tableFormat(insFile, 'Data', writer1)

@@ -149,3 +149,35 @@ def load_lookup_master(file_dir):
               'Please make sure Lookup Master - Current.xlsx is '
               'in the directory.')
     return master_lookup
+
+
+def load_root_customer_mappings(file_dir):
+    """Load and prepare the root customer mappings file."""
+    customer_mappings = pd.Series([])
+    if os.path.exists(file_dir + '\\rootCustomerMappings.xlsx'):
+        customer_mappings = pd.read_excel(look_dir + '\\rootCustomerMappings.xlsx', 'Sales Lookup').fillna('')
+        # Check the column names.
+        map_cols = ['Root Customer', 'Salesperson']
+        missing_cols = [i for i in map_cols if i not in list(customer_mappings)]
+        if missing_cols:
+            print('The following columns were not detected in rootCustomerMappings.xlsx:\n%s' %
+                  ', '.join(map(str, missing_cols)) + '\n*Program Terminated*')
+    else:
+        print('---\nNo Root Customer Mappings file found!\n'
+              'Please make sure rootCustomerMappings.xlsx is in the directory.\n'
+              '*Program Terminated*')
+    return customer_mappings
+
+
+def load_digikey_master(file_dir):
+    """Load and prepare the digikey insights master file."""
+    digikey_master = pd.Series([])
+    files_processed = pd.Series([])
+    if os.path.exists(file_dir + '\\Digikey Insight Master.xlsx'):
+        digikey_master = pd.read_excel(file_dir + '\\Digikey Insight Master.xlsx', 'Master').fillna('')
+        files_processed = pd.read_excel(file_dir + '\\Digikey Insight Master.xlsx', 'Files Processed').fillna('')
+    else:
+        print('---\nNo Digikey Insight Master file found!\n'
+              'Please make sure Digikey Insight Master is in the directory.\n'
+              '*Program Terminated*')
+    return digikey_master, files_processed
