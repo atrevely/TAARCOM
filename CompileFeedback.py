@@ -71,7 +71,7 @@ def main(filepaths):
     acct_list = load_acct_list(file_dir=look_dir)
     digikey_master, files_processed = load_digikey_master(file_dir=data_dir)
 
-    if any([sales_info.empty, customer_mappings.empty, acct_list.empty]):
+    if any([sales_info.empty, customer_mappings.empty, acct_list.empty, digikey_master.empty]):
         print('*Program Terminated*')
         return
 
@@ -87,27 +87,27 @@ def main(filepaths):
               '*Program Terminated*')
         return
 
-    # ----------------------------------------------
+    # -----------------------------------------------
     # Combine the report data from each salesperson.
-    # ----------------------------------------------
+    # -----------------------------------------------
     # Make sure each filename has a salesperson initials.
     salespeople = sales_info['Sales Initials'].values
-    initList = []
+    initials_list = []
     for filename in filenames:
-        inits = filename[0:2]
-        if inits not in salespeople:
-            print('Salesperson initials ' + inits + ' not recognized!\n'
-                  'Make sure the first two letters of each filename are salesperson initials (capitalized).\n'
+        initials = filename[0:2].upper()
+        if initials not in salespeople:
+            print('Salesperson initials ' + initials + ' not recognized!\n'
+                  'Make sure the first two letters of each filename are salesperson initials.\n'
                   '*Program Terminated*')
             return
-        elif inits in initList:
-            print('Salesperson initials ' + inits + ' duplicated!\n'
+        elif initials in initials_list:
+            print('Salesperson initials ' + initials + ' duplicated!\n'
                   'Make sure each salesperson has at most one file.\n'
                   '*Program Terminated*')
             return
-        initList.append(inits)
+        initials_list.append(initials)
     # Create the master dataframe to append to.
-    final_data = pd.DataFrame(columns=input_data[0].columns)
+    final_data = pd.DataFrame(columns=digikey_master.columns)
     # Copy over the comments.
     file_num = 0
     for sheet in input_data:
@@ -121,71 +121,65 @@ def main(filepaths):
         file_num += 1
     # Drop any unnamed columns that got processed.
     try:
-        final_data = final_data.loc[:, ~sheet.columns.str.contains('^Unnamed')]
-        final_data = final_data.loc[:, list(input_data[0])]
+        final_data = final_data.loc[:, ~final_data.columns.str.contains('^Unnamed')]
+        final_data = final_data.loc[:, digikey_master.columns]
     except AttributeError:
         pass
 
-    # -------------------------------------
+    # --------------------------------------
     # Update the rootCustomerMappings file.
-    # -------------------------------------
+    # --------------------------------------
     for row in final_data.index:
         # Get root customer and salesperson.
-        cust = sheet.loc[row, 'Root Customer..']
-        salesperson = sheet.loc[row, 'Sales']
+        cust = final_data.loc[row, 'Root Customer..']
+        salesperson = final_data.loc[row, 'Sales']
         try:
-            indiv = sheet.loc[row,
-                              'Root Customer Class'].lower() == 'individual'
+            indiv = final_data.loc[row, 'Root Customer Class'].lower() == 'individual'
         except AttributeError:
             indiv = False
         if cust and salesperson and not indiv:
             # Find match in rootCustomerMappings.
-            custMatch = customer_mappings['Root Customer'] == cust
-            if sum(custMatch) == 1:
-                matchID = customer_mappings[custMatch].index
+            cust_match = customer_mappings['Root Customer'] == cust
+            if sum(cust_match) == 1:
+                match_id = customer_mappings[cust_match].index
                 # Input (possibly new) salesperson.
-                customer_mappings.loc[matchID, 'Salesperson'] = salesperson
-            elif not custMatch.any():
+                customer_mappings.loc[match_id, 'Salesperson'] = salesperson
+            elif not cust_match.any():
                 # New customer (no match), so append to mappings.
-                newCust = pd.DataFrame({'Root Customer': [cust],
-                                        'Salesperson': [salesperson]})
-                customer_mappings = customer_mappings.append(newCust, ignore_index=True,
-                                                 sort=False)
+                newCust = pd.DataFrame({'Root Customer': [cust], 'Salesperson': [salesperson]})
+                customer_mappings = customer_mappings.append(newCust, ignore_index=True, sort=False)
             else:
-                print('There appears to be a duplicate customer in'
-                      ' rootCustomerMappings:\n'
+                print('There appears to be a duplicate customer in rootCustomerMappings:\n'
                       + str(cust) + '\nPlease trim to one entry and try again.'
                       + '\n*Program Terminated*')
                 return
 
-    # ----------------------------------------------------------------
-    # Append the new data to the Digikey Insight Master, then update
-    # the Current Salesperson.
-    # ----------------------------------------------------------------
+    # ----------------------------------------------------------------------------------------
+    # Append the new data to the Digikey Insight Master, then update the Current Salesperson.
+    # ----------------------------------------------------------------------------------------
     mastCols = list(digikey_master)
     mastCols.remove('Current Sales')
-    digikey_master = digikey_master.append(final_data[mastCols],
-                             ignore_index=True, sort=False)
+    digikey_master = digikey_master.append(final_data[mastCols], ignore_index=True, sort=False)
     digikey_master.fillna('', inplace=True)
     final_data.fillna('', inplace=True)
     # Go through each root customer and update current salesperson.
     for cust in digikey_master['Root Customer..'].unique():
-        currentSales = ''
+        current_sales = ''
         # First check the Account List.
-        acctMatch = acct_list[acct_list['ProperName'] == cust]
-        if not acctMatch.empty:
-            currentSales = acctMatch['SLS'].iloc[0]
+        acct_match = acct_list[acct_list['ProperName'] == cust]
+        if not acct_match.empty:
+            current_sales = acct_match['SLS'].iloc[0]
         # Next try rootCustomerMappings.
-        mapMatch = customer_mappings[customer_mappings['Root Customer'] == cust]
-        if acctMatch.empty and not mapMatch.empty:
+        map_match = customer_mappings[customer_mappings['Root Customer'] == cust]
+        if acct_match.empty and not map_match.empty:
             try:
-                currentSales = mapMatch['Current Sales'].iloc[0]
+                current_sales = map_match['Current Sales'].iloc[0]
             except KeyError:
                 pass
         # Update current salesperson, if a new one is found.
-        if currentSales:
-            matchID = digikey_master[digikey_master['Root Customer..'] == cust].index
-            digikey_master.loc[matchID, 'Current Sales'] = currentSales
+        if current_sales:
+            match_id = digikey_master[digikey_master['Root Customer..'] == cust].index
+            digikey_master.loc[match_id, 'Current Sales'] = current_sales
 
     # ---------------------------------------------------------------------
     # Try saving the files, exit with error if any file is currently open.
@@ -195,27 +189,22 @@ def main(filepaths):
     # Append the new file to files processed.
     newFile = pd.DataFrame(columns=files_processed.columns)
     newFile.loc[0, 'Filename'] = fname1
-    files_processed = files_processed.append(newFile, ignore_index=True,
-                                           sort=False)
+    files_processed = files_processed.append(newFile, ignore_index=True, sort=False)
     fname2 = data_dir + '\\Digikey Insight Master.xlsx'
     if save_error(fname1, fname2):
-        print('---\n'
-              'Insight Master and/or Final is currently open in Excel!\n'
+        print('---\nInsight Master and/or Final is currently open in Excel!\n'
               'Please close the file and try again.\n'
               '*Program Terminated*')
         return
     # Write the finished Insight file.
-    writer1 = pd.ExcelWriter(fname1, engine='xlsxwriter',
-                             datetime_format='mm/dd/yyyy')
+    writer1 = pd.ExcelWriter(fname1, engine='xlsxwriter', datetime_format='mm/dd/yyyy')
     final_data.to_excel(writer1, sheet_name='Master', index=False)
     # Format as table in Excel.
     table_format(final_data, 'Master', writer1)
     # Write the Insight Master file.
-    writer2 = pd.ExcelWriter(fname2, engine='xlsxwriter',
-                             datetime_format='mm/dd/yyyy')
+    writer2 = pd.ExcelWriter(fname2, engine='xlsxwriter', datetime_format='mm/dd/yyyy')
     digikey_master.to_excel(writer2, sheet_name='Master', index=False)
-    files_processed.to_excel(writer2, sheet_name='Files Processed',
-                            index=False)
+    files_processed.to_excel(writer2, sheet_name='Files Processed', index=False)
     # Format as table in Excel.
     table_format(digikey_master, 'Master', writer2)
     table_format(files_processed, 'Files Processed', writer2)

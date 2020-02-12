@@ -11,7 +11,7 @@ num_cols = ['Quantity', 'Ext. Cost', 'Invoiced Dollars', 'Paid-On Revenue', 'Act
 
 
 def load_salespeople_info(file_dir):
-    """Read in Salespeople Info. Return empty series if not found."""
+    """Read in Salespeople Info. Return empty series if not found or if there's an error."""
     sales_info = pd.Series([])
     try:
         sales_info = pd.read_excel(file_dir + '\\Salespeople Info.xlsx', 'Info')
@@ -20,8 +20,8 @@ def load_salespeople_info(file_dir):
         missing_cols = [i for i in cols if i not in list(sales_info)]
         if missing_cols:
             print('---\nThe following columns were not found in Salespeople Info: '
-                  + ', '.join(missing_cols) + '\nPlease check for these column '
-                  'names and try again.')
+                  + ', '.join(missing_cols) + '\nPlease check for these columns and try again.')
+            sales_info = pd.Series([])
     except FileNotFoundError:
         print('---\nNo Salespeople Info file found!\n'
               'Please make sure Salespeople Info.xlsx is in the directory:\n' + file_dir)
@@ -36,10 +36,8 @@ def load_com_master(file_dir):
     com_mast = pd.Series([])
     master_files = pd.Series([])
     try:
-        com_mast = pd.read_excel(file_dir + '\\Commissions Master.xlsx',
-                                 'Master Data', dtype=str)
-        master_files = pd.read_excel(file_dir + '\\Commissions Master.xlsx',
-                                     'Files Processed').fillna('')
+        com_mast = pd.read_excel(file_dir + '\\Commissions Master.xlsx', 'Master Data', dtype=str)
+        master_files = pd.read_excel(file_dir + '\\Commissions Master.xlsx', 'Files Processed').fillna('')
         # Force numerical columns to be numeric.
         for col in num_cols:
             try:
@@ -60,6 +58,8 @@ def load_com_master(file_dir):
             com_mast[col] = com_mast[col].map(lambda x: form_date(x))
         # Make sure that the CM Splits aren't blank or zero.
         com_mast['CM Split'] = com_mast['CM Split'].replace(['', '0', 0], 20)
+        for col in ['CM Sales', 'Design Sales', 'Principal']:
+            running_com[col] = running_com[col].map(lambda x: x.strip().upper())
     except FileNotFoundError:
         print('---\nNo Commissions Master file found!')
     except XLRDError:
@@ -83,12 +83,8 @@ def load_run_com(file_path):
             except KeyError:
                 pass
         # Convert individual numbers to numeric in rest of columns.
-        mixed_cols = [col for col in list(running_com) if col not in num_cols]
-        # Invoice/part numbers sometimes has leading zeros we'd like to keep.
-        mixed_cols.remove('Invoice Number')
-        mixed_cols.remove('Part Number')
-        # The INF gets read in as infinity, so skip the principal column.
-        mixed_cols.remove('Principal')
+        mixed_cols = [col for col in list(running_com) if col not in num_cols
+                      and col not in ['Invoice Number', 'Part Number', 'Principal']]
         for col in mixed_cols:
             try:
                 running_com[col] = pd.to_numeric(running_com[col], errors='ignore')
@@ -100,9 +96,8 @@ def load_run_com(file_path):
         running_com['Invoice Date'] = running_com['Invoice Date'].map(lambda x: form_date(x))
         # Make sure that the CM Splits aren't blank or zero.
         running_com['CM Split'] = running_com['CM Split'].replace(['', '0', 0], 20)
-        # Strip any extra spaces that made their way into salespeople columns.
-        for col in ['CM Sales', 'Design Sales']:
-            running_com[col] = running_com[col].map(lambda x: x.strip())
+        for col in ['CM Sales', 'Design Sales', 'Principal']:
+            running_com[col] = running_com[col].map(lambda x: x.strip().upper())
     except FileNotFoundError:
         print('---\nNo Running Commissions file found!')
     except XLRDError:
@@ -123,6 +118,7 @@ def load_acct_list(file_dir):
             print('---\nThe following columns were not found in the Account List: '
                   + ', '.join(missing_cols) + '\nPlease check for these column '
                   'names and try again.')
+            acct_list = pd.Series([])
     except FileNotFoundError:
         print('---\nNo Account List file found!')
     except XLRDError:
@@ -132,7 +128,7 @@ def load_acct_list(file_dir):
 
 
 def load_lookup_master(file_dir):
-    """Load and prepare the Lookup master."""
+    """Load and prepare the Lookup Master."""
     master_lookup = pd.Series([])
     if os.path.exists(file_dir + '\\Lookup Master - Current.xlsx'):
         master_lookup = pd.read_excel(file_dir + '\\Lookup Master - Current.xlsx').fillna('')
@@ -142,12 +138,11 @@ def load_lookup_master(file_dir):
         missing_cols = [i for i in lookup_cols if i not in list(master_lookup)]
         if missing_cols:
             print('---\nThe following columns were not found in the Lookup Master: '
-                  + ', '.join(missing_cols) + '\nPlease check for these column '
-                  'names and try again.')
+                  + ', '.join(missing_cols) + '\nPlease check for these column names and try again.')
+            master_lookup = pd.Series([])
     else:
         print('---\nNo Lookup Master found!\n'
-              'Please make sure Lookup Master - Current.xlsx is '
-              'in the directory.')
+              'Please make sure Lookup Master - Current.xlsx is in the directory.')
     return master_lookup
 
 
@@ -161,11 +156,11 @@ def load_root_customer_mappings(file_dir):
         missing_cols = [i for i in map_cols if i not in list(customer_mappings)]
         if missing_cols:
             print('The following columns were not detected in rootCustomerMappings.xlsx:\n%s' %
-                  ', '.join(map(str, missing_cols)) + '\n*Program Terminated*')
+                  ', '.join(map(str, missing_cols)))
+            customer_mappings = pd.Series([])
     else:
         print('---\nNo Root Customer Mappings file found!\n'
-              'Please make sure rootCustomerMappings.xlsx is in the directory.\n'
-              '*Program Terminated*')
+              'Please make sure rootCustomerMappings.xlsx is in the directory.\n')
     return customer_mappings
 
 
@@ -178,6 +173,5 @@ def load_digikey_master(file_dir):
         files_processed = pd.read_excel(file_dir + '\\Digikey Insight Master.xlsx', 'Files Processed').fillna('')
     else:
         print('---\nNo Digikey Insight Master file found!\n'
-              'Please make sure Digikey Insight Master is in the directory.\n'
-              '*Program Terminated*')
+              'Please make sure Digikey Insight Master is in the directory.\n')
     return digikey_master, files_processed

@@ -41,7 +41,7 @@ class PivotTables:
         wb = self.excel.Workbooks.Open(excel_file)
         if wb is None:
             print('Error loading file :' + os.path.basename(excel_file)
-                  + '/nMake sure the file is closed and try again.')
+                  + '\nMake sure the file is closed and try again.')
             return
         wb.Sheets.Add(After=wb.Sheets(wb.Sheets.Count))
         pivot_sheet = wb.Worksheets(wb.Sheets.Count)
@@ -155,7 +155,7 @@ def table_format(sheet_data, sheet_name, workbook):
             max_width += 2
         sheet.set_column(index, index, max_width+0.8, formatting)
     # Set the auto-filter for the sheet.
-    sheet.autofilter(0, 0, sheet_data.shape[0], sheet_data.shape[1]-1)
+    sheet.autofilter(0, 0, sheet_data.shape[0], sheet_data.shape[1] - 1)
 
 
 def save_error(*excel_files):
@@ -180,7 +180,7 @@ def form_date(input_date):
 
 
 def tab_save_prep(writer, data, sheet_name):
-    """Prepares a file for being saved."""
+    """Prepares a commissions file for being saved."""
     # Make sure desired columns are numeric, and replace zeros in non-commission columns with blanks.
     for col in num_cols:
         try:
