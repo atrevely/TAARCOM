@@ -59,7 +59,7 @@ def load_com_master(file_dir):
         # Make sure that the CM Splits aren't blank or zero.
         com_mast['CM Split'] = com_mast['CM Split'].replace(['', '0', 0], 20)
         for col in ['CM Sales', 'Design Sales', 'Principal']:
-            running_com[col] = running_com[col].map(lambda x: x.strip().upper())
+            com_mast[col] = com_mast[col].map(lambda x: x.strip().upper())
     except FileNotFoundError:
         print('---\nNo Commissions Master file found!')
     except XLRDError:
@@ -69,9 +69,7 @@ def load_com_master(file_dir):
 
 
 def load_run_com(file_path):
-    """Load and prepare the Running Commissions file.
-    Return empty series if not found.
-    """
+    """Load and prepare the Running Commissions file. Return empty series if not found."""
     running_com = pd.Series([])
     files_processed = pd.Series([])
     try:
@@ -106,11 +104,42 @@ def load_run_com(file_path):
     return running_com, files_processed
 
 
+def load_entries_need_fixing(file_dir):
+    """Load and prepare the Entries Need Fixing file."""
+    entries_need_fixing = pd.Series([])
+    try:
+        entries_need_fixing = pd.read_excel(file_dir, 'Data', dtype=str)
+        # Convert entries to proper types, like above.
+        for col in num_cols:
+            try:
+                entries_need_fixing[col] = pd.to_numeric(entries_need_fixing[col], errors='coerce').fillna('')
+            except KeyError:
+                print('The following column was not found in ENF: ' + col
+                      + '\nPlease check the column names and try again')
+                return pd.Series([])
+        mixed_cols = [col for col in list(entries_need_fixing) if col not in num_cols
+                      and col not in ['Invoice Number', 'Part Number', 'Principal']]
+        for col in mixed_cols:
+            try:
+                entries_need_fixing[col] = entries_need_fixing[col].map(lambda x: pd.to_numeric(x, errors='ignore'))
+            except KeyError:
+                print('The following column was not found in ENF: ' + col
+                      + '\nPlease check the column names and try again.')
+                return pd.Series([])
+        # Now remove the nans.
+        entries_need_fixing.replace('nan', '', inplace=True)
+    except FileNotFoundError:
+        print('No matching Entries Need Fixing file found for this Running Commissions file!')
+    except XLRDError:
+        print('No sheet named Data found in Entries Need Fixing!')
+    return entries_need_fixing
+
+
 def load_acct_list(file_dir):
     """Load and prepare the Account List file."""
     acct_list = pd.Series([])
     try:
-        acct_list = pd.read_excel(file_dir + '\\Master Account List.xlsx', 'Allacct')
+        acct_list = pd.read_excel(file_dir + '\\Master Account List.xlsx', 'Allacct').fillna('')
         # Make sure the required columns are present.
         cols = ['SLS', 'ProperName']
         missing_cols = [i for i in cols if i not in list(acct_list)]
@@ -139,7 +168,9 @@ def load_lookup_master(file_dir):
         if missing_cols:
             print('---\nThe following columns were not found in the Lookup Master: '
                   + ', '.join(missing_cols) + '\nPlease check for these column names and try again.')
-            master_lookup = pd.Series([])
+            return pd.Series([])
+        # Set the CM Split to an int.
+        master_lookup['CM Split'] = master_lookup['CM Split'].map(lambda x: int(x) if isinstance(x, float) else x)
     else:
         print('---\nNo Lookup Master found!\n'
               'Please make sure Lookup Master - Current.xlsx is in the directory.')
@@ -150,7 +181,7 @@ def load_root_customer_mappings(file_dir):
     """Load and prepare the root customer mappings file."""
     customer_mappings = pd.Series([])
     if os.path.exists(file_dir + '\\rootCustomerMappings.xlsx'):
-        customer_mappings = pd.read_excel(look_dir + '\\rootCustomerMappings.xlsx', 'Sales Lookup').fillna('')
+        customer_mappings = pd.read_excel(file_dir + '\\rootCustomerMappings.xlsx', 'Sales Lookup').fillna('')
         # Check the column names.
         map_cols = ['Root Customer', 'Salesperson']
         missing_cols = [i for i in map_cols if i not in list(customer_mappings)]

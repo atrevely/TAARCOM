@@ -8,9 +8,16 @@ import os.path
 from xlrd import XLRDError
 from RCExcelTools import table_format, save_error, form_date
 
+# Set the directory for the data input/output.
+if os.path.exists('Z:\\'):
+    outDir = 'Z:\\MK Working Commissions'
+    lookDir = 'Z:\\Commissions Lookup'
+else:
+    outDir = os.getcwd()
+    lookDir = os.getcwd()
 
-# The main function.
-def main(runCom):
+
+def main(running_com):
     """Replaces incomplete entries in Running Commissions with final versions.
 
     Entries in Running Commissions which need attention are copied to the
@@ -23,29 +30,18 @@ def main(runCom):
     entries when needed, and quarantining old entries that have not been
     used in 2+ years.
     """
-    # Set the directory for the data input/output.
-    if os.path.exists('Z:\\'):
-        outDir = 'Z:\\MK Working Commissions'
-        lookDir = 'Z:\\Commissions Lookup'
-    else:
-        outDir = os.getcwd()
-        lookDir = os.getcwd()
-
     # ----------------------------------------------
     # Load up the current Running Commissions file.
     # ----------------------------------------------
-    runningCom = pd.read_excel(runCom, 'Master', dtype=str)
+    runningCom = pd.read_excel(running_com, 'Master', dtype=str)
     # Convert applicable columns to numeric.
-    numCols = ['Quantity', 'Ext. Cost', 'Invoiced Dollars',
-               'Paid-On Revenue', 'Actual Comm Paid', 'Unit Cost',
-               'Unit Price', 'CM Split', 'Year', 'Sales Commission',
-               'Split Percentage', 'Commission Rate',
-               'Gross Rev Reduction', 'Shared Rev Tier Rate',
+    numCols = ['Quantity', 'Ext. Cost', 'Invoiced Dollars', 'Paid-On Revenue', 'Actual Comm Paid',
+               'Unit Cost', 'Unit Price', 'CM Split', 'Year', 'Sales Commission',
+               'Split Percentage', 'Commission Rate', 'Gross Rev Reduction', 'Shared Rev Tier Rate',
                'CM Sales Comm', 'Design Sales Comm']
     for col in numCols:
         try:
-            runningCom[col] = pd.to_numeric(runningCom[col],
-                                            errors='coerce').fillna('')
+            runningCom[col] = pd.to_numeric(runningCom[col], errors='coerce').fillna('')
         except KeyError:
             pass
     # Convert individual numbers to numeric in rest of columns.
@@ -60,10 +56,9 @@ def main(runCom):
                 lambda x: pd.to_numeric(x, errors='ignore'))
     runningCom.replace('nan', '', inplace=True)
     # Round the Actual Comm Paid field.
-    runningCom['Actual Comm Paid'] = runningCom['Actual Comm Paid'].map(
-            lambda x: round(float(x), 2))
-    filesProcessed = pd.read_excel(runCom, 'Files Processed').fillna('')
-    comDate = runCom[-20:]
+    runningCom['Actual Comm Paid'] = runningCom['Actual Comm Paid'].map(lambda x: round(float(x), 2))
+    filesProcessed = pd.read_excel(running_com, 'Files Processed').fillna('')
+    comDate = running_com[-20:]
     # Track commission dollars.
     try:
         comm = pd.to_numeric(runningCom['Actual Comm Paid'],
@@ -223,8 +218,7 @@ def main(runCom):
         if not dateError:
             # Check for match in commission dollars.
             try:
-                RCIndex = pd.to_numeric(fixed.loc[row, 'Running Com Index'],
-                                        errors='raise')
+                RCIndex = pd.to_numeric(fixed.loc[row, 'Running Com Index'], errors='raise')
             except ValueError:
                 print('Error reading Running Com Index!\n'
                       'Make sure all values are numeric.\n'
@@ -236,21 +230,17 @@ def main(runCom):
                 # Replace the Running Commissions entry with the fixed one.
                 runningCom.loc[RCIndex, :] = fixed.loc[row, list(runningCom)]
             else:
-                print('Mismatch in commission dollars found in Entries '
-                      'Need Fixing on row '
+                print('Mismatch in commission dollars found in Entries Need Fixing on row '
                       + str(row + 2) + '\n Check to make sure lines were not '
-                      'deleted from the Running Commissions.'
-                      + '\n*Program Teminated*')
+                      'deleted from the Running Commissions.\n'
+                      '*Program Terminated*')
                 return
             # Delete the fixed entry from the Needs Fixing file.
             fixList.drop(row, inplace=True)
 
-    # %%
     # Make sure all the dates are formatted correctly.
-    runningCom['Invoice Date'] = runningCom['Invoice Date'].map(
-            lambda x: form_date(x))
-    fixList['Invoice Date'] = fixList['Invoice Date'].map(
-            lambda x: form_date(x))
+    runningCom['Invoice Date'] = runningCom['Invoice Date'].map(lambda x: form_date(x))
+    fixList['Invoice Date'] = fixList['Invoice Date'].map(lambda x: form_date(x))
     mastLook['Last Used'] = mastLook['Last Used'].map(lambda x: form_date(x))
     mastLook['Date Added'] = mastLook['Date Added'].map(lambda x: form_date(x))
     # Go through each column and convert applicable entries to numeric.
@@ -267,11 +257,9 @@ def main(runCom):
                          errors='coerce').fillna(0)
     if sum(comm) != totComm:
         print('Commission dollars do not match after fixing entries!\n'
-              'Make sure Entries Need fixing aligns properly with '
-              'Running Commissions.\n'
-              'This error was likely caused by adding or removing rows '
-              'in either file.\n'
-              '*Program Teminated*')
+              'Make sure Entries Need fixing aligns properly with Running Commissions.\n'
+              'This error was potentially caused by adding or removing rows in either file.\n'
+              '*Program Terminated*')
         return
     # Re-index the fix list and drop nans in Lookup Master.
     fixList.reset_index(drop=True, inplace=True)
@@ -283,8 +271,8 @@ def main(runCom):
         lastUsed = lastUsed.map(lambda x: x.strftime('%Y%m%d'))
     except (AttributeError, ValueError):
         print('Error reading one or more dates in the Lookup Master!\n'
-              'Make sure the Last Used column is all MM/DD/YYYY format.\n'
-              '---')
+              'Make sure the Last Used column is all MM/DD/YYYY format.\n---')
+        return
     dateCutoff = lastUsed < twoYearsAgo.strftime('%Y%m%d')
     oldEntries = mastLook[dateCutoff].reset_index(drop=True)
     mastLook = mastLook[~dateCutoff].reset_index(drop=True)
@@ -295,9 +283,7 @@ def main(runCom):
         quarantined = quarantined.append(oldEntries,  ignore_index=True,
                                          sort=False)
         # Notify us of changes.
-        print(str(len(oldEntries))
-              + ' entries quarantied for being more than 2 years old.\n'
-              '---')
+        print(str(len(oldEntries)) + ' entries quarantied for being more than 2 years old.\n---')
 
     # Check if the files we're going to save are open already.
     fname1 = outDir + '\\Running Commissions ' + comDate
@@ -305,39 +291,33 @@ def main(runCom):
     fname3 = lookDir + '\\Lookup Master - Current.xlsx'
     fname4 = lookDir + '\\Quarantined Lookups.xlsx'
     if save_error(fname1, fname2, fname3, fname4):
-        print('---\n'
-              'One or more files are currently open in Excel!\n'
+        print('---\nOne or more files are currently open in Excel!\n'
               'Please close the files and try again.\n'
               '*Program Teminated*')
         return
 
     # Write the Running Commissions file.
-    writer1 = pd.ExcelWriter(fname1, engine='xlsxwriter',
-                             datetime_format='mm/dd/yyyy')
+    writer1 = pd.ExcelWriter(fname1, engine='xlsxwriter', datetime_format='mm/dd/yyyy')
     runningCom.to_excel(writer1, sheet_name='Master', index=False)
-    filesProcessed.to_excel(writer1, sheet_name='Files Processed',
-                            index=False)
+    filesProcessed.to_excel(writer1, sheet_name='Files Processed', index=False)
     # Format as table in Excel.
     table_format(runningCom, 'Master', writer1)
     table_format(filesProcessed, 'Files Processed', writer1)
 
     # Write the Needs Fixing file.
-    writer2 = pd.ExcelWriter(fname2, engine='xlsxwriter',
-                             datetime_format='mm/dd/yyyy')
+    writer2 = pd.ExcelWriter(fname2, engine='xlsxwriter', datetime_format='mm/dd/yyyy')
     fixList.to_excel(writer2, sheet_name='Data', index=False)
     # Format as table in Excel.
     table_format(fixList, 'Data', writer2)
 
     # Write the Lookup Master file.
-    writer3 = pd.ExcelWriter(fname3, engine='xlsxwriter',
-                             datetime_format='mm/dd/yyyy')
+    writer3 = pd.ExcelWriter(fname3, engine='xlsxwriter', datetime_format='mm/dd/yyyy')
     mastLook.to_excel(writer3, sheet_name='Lookup', index=False)
     # Format as table in Excel.
     table_format(mastLook, 'Lookup', writer3)
 
     # Write the Quarantined Lookups file.
-    writer4 = pd.ExcelWriter(fname4, engine='xlsxwriter',
-                             datetime_format='mm/dd/yyyy')
+    writer4 = pd.ExcelWriter(fname4, engine='xlsxwriter', datetime_format='mm/dd/yyyy')
     quarantined.to_excel(writer4, sheet_name='Lookup', index=False)
     # Format as table in Excel.
     table_format(quarantined, 'Lookup', writer4)

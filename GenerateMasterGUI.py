@@ -10,19 +10,19 @@ import MergeFixedEntries
 import SalesReportGenerator
 import CommTools
 
-VERSION = 'Development v2.3'
+VERSION = 'Development v2.3.212'
 if os.path.exists('Z:\\Commissions Lookup'):
-    lookDir = 'Z:\\Commissions Lookup'
+    look_dir = 'Z:\\Commissions Lookup'
 else:
-    lookDir = os.getcwd()
+    look_dir = os.getcwd()
 
 
 class Stream(QtCore.QObject):
     """Redirects console output to text widget."""
-    newText = QtCore.pyqtSignal(str)
+    new_text = QtCore.pyqtSignal(str)
 
     def write(self, text):
-        self.newText.emit(str(text))
+        self.new_text.emit(str(text))
 
     # Pass the flush so we don't get an attribute error.
     def flush(self):
@@ -34,7 +34,7 @@ class GenMast(QMainWindow):
     def __init__(self):
         super().__init__()
         # Custom output stream.
-        sys.stdout = Stream(newText=self.onUpdateText)
+        sys.stdout = Stream(new_text=self.onUpdateText)
         # Set working directory as current file directory.
         dirPath = os.path.dirname(os.path.realpath(__file__))
         os.chdir(dirPath)
@@ -50,31 +50,28 @@ class GenMast(QMainWindow):
               '_______________________________________________________________'
               '\nREMINDER: Did you check for updates on GitHub?\n'
               'REMINDER: If new code was pulled or the branch changed, please '
-              'close and relaunch the program.\n'
-              '---')
+              'close and relaunch the program.\n---')
         if not os.path.exists('Z:/'):
-            print('No connection to Z:/ drive established! Working locally.'
-                  '\n---')
+            print('No connection to Z:/ drive established! Working locally.\n---')
         # Try loading/finding the supporting files.
-        if os.path.exists(lookDir):
-            if os.path.exists(lookDir + '\\fieldMappings.xlsx'):
-                self.fieldMappings = pd.read_excel(lookDir + '\\fieldMappings.xlsx',
-                                                   index_col=False)
+        if os.path.exists(look_dir):
+            if os.path.exists(look_dir + '\\fieldMappings.xlsx'):
+                self.fieldMappings = pd.read_excel(look_dir + '\\fieldMappings.xlsx', index_col=False)
             else:
                 print('No field mappings found!\n'
                       'Please make sure fieldMappings.xlsx is in the directory.\n'
                       '***')
-            if not os.path.exists(lookDir + '\\Lookup Master - Current.xlsx'):
+            if not os.path.exists(look_dir + '\\Lookup Master - Current.xlsx'):
                 print('No Lookup Master found!\n'
                       'Please make sure Lookup Master is in the directory.\n'
                       '***')
-            if not os.path.exists(lookDir + '\\distributorLookup.xlsx'):
+            if not os.path.exists(look_dir + '\\distributorLookup.xlsx'):
                 print('No distributor lookup found!\n'
                       'Please make sure distributorLookup.xlsx '
                       'is in the directory.\n'
                       '***')
         else:
-            print('Could not find route to ' + lookDir + '\nPlease make sure you '
+            print('Could not find route to ' + look_dir + '\nPlease make sure you '
                   'are connected to the TAARCOM server, then relaunch the program.'
                   '\n***')
 
@@ -221,7 +218,7 @@ class GenMast(QMainWindow):
     def genMastExecute(self):
         """Runs function for processing new files to master."""
         # Check to see if we're ready to process.
-        mapExists = os.path.exists(lookDir + '\\fieldMappings.xlsx')
+        mapExists = os.path.exists(look_dir + '\\fieldMappings.xlsx')
         if self.filenames and mapExists:
             # Run the GenerateMaster.py file.
             try:

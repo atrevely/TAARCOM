@@ -62,8 +62,7 @@ def get_sales_comm_data(salesperson, input_data, sales_info):
 
 def data_by_princ_tab(input_data):
     """Builds a DataFrame of the provided data broken down by principal."""
-    princ_tab = pd.DataFrame(columns=['Principal', 'Paid-On Revenue', 'Actual Comm Paid',
-                                      'Sales Commission'])
+    princ_tab = pd.DataFrame(columns=['Principal', 'Paid-On Revenue', 'Actual Comm Paid', 'Sales Commission'])
     # Tally up totals for each principal.
     for row, principal in enumerate(input_data['Principal'].unique()):
         princ_sales = input_data[input_data['Principal'] == principal]
@@ -551,4 +550,4 @@ def main(run_com):
     print('---\nSales reports finished successfully!')
     if run_com:
         print('---\nCommissions Master updated.\nLookup Master updated.')
-    print('+++')
+    print('+Program Complete+')
