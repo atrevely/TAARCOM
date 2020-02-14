@@ -8,7 +8,7 @@ import sys
 import shutil
 from dateutil.parser import parse
 from RCExcelTools import tab_save_prep, form_date, save_error, PivotTables
-from FileLoader import load_salespeople_info, load_com_master, load_run_com, load_acct_list
+from FileLoader import load_salespeople_info, load_com_master, load_run_com, load_acct_list, load_lookup_master
 from xlrd import XLRDError
 # from PDFReportGenerator import pdfReport
 
