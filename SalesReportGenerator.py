@@ -165,7 +165,7 @@ def main(run_com):
     last_month = max(comm_months)
 
     if run_com:
-        look_mast = load_lookup_master(file_path=look_dir)
+        look_mast = load_lookup_master(file_dir=look_dir)
         running_com, files_processed = load_run_com(file_path=run_com)
         if any([look_mast.empty, running_com.empty, files_processed.empty]):
             print('*Program Terminated*')

@@ -157,9 +157,9 @@ def main(filepaths):
     # ----------------------------------------------------------------------------------------
     # Append the new data to the Digikey Insight Master, then update the Current Salesperson.
     # ----------------------------------------------------------------------------------------
-    mastCols = list(digikey_master)
-    mastCols.remove('Current Sales')
-    digikey_master = digikey_master.append(final_data[mastCols], ignore_index=True, sort=False)
+    master_cols = list(digikey_master)
+    master_cols.remove('Current Sales')
+    digikey_master = digikey_master.append(final_data[master_cols], ignore_index=True, sort=False)
     digikey_master.fillna('', inplace=True)
     final_data.fillna('', inplace=True)
     # Go through each root customer and update current salesperson.
@@ -184,12 +184,11 @@ def main(filepaths):
     # ---------------------------------------------------------------------
     # Try saving the files, exit with error if any file is currently open.
     # ---------------------------------------------------------------------
-    currentTime = time.strftime('%Y-%m-%d')
-    fname1 = data_dir + '\\Digikey Insight Final ' + currentTime + '.xlsx'
+    fname1 = data_dir + '\\Digikey Insight Final ' + time.strftime('%Y-%m-%d') + '.xlsx'
     # Append the new file to files processed.
-    newFile = pd.DataFrame(columns=files_processed.columns)
-    newFile.loc[0, 'Filename'] = fname1
-    files_processed = files_processed.append(newFile, ignore_index=True, sort=False)
+    new_file = pd.DataFrame(columns=files_processed.columns)
+    new_file.loc[0, 'Filename'] = fname1
+    files_processed = files_processed.append(new_file, ignore_index=True, sort=False)
     fname2 = data_dir + '\\Digikey Insight Master.xlsx'
     if save_error(fname1, fname2):
         print('---\nInsight Master and/or Final is currently open in Excel!\n'
