@@ -15,14 +15,14 @@ from RCExcelTools import table_format, save_error, form_date
 if os.path.exists('Z:\\'):
     out_dir = 'Z:\\MK Working Commissions'
     look_dir = 'Z:\\Commissions Lookup'
-    match_dir = 'Z:\\Matched Raw Data Files/'
+    match_dir = 'Z:\\Matched Raw Data Files'
 else:
     out_dir = os.getcwd()
     look_dir = os.getcwd()
     match_dir = os.getcwd()
 
     
-def tailoredPreCalc(princ, sheet, sheet_name):
+def preprocess_by_principal(princ, sheet, sheet_name):
     """Do special pre-processing tailored to the principal input. Primarily,
     this involves renaming columns that would get looked up incorrectly
     in the Field Mappings.
@@ -47,19 +47,19 @@ def tailoredPreCalc(princ, sheet, sheet_name):
     # -----------------------------
     # ISSI special pre-processing.
     # -----------------------------
-    if princ == 'ISS':
+    elif princ == 'ISS':
         rename_dict = {'Commission Due': 'Unmapped', 'Name': 'OEM/POS'}
         sheet.rename(columns=rename_dict, inplace=True)
     # ----------------------------
     # ATS special pre-processing.
     # ----------------------------
-    if princ == 'ATS':
+    elif princ == 'ATS':
         rename_dict = {'Resale': 'Extended Resale', 'Cost': 'Extended Cost'}
         sheet.rename(columns=rename_dict, inplace=True)
     # ----------------------------
     # QRF special pre-processing.
     # ----------------------------
-    if princ == 'QRF':
+    elif princ == 'QRF':
         if sheet_name in ['OEM', 'OFF']:
             rename_dict = {'End Customer': 'Unmapped 2', 'Item': 'Unmapped 3'}
             sheet.rename(columns=rename_dict, inplace=True)
@@ -70,19 +70,17 @@ def tailoredPreCalc(princ, sheet, sheet_name):
     # ----------------------------
     # XMO special pre-processing.
     # ----------------------------
-    if princ == 'XMO':
+    elif princ == 'XMO':
         rename_dict = {'Amount': 'Commission', 'Commission Due': 'Unmapped'}
         sheet.rename(columns=rename_dict, inplace=True)
     # Return the renameDict for future use in the matched raw file.
     if rename_dict:
-        print('The following columns were renamed automatically '
-              'on this sheet:')
-        [print(i + ' --> ' + j) for i, j
-         in zip(rename_dict.keys(), rename_dict.values())]
+        print('The following columns were renamed automatically on this sheet:')
+        [print(i + ' --> ' + j) for i, j in zip(rename_dict.keys(), rename_dict.values())]
     return rename_dict
 
 
-def tailoredCalc(princ, sheet, sheet_name, distMap):
+def process_by_principal(princ, sheet, sheet_name, disty_map):
     """Do special processing tailored to the principal input. This involves
     things like filling in commissions source as cost/resale, setting some
     commission rates that aren't specified in the data, etc.
@@ -153,7 +151,7 @@ def tailoredCalc(princ, sheet, sheet_name, distMap):
                     cust = sheet.loc[row, 'Reported Customer']
                     distName = re.sub('[^a-zA-Z0-9]', '', str(cust).lower())
                     # Find matches in the Distributor Abbreviations.
-                    distMatches = [i for i in distMap['Search Abbreviation']
+                    distMatches = [i for i in disty_map['Search Abbreviation']
                                    if i in distName]
                     if len(distMatches) == 1:
                         # Copy to distributor column.
@@ -379,10 +377,11 @@ def main(filepaths, path_to_running_com, field_mappings):
         if any([running_com.empty, files_processed.empty, entries_need_fixing.empty]):
             print('*Program Terminated*')
             return
+        run_com_len = len(running_com)
     # Start new Running Commissions.
     else:
         print('No Running Commissions file provided. Starting a new one.')
-        runComLen = 0
+        run_com_len = 0
         running_com = pd.DataFrame(columns=column_names)
         files_processed = pd.DataFrame(columns=['Filename', 'Total Commissions', 'Date Added', 'Paid Date'])
 
@@ -408,11 +407,11 @@ def main(filepaths, path_to_running_com, field_mappings):
     input_data = [pd.read_excel(filepath, None, dtype=str) for filepath in filepaths]
 
     # --------------------------------------------------------------
-    # Read in distMap. Terminate if not found or if errors in file.
+    # Read in disty_map. Terminate if not found or if errors in file.
     # --------------------------------------------------------------
     if os.path.exists(look_dir + '\\distributorLookup.xlsx'):
         try:
-            distMap = pd.read_excel(look_dir + '\\distributorLookup.xlsx',
+            disty_map = pd.read_excel(look_dir + '\\distributorLookup.xlsx',
                                     'Distributors')
         except XLRDError:
             print('---\n'
@@ -421,8 +420,8 @@ def main(filepaths, path_to_running_com, field_mappings):
                   '*Program terminated*')
             return
         # Check the column names.
-        distMapCols = ['Corrected Dist', 'Search Abbreviation']
-        missing_cols = [i for i in distMapCols if i not in list(distMap)]
+        disty_mapCols = ['Corrected Dist', 'Search Abbreviation']
+        missing_cols = [i for i in disty_mapCols if i not in list(disty_map)]
         if missing_cols:
             print('The following columns were not detected in '
                   'distributorLookup.xlsx:\n%s' %
@@ -446,7 +445,7 @@ def main(filepaths, path_to_running_com, field_mappings):
     fileNum = 0
     for filename in filenames:
         # Grab the next file from the list.
-        newData = input_data[fileNum]
+        new_data = input_data[fileNum]
         fileNum += 1
         print('_' * 54 + '\nWorking on file: ' + filename + '\n' + '_' * 54)
         # Initialize total commissions for this file.
@@ -470,9 +469,9 @@ def main(filepaths, path_to_running_com, field_mappings):
         # Iterate over each dataframe in the ordered dictionary.
         # Each sheet in the file is its own dataframe in the dictionary.
         # ----------------------------------------------------------------
-        for sheet_name in list(newData):
+        for sheet_name in list(new_data):
             # Rework the index just in case it got read in wrong.
-            sheet = newData[sheet_name].reset_index(drop=True)
+            sheet = new_data[sheet_name].reset_index(drop=True)
             sheet.index = sheet.index.map(int)
             sheet.replace('nan', '', inplace=True)
             # Create a duplicate of the sheet that stays unchanged, aside
@@ -490,7 +489,7 @@ def main(filepaths, path_to_running_com, field_mappings):
             except AttributeError:
                 pass
             # Do specialized pre-processing tailored to principlal.
-            renameDict = tailoredPreCalc(principal, sheet, sheet_name)
+            renameDict = preprocess_by_principal(principal, sheet, sheet_name)
             # Iterate over each column of data that we want to append.
             for dataName in list(field_mappings):
                 # Grab list of names that the data could potentially be under.
@@ -517,7 +516,7 @@ def main(filepaths, path_to_running_com, field_mappings):
 
             # Replace the old raw data sheet with the new one.
             rawSheet.sort_index(inplace=True)
-            newData[sheet_name] = rawSheet
+            new_data[sheet_name] = rawSheet
 
             # Convert applicable columns to numeric.
             numCols = ['Quantity', 'Ext. Cost', 'Invoiced Dollars',
@@ -547,7 +546,7 @@ def main(filepaths, path_to_running_com, field_mappings):
                     pass
 
             # Do special processing for principal, if applicable.
-            tailoredCalc(principal, sheet, sheet_name, distMap)
+            process_by_principal(principal, sheet, sheet_name, disty_map)
             # Drop entries with emtpy part number or reported customer.
             try:
                 sheet.drop(sheet[sheet['Part Number'] == ''].index,
@@ -629,12 +628,9 @@ def main(filepaths, path_to_running_com, field_mappings):
               '${:,.2f}'.format(totalComm))
         # Append filename and total commissions to Files Processed sheet.
         currentDate = datetime.datetime.now().date()
-        newFile = pd.DataFrame({'Filename': [filename],
-                                'Total Commissions': [totalComm],
-                                'Date Added': [currentDate],
-                                'Paid Date': ['']})
-        files_processed = files_processed.append(newFile, ignore_index=True,
-                                               sort=False)
+        newFile = pd.DataFrame({'Filename': [filename], 'Total Commissions': [totalComm],
+                                'Date Added': [currentDate], 'Paid Date': ['']})
+        files_processed = files_processed.append(newFile, ignore_index=True, sort=False)
         # Save the matched raw data file.
         fname = filename[:-5]
         if filename[-12:] != 'Matched.xlsx':
@@ -642,24 +638,22 @@ def main(filepaths, path_to_running_com, field_mappings):
         else:
             fname += '.xlsx'
         if save_error(fname):
-            print('---\n'
-                  'One or more of the raw data files are open in Excel.\n'
+            print('---\nOne or more of the raw data files are open in Excel.\n'
                   'Please close these files and try again.\n'
                   '*Program terminated*')
             return
         # Write the raw data file with matches.
         writer = pd.ExcelWriter(match_dir + '\\' + fname, engine='xlsxwriter',
                                 datetime_format='mm/dd/yyyy')
-        for tab in list(newData):
-            newData[tab].to_excel(writer, sheet_name=tab, index=False)
+        for tab in list(new_data):
+            new_data[tab].to_excel(writer, sheet_name=tab, index=False)
             # Format and fit each column.
             sheet = writer.sheets[tab]
             index = 0
-            for col in newData[tab].columns:
+            for col in new_data[tab].columns:
                 # Set column width and formatting.
                 try:
-                    maxWidth = max(len(str(val)) for val
-                                   in newData[tab][col].values)
+                    maxWidth = max(len(str(val)) for val in new_data[tab][col].values)
                 except ValueError:
                     maxWidth = 0
                 maxWidth = max(10, maxWidth)
@@ -668,7 +662,6 @@ def main(filepaths, path_to_running_com, field_mappings):
         # Save the file.
         writer.save()
 
-    # %%
     # Fill NaNs left over from appending.
     running_com.fillna('', inplace=True)
     # Create the Entries Need Fixing dataframe (if not loaded in already).
@@ -676,20 +669,17 @@ def main(filepaths, path_to_running_com, field_mappings):
         entries_need_fixing = pd.DataFrame(columns=list(running_com))
     # Find matches in Lookup Master and extract data from them.
     # Let us know how many rows are being processed.
-    numRows = '{:,.0f}'.format(len(running_com) - runComLen)
+    numRows = '{:,.0f}'.format(len(running_com) - run_com_len)
     if numRows == '0':
-        print('---\n'
-              'No new valid data provided.\n'
-              'Please check the new files for missing '
-              'data or column matches.\n'
+        print('---\nNo new valid data provided.\n'
+              'Please check the new files for missing data or column matches.\n'
               '*Program terminated*')
         return
-    print('---\n'
-          'Beginning processing on ' + numRows + ' rows of data.')
+    print('---\nBeginning processing on ' + numRows + ' rows of data.')
     running_com.reset_index(inplace=True, drop=True)
 
     # Iterate over each row of the newly appended data.
-    for row in range(runComLen, len(running_com)):
+    for row in range(run_com_len, len(running_com)):
         # ------------------------------------------
         # Try to find a match in the Lookup Master.
         # ------------------------------------------
@@ -791,12 +781,12 @@ def main(filepaths, path_to_running_com, field_mappings):
         distName = re.sub('[^a-zA-Z0-9]', '', repDist).lower()
 
         # Find matches for the distName in the Distributor Abbreviations.
-        distMatches = [i for i in distMap['Search Abbreviation']
+        distMatches = [i for i in disty_map['Search Abbreviation']
                        if i in distName]
         if len(distMatches) == 1:
             # Find and input corrected distributor name.
-            mloc = distMap['Search Abbreviation'] == distMatches[0]
-            corrDist = distMap[mloc].iloc[0]['Corrected Dist']
+            mloc = disty_map['Search Abbreviation'] == distMatches[0]
+            corrDist = disty_map[mloc].iloc[0]['Corrected Dist']
             running_com.loc[row, 'Distributor'] = corrDist
         elif not distName:
             running_com.loc[row, 'Distributor'] = ''
@@ -825,8 +815,8 @@ def main(filepaths, path_to_running_com, field_mappings):
             entries_need_fixing.loc[row, 'Date Added'] = datetime.datetime.now().date()
 
         # Update progress every 100 rows.
-        if (row - runComLen) % 100 == 0 and row > runComLen:
-            print('Done with row ' '{:,.0f}'.format(row - runComLen))
+        if (row - run_com_len) % 100 == 0 and row > run_com_len:
+            print('Done with row ' '{:,.0f}'.format(row - run_com_len))
     # %% Clean up the finalized data.
     # Reorder columns to match the desired layout in column_names.
     running_com.fillna('', inplace=True)
