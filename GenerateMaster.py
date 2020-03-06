@@ -188,13 +188,11 @@ def process_by_principal(princ, sheet, sheet_name, disty_map):
         try:
             sheet['Invoice Number']
         except KeyError:
-            print('Found no Invoice Numbers on this sheet.\n'
-                  '---')
+            print('Found no Invoice Numbers on this sheet.\n---')
             invNum = False
         if extCost and not invDol:
             # Sometimes the Totals are written in the Part Number column.
-            sheet.drop(sheet[sheet['Part Number'] == 'Totals'].index,
-                       inplace=True)
+            sheet.drop(sheet[sheet['Part Number'] == 'Totals'].index, inplace=True)
             sheet.reset_index(drop=True, inplace=True)
             # These commissions are paid on cost.
             sheet['Paid-On Revenue'] = sheet['Ext. Cost']
@@ -204,14 +202,11 @@ def process_by_principal(princ, sheet, sheet_name, disty_map):
             if os.path.exists(look_dir + '\\Mill-Max Invoice Log.xlsx'):
                 MMaxLog = pd.read_excel(look_dir + '\\Mill-Max Invoice Log.xlsx',
                                         dtype=str).fillna('')
-                print('Looking up part numbers from invoice log.\n'
-                      '---')
+                print('Looking up part numbers from invoice log.\n---')
             else:
                 print('No Mill-Max Invoice Log found!\n'
-                      'Please make sure the Invoice Log is in the '
-                      'Commission Lookup directory.\n'
-                      'Skipping tab.\n'
-                      '---')
+                      'Please make sure the Invoice Log is in the Commission Lookup directory.\n'
+                      'Skipping tab.\n---')
                 return
             # Input part number from Mill-Max Invoice Log.
             for row in sheet.index:
@@ -275,51 +270,19 @@ def process_by_principal(princ, sheet, sheet_name, disty_map):
                       '---')
                 return
         sheet['Comm Source'] = 'Resale'
-    # --------------------------
-    # RF360 special processing.
-    # --------------------------
-    if princ == 'QRF':
+    # -------------------------------------------------
+    # Generic special processing for a few principals.
+    # -------------------------------------------------
+    if princ in ['QRF', 'GAN', 'SUR', 'XMO', 'TRI']:
         try:
             sheet['Paid-On Revenue'] = sheet['Invoiced Dollars']
         except KeyError:
             pass
         sheet['Comm Source'] = 'Resale'
-    # ------------------------
-    # INF special processing.
-    # ------------------------
-    if princ == 'INF':
-        sheet['Comm Source'] = 'Resale'
-    # ------------------------
-    # LAT special processing.
-    # ------------------------
-    if princ == 'LAT':
-        sheet['Comm Source'] = 'Resale'
-    # ------------------------
-    # SUR special processing.
-    # ------------------------
-    if princ == 'SUR':
-        try:
-            sheet['Paid-On Revenue'] = sheet['Invoiced Dollars']
-        except KeyError:
-            pass
-        sheet['Comm Source'] = 'Resale'
-    # ------------------------
-    # XMO special processing.
-    # ------------------------
-    if princ == 'XMO':
-        try:
-            sheet['Paid-On Revenue'] = sheet['Invoiced Dollars']
-        except KeyError:
-            pass
-        sheet['Comm Source'] = 'Resale'
-    # ------------------------
-    # TRI special processing.
-    # ------------------------
-    if princ == 'TRI':
-        try:
-            sheet['Paid-On Revenue'] = sheet['Invoiced Dollars']
-        except KeyError:
-            pass
+    # ---------------------------
+    # INF/LAT special processing.
+    # ---------------------------
+    if princ in ['INF', 'LAT']:
         sheet['Comm Source'] = 'Resale'
 
 
@@ -411,11 +374,9 @@ def main(filepaths, path_to_running_com, field_mappings):
     # --------------------------------------------------------------
     if os.path.exists(look_dir + '\\distributorLookup.xlsx'):
         try:
-            disty_map = pd.read_excel(look_dir + '\\distributorLookup.xlsx',
-                                    'Distributors')
+            disty_map = pd.read_excel(look_dir + '\\distributorLookup.xlsx', 'Distributors')
         except XLRDError:
-            print('---\n'
-                  'Error reading sheet name for distributorLookup.xlsx!\n'
+            print('---\nError reading sheet name for distributorLookup.xlsx!\n'
                   'Please make sure the main tab is named Distributors.\n'
                   '*Program terminated*')
             return
@@ -423,14 +384,12 @@ def main(filepaths, path_to_running_com, field_mappings):
         disty_mapCols = ['Corrected Dist', 'Search Abbreviation']
         missing_cols = [i for i in disty_mapCols if i not in list(disty_map)]
         if missing_cols:
-            print('The following columns were not detected in '
-                  'distributorLookup.xlsx:\n%s' %
+            print('The following columns were not detected in distributorLookup.xlsx:\n%s' %
                   ', '.join(map(str, missing_cols))
                   + '\n*Program terminated*')
             return
     else:
-        print('---\n'
-              'No distributor lookup file found!\n'
+        print('---\nNo distributor lookup file found!\n'
               'Please make sure distributorLookup.xlsx is in the directory.\n'
               '*Program terminated*')
         return
@@ -549,8 +508,7 @@ def main(filepaths, path_to_running_com, field_mappings):
             process_by_principal(principal, sheet, sheet_name, disty_map)
             # Drop entries with emtpy part number or reported customer.
             try:
-                sheet.drop(sheet[sheet['Part Number'] == ''].index,
-                           inplace=True)
+                sheet.drop(sheet[sheet['Part Number'] == ''].index, inplace=True)
                 sheet.reset_index(drop=True, inplace=True)
             except KeyError:
                 pass
@@ -568,13 +526,11 @@ def main(filepaths, path_to_running_com, field_mappings):
             elif 'Actual Comm Paid' not in list(sheet):
                 # Tab has no commission data, so it is ignored.
                 print('No commission dollars column found on this tab.\n'
-                      'Skipping tab.\n'
-                      '-')
+                      'Skipping tab.\n-')
             elif 'Part Number' not in list(sheet):
                 # Tab has no paart number data, so it is ignored.
                 print('No part number column found on this tab.\n'
-                      'Skipping tab.\n'
-                      '-')
+                      'Skipping tab.\n-')
             elif 'Invoice Date' not in list(sheet):
                 # Tab has no date column, so report and exit.
                 print('No Invoice Date column found for this tab.\n'
@@ -584,14 +540,12 @@ def main(filepaths, path_to_running_com, field_mappings):
             else:
                 # Report the number of rows that have part numbers.
                 totalRows = sum(sheet['Part Number'] != '')
-                print('Found ' + str(totalRows) + ' entries in the tab '
-                      + sheet_name + ' with valid part numbers.'
-                                    '\n----------------------------------')
+                print('Found ' + str(totalRows) + ' entries in the tab ' + sheet_name
+                      + ' with valid part numbers.\n' + '-'*35)
                 # Remove entries with no commissions dollars.
                 # Coerce entries with bad data (non-numeric gets 0).
-                sheet['Actual Comm Paid'] = pd.to_numeric(
-                    sheet['Actual Comm Paid'],
-                    errors='coerce').fillna(0)
+                sheet['Actual Comm Paid'] = pd.to_numeric(sheet['Actual Comm Paid'],
+                                                          errors='coerce').fillna(0)
                 sheet = sheet[sheet['Actual Comm Paid'] != 0]
 
                 # Add 'From File' column to track where data came from.
@@ -624,8 +578,7 @@ def main(filepaths, path_to_running_com, field_mappings):
                           '-')
 
         # Show total commissions.
-        print('Total commissions for this file: '
-              '${:,.2f}'.format(totalComm))
+        print('Total commissions for this file: ${:,.2f}'.format(totalComm))
         # Append filename and total commissions to Files Processed sheet.
         currentDate = datetime.datetime.now().date()
         newFile = pd.DataFrame({'Filename': [filename], 'Total Commissions': [totalComm],
