@@ -29,7 +29,7 @@ def preprocess_by_principal(princ, sheet, sheet_name):
 
     This function modifies a dataframe inplace.
     """
-    # Initialize the renameDict in case it doesn't get set later.
+    # Initialize the rename_dict in case it doesn't get set later.
     rename_dict = {}
     # ------------------------------
     # Osram special pre-processing.
@@ -73,7 +73,7 @@ def preprocess_by_principal(princ, sheet, sheet_name):
     elif princ == 'XMO':
         rename_dict = {'Amount': 'Commission', 'Commission Due': 'Unmapped'}
         sheet.rename(columns=rename_dict, inplace=True)
-    # Return the renameDict for future use in the matched raw file.
+    # Return the rename_dict for future use in the matched raw file.
     if rename_dict:
         print('The following columns were renamed automatically on this sheet:')
         [print(i + ' --> ' + j) for i, j in zip(rename_dict.keys(), rename_dict.values())]
@@ -112,9 +112,7 @@ def process_by_principal(princ, sheet, sheet_name, disty_map):
             # These are paid on resale.
             sheet['Comm Source'] = 'Resale'
             print('Columns added from Abracon special processing:\n'
-                  'Commission Rate, Paid-On Revenue, '
-                  'Actual Comm Paid\n'
-                  '---')
+                  'Commission Rate, Paid-On Revenue, Actual Comm Paid\n---')
         elif 'MoComm' in sheet_name:
             # Fill down Distributor for their grouping scheme.
             sheet['Reported Distributor'].replace('', np.nan, inplace=True)
@@ -129,14 +127,11 @@ def process_by_principal(princ, sheet, sheet_name, disty_map):
             comRate = round(comPaid / revenue, 3)
             sheet['Commission Rate'] = comRate
             print('Columns added from Abracon special processing:\n'
-                  'Commission Rate\n'
-                  '---')
+                  'Commission Rate\n---')
         else:
             print('Sheet not recognized!\n'
-                  'Make sure the tab name contains either MoComm or Adj '
-                  'in the name.\n'
-                  'Continuing without extra ABR processing.\n'
-                  '---')
+                  'Make sure the tab name contains either MoComm or Adj in the name.\n'
+                  'Continuing without extra ABR processing.\n---')
     # -------------------------
     # ISSI special processing.
     # -------------------------
@@ -200,8 +195,7 @@ def process_by_principal(princ, sheet, sheet_name, disty_map):
         elif 'Part Number' not in list(sheet) and invNum:
             # We need to load in the part number log.
             if os.path.exists(look_dir + '\\Mill-Max Invoice Log.xlsx'):
-                MMaxLog = pd.read_excel(look_dir + '\\Mill-Max Invoice Log.xlsx',
-                                        dtype=str).fillna('')
+                MMaxLog = pd.read_excel(look_dir + '\\Mill-Max Invoice Log.xlsx', dtype=str).fillna('')
                 print('Looking up part numbers from invoice log.\n---')
             else:
                 print('No Mill-Max Invoice Log found!\n'
@@ -238,18 +232,17 @@ def process_by_principal(princ, sheet, sheet_name, disty_map):
         # Only work with the Details tab.
         if sheet_name == 'Details' and extCost:
             print('Calculating commissions as 5% of Cost Ext.\n'
-                  'For Allied shipments, 4.9% of Cost Ext.\n'
-                  '---')
+                  'For Allied shipments, 4.9% of Cost Ext.\n---')
             # Revenue is from cost.
             sheet['Paid-On Revenue'] = sheet['Ext. Cost']
             for row in sheet.index:
-                extenCost = sheet.loc[row, 'Ext. Cost']
+                ext_cost = sheet.loc[row, 'Ext. Cost']
                 if sheet.loc[row, 'Reported Distributor'] == 'ALLIED':
                     sheet.loc[row, 'Commission Rate'] = 0.049
-                    sheet.loc[row, 'Actual Comm Paid'] = 0.049 * extenCost
+                    sheet.loc[row, 'Actual Comm Paid'] = 0.049 * ext_cost
                 else:
                     sheet.loc[row, 'Commission Rate'] = 0.05
-                    sheet.loc[row, 'Actual Comm Paid'] = 0.05 * extenCost
+                    sheet.loc[row, 'Actual Comm Paid'] = 0.05 * ext_cost
         sheet['Comm Source'] = 'Cost'
     # ----------------------------
     # Globtek special processing.
@@ -266,8 +259,7 @@ def process_by_principal(princ, sheet, sheet_name, disty_map):
                 sheet['Actual Comm Paid'] = sheet['Paid-On Revenue'] * 0.05
             except KeyError:
                 print('No Paid-On Revenue found, could not calculate '
-                      'Actual Comm Paid.\n'
-                      '---')
+                      'Actual Comm Paid.\n---')
                 return
         sheet['Comm Source'] = 'Resale'
     # -------------------------------------------------
@@ -346,6 +338,7 @@ def main(filepaths, path_to_running_com, field_mappings):
         print('No Running Commissions file provided. Starting a new one.')
         run_com_len = 0
         running_com = pd.DataFrame(columns=column_names)
+        entries_need_fixing = pd.DataFrame(columns=column_names)
         files_processed = pd.DataFrame(columns=['Filename', 'Total Commissions', 'Date Added', 'Paid Date'])
 
     # -------------------------------------------------------------------
@@ -408,7 +401,7 @@ def main(filepaths, path_to_running_com, field_mappings):
         fileNum += 1
         print('_' * 54 + '\nWorking on file: ' + filename + '\n' + '_' * 54)
         # Initialize total commissions for this file.
-        totalComm = 0
+        total_comm = 0
 
         # -------------------------------------------------------------------
         # Detect principal from filename, terminate if not on approved list.
@@ -435,10 +428,10 @@ def main(filepaths, path_to_running_com, field_mappings):
             sheet.replace('nan', '', inplace=True)
             # Create a duplicate of the sheet that stays unchanged, aside
             # from recording matches.
-            rawSheet = sheet.copy(deep=True)
+            raw_sheet = sheet.copy(deep=True)
             # Figure out if we've already added in the matches row.
             if filename.split('.')[0][-7:] != 'Matched':
-                rawSheet.index += 1
+                raw_sheet.index += 1
             # Strip whitespace from column names.
             sheet.rename(columns=lambda x: str(x).strip(), inplace=True)
             # Clear out unnamed columns. Attribute error means it's an empty
@@ -448,59 +441,50 @@ def main(filepaths, path_to_running_com, field_mappings):
             except AttributeError:
                 pass
             # Do specialized pre-processing tailored to principlal.
-            renameDict = preprocess_by_principal(principal, sheet, sheet_name)
+            rename_dict = preprocess_by_principal(principal, sheet, sheet_name)
             # Iterate over each column of data that we want to append.
-            for dataName in list(field_mappings):
+            for data_name in list(field_mappings):
                 # Grab list of names that the data could potentially be under.
-                nameList = field_mappings[dataName].dropna().tolist()
+                name_list = field_mappings[data_name].dropna().tolist()
                 # Look for a match in the sheet column names.
-                sheetColumns = list(sheet)
-                columnName = [val for val in sheetColumns if val in nameList]
-                # If we found too many columns that match,
-                # then rename the column in the sheet to the master name.
-                if len(columnName) > 1:
-                    print('Found multiple matches for ' + dataName
-                          + '\nMatching columns: %s' %
-                          ', '.join(map(str, columnName))
+                column_name = [val for val in sheet.columns if val in name_list]
+                # If we found too many columns that match, then rename the column in the sheet to the master name.
+                if len(column_name) > 1:
+                    print('Found multiple matches for ' + data_name
+                          + '\nMatching columns: %s' % ', '.join(map(str, column_name))
                           + '\nPlease fix column names and try again.\n'
                             '*Program terminated*')
                     return
-                elif len(columnName) == 1:
-                    sheet.rename(columns={columnName[0]: dataName},
-                                 inplace=True)
-                    if columnName[0] in renameDict.values():
-                        columnName[0] = [i for i in renameDict.keys()
-                                         if renameDict[i] == columnName[0]][0]
-                    rawSheet.loc[0, columnName[0]] = dataName
+                elif len(column_name) == 1:
+                    sheet.rename(columns={column_name[0]: data_name}, inplace=True)
+                    if column_name[0] in rename_dict.values():
+                        column_name[0] = [i for i in rename_dict.keys() if rename_dict[i] == column_name[0]][0]
+                    raw_sheet.loc[0, column_name[0]] = data_name
 
             # Replace the old raw data sheet with the new one.
-            rawSheet.sort_index(inplace=True)
-            new_data[sheet_name] = rawSheet
+            raw_sheet.sort_index(inplace=True)
+            new_data[sheet_name] = raw_sheet
 
             # Convert applicable columns to numeric.
-            numCols = ['Quantity', 'Ext. Cost', 'Invoiced Dollars',
-                       'Paid-On Revenue', 'Actual Comm Paid',
+            numCols = ['Quantity', 'Ext. Cost', 'Invoiced Dollars', 'Paid-On Revenue', 'Actual Comm Paid',
                        'Unit Cost', 'Unit Price']
             for col in numCols:
                 try:
-                    sheet[col] = pd.to_numeric(sheet[col],
-                                               errors='coerce').fillna('')
+                    sheet[col] = pd.to_numeric(sheet[col], errors='coerce').fillna('')
                 except KeyError:
                     pass
 
             # Fix Commission Rate if it got read in as a decimal.
-            pctCols = ['Commission Rate', 'Split Percentage',
-                       'Gross Rev Reduction', 'Shared Rev Tier Rate']
-            for pctCol in pctCols:
+            pct_cols = ['Commission Rate', 'Split Percentage', 'Gross Rev Reduction', 'Shared Rev Tier Rate']
+            for pct_col in pct_cols:
                 try:
                     # Remove '%' sign if present.
-                    col = sheet[pctCol].astype(str).map(lambda x: x.strip('%'))
+                    col = sheet[pct_col].astype(str).map(lambda x: x.strip('%'))
                     # Convert to numeric.
                     col = pd.to_numeric(col, errors='coerce')
-                    # Identify which entries are not decimal.
-                    notDec = col > 1
-                    col[notDec] = col[notDec] / 100
-                    sheet[pctCol] = col.fillna(0)
+                    # Identify and correct which entries are not decimal.
+                    col[col > 1] /= 100
+                    sheet[pct_col] = col.fillna(0)
                 except (KeyError, TypeError):
                     pass
 
@@ -519,8 +503,7 @@ def main(filepaths, path_to_running_com, field_mappings):
             if sheet.columns.duplicated().any():
                 dupes = sheet.columns[sheet.columns.duplicated()].unique()
                 print('Two items are being mapped to the same column!\n'
-                      'These columns contain duplicates: %s' %
-                      ', '.join(map(str, dupes))
+                      'These columns contain duplicates: %s' % ', '.join(map(str, dupes))
                       + '\n*Program terminated*')
                 return
             elif 'Actual Comm Paid' not in list(sheet):
@@ -528,7 +511,7 @@ def main(filepaths, path_to_running_com, field_mappings):
                 print('No commission dollars column found on this tab.\n'
                       'Skipping tab.\n-')
             elif 'Part Number' not in list(sheet):
-                # Tab has no paart number data, so it is ignored.
+                # Tab has no part number data, so it is ignored.
                 print('No part number column found on this tab.\n'
                       'Skipping tab.\n-')
             elif 'Invoice Date' not in list(sheet):
@@ -539,13 +522,11 @@ def main(filepaths, path_to_running_com, field_mappings):
                 return
             else:
                 # Report the number of rows that have part numbers.
-                totalRows = sum(sheet['Part Number'] != '')
-                print('Found ' + str(totalRows) + ' entries in the tab ' + sheet_name
+                total_rows = sum(sheet['Part Number'] != '')
+                print('Found ' + str(total_rows) + ' entries in the tab ' + sheet_name
                       + ' with valid part numbers.\n' + '-'*35)
                 # Remove entries with no commissions dollars.
-                # Coerce entries with bad data (non-numeric gets 0).
-                sheet['Actual Comm Paid'] = pd.to_numeric(sheet['Actual Comm Paid'],
-                                                          errors='coerce').fillna(0)
+                sheet['Actual Comm Paid'] = pd.to_numeric(sheet['Actual Comm Paid'], errors='coerce').fillna(0)
                 sheet = sheet[sheet['Actual Comm Paid'] != 0]
 
                 # Add 'From File' column to track where data came from.
@@ -554,34 +535,27 @@ def main(filepaths, path_to_running_com, field_mappings):
                 sheet['Principal'] = principal
 
                 # Find matching columns.
-                matchingColumns = [val for val in list(sheet)
-                                   if val in list(field_mappings)]
-                if len(matchingColumns) > 0:
+                matching_columns = [val for val in list(sheet) if val in list(field_mappings)]
+                if len(matching_columns) > 0:
                     # Sum commissions paid on sheet.
                     print('Commissions for this tab: '
-                          + '${:,.2f}'.format(sheet['Actual Comm Paid'].sum())
-                          + '\n-')
-                    totalComm += sheet['Actual Comm Paid'].sum()
+                          + '${:,.2f}'.format(sheet['Actual Comm Paid'].sum()) + '\n-')
+                    total_comm += sheet['Actual Comm Paid'].sum()
                     # Strip whitespace from all strings in dataframe.
-                    stringCols = [val for val in list(sheet)
-                                  if sheet[val].dtype == 'object']
+                    stringCols = [val for val in list(sheet) if sheet[val].dtype == 'object']
                     for col in stringCols:
-                        sheet[col] = sheet[col].fillna('').astype(str).map(
-                            lambda x: x.strip())
-
+                        sheet[col] = sheet[col].fillna('').astype(str).map(lambda x: x.strip())
                     # Append matching columns of data.
-                    appCols = matchingColumns + ['From File', 'Principal']
-                    running_com = running_com.append(sheet[appCols],
-                                                 ignore_index=True, sort=False)
+                    appCols = matching_columns + ['From File', 'Principal']
+                    running_com = running_com.append(sheet[appCols], ignore_index=True, sort=False)
                 else:
-                    print('Found no data on this tab. Moving on.\n'
-                          '-')
+                    print('Found no data on this tab. Moving on.\n-')
 
         # Show total commissions.
-        print('Total commissions for this file: ${:,.2f}'.format(totalComm))
+        print('Total commissions for this file: ${:,.2f}'.format(total_comm))
         # Append filename and total commissions to Files Processed sheet.
         currentDate = datetime.datetime.now().date()
-        newFile = pd.DataFrame({'Filename': [filename], 'Total Commissions': [totalComm],
+        newFile = pd.DataFrame({'Filename': [filename], 'Total Commissions': [total_comm],
                                 'Date Added': [currentDate], 'Paid Date': ['']})
         files_processed = files_processed.append(newFile, ignore_index=True, sort=False)
         # Save the matched raw data file.
@@ -596,8 +570,7 @@ def main(filepaths, path_to_running_com, field_mappings):
                   '*Program terminated*')
             return
         # Write the raw data file with matches.
-        writer = pd.ExcelWriter(match_dir + '\\' + fname, engine='xlsxwriter',
-                                datetime_format='mm/dd/yyyy')
+        writer = pd.ExcelWriter(match_dir + '\\' + fname, engine='xlsxwriter', datetime_format='mm/dd/yyyy')
         for tab in list(new_data):
             new_data[tab].to_excel(writer, sheet_name=tab, index=False)
             # Format and fit each column.
@@ -617,9 +590,6 @@ def main(filepaths, path_to_running_com, field_mappings):
 
     # Fill NaNs left over from appending.
     running_com.fillna('', inplace=True)
-    # Create the Entries Need Fixing dataframe (if not loaded in already).
-    if not path_to_running_com:
-        entries_need_fixing = pd.DataFrame(columns=list(running_com))
     # Find matches in Lookup Master and extract data from them.
     # Let us know how many rows are being processed.
     numRows = '{:,.0f}'.format(len(running_com) - run_com_len)
@@ -668,20 +638,16 @@ def main(filepaths, path_to_running_com, field_mappings):
                 running_com.loc[row, 'T-End Cust'] = fullMatch['T-End Cust']
                 running_com.loc[row, 'CM Split'] = fullMatch['CM Split']
                 # Update usage in lookup Master.
-                master_lookup.loc[fullMatch['index'],
-                                 'Last Used'] = datetime.datetime.now().date()
+                master_lookup.loc[fullMatch['index'], 'Last Used'] = datetime.datetime.now().date()
                 # Update OOT city if not already filled in.
                 if fullMatch['T-Name'][0:3] == 'OOT' and not fullMatch['City']:
-                    master_lookup.loc[fullMatch['index'],
-                                     'City'] = running_com.loc[row, 'City']
+                    master_lookup.loc[fullMatch['index'], 'City'] = running_com.loc[row, 'City']
             # If we found multiple matches, then fill in all the options.
             elif lookMatches > 1:
-                lookCols = ['CM Sales', 'Design Sales', 'T-Name', 'CM',
-                            'T-End Cust', 'CM Split']
+                lookCols = ['CM Sales', 'Design Sales', 'T-Name', 'CM', 'T-End Cust', 'CM Split']
                 # Write list of all unique entries for each column.
                 for col in lookCols:
-                    running_com.loc[row, col] = ', '.join(
-                        fullMatch[col].map(lambda x: str(x)).unique())
+                    running_com.loc[row, col] = ', '.join(fullMatch[col].map(lambda x: str(x)).unique())
 
         # -----------------------------------------------------------
         # Format the date correctly and fill in the Quarter Shipped.
@@ -702,11 +668,9 @@ def main(filepaths, path_to_running_com, field_mappings):
             # The date isn't recognized by the parser.
             dateError = True
         except KeyError:
-            print('---'
-                  'There is no Invoice Date column in Running Commissions!\n'
+            print('---\nThere is no Invoice Date column in Running Commissions!\n'
                   'Please check to make sure an Invoice Date column exists.\n'
-                  'Note: Spelling, whitespace, and capitalization matter.\n'
-                  '---')
+                  'Note: Spelling, whitespace, and capitalization matter.\n---')
             dateError = True
         # If no error found in date, fill in the month/year/quarter
         if not dateError:
@@ -734,8 +698,7 @@ def main(filepaths, path_to_running_com, field_mappings):
         distName = re.sub('[^a-zA-Z0-9]', '', repDist).lower()
 
         # Find matches for the distName in the Distributor Abbreviations.
-        distMatches = [i for i in disty_map['Search Abbreviation']
-                       if i in distName]
+        distMatches = [i for i in disty_map['Search Abbreviation'] if i in distName]
         if len(distMatches) == 1:
             # Find and input corrected distributor name.
             mloc = disty_map['Search Abbreviation'] == distMatches[0]
@@ -754,8 +717,7 @@ def main(filepaths, path_to_running_com, field_mappings):
         # The INF gets read in as infinity, so skip the principal column.
         cols.remove('Principal')
         for col in cols:
-            running_com.loc[row, col] = pd.to_numeric(running_com.loc[row, col],
-                                                    errors='ignore')
+            running_com.loc[row, col] = pd.to_numeric(running_com.loc[row, col], errors='ignore')
 
         # -----------------------------------------------------------------
         # If any data isn't found/parsed, copy over to Entries Need Fixing.
@@ -774,22 +736,17 @@ def main(filepaths, path_to_running_com, field_mappings):
     # Reorder columns to match the desired layout in column_names.
     running_com.fillna('', inplace=True)
     running_com = running_com.loc[:, column_names]
-    column_names.extend(['Distributor Matches', 'Lookup Master Matches',
-                        'Date Added', 'Running Com Index'])
+    column_names.extend(['Distributor Matches', 'Lookup Master Matches', 'Date Added', 'Running Com Index'])
     # Fix up the Entries Need Fixing file.
     entries_need_fixing = entries_need_fixing.loc[:, column_names]
     entries_need_fixing.reset_index(drop=True, inplace=True)
     entries_need_fixing.fillna('', inplace=True)
     # Make sure all the dates are formatted correctly.
-    running_com['Invoice Date'] = running_com['Invoice Date'].map(
-        lambda x: form_date(x))
-    entries_need_fixing['Invoice Date'] = entries_need_fixing['Invoice Date'].map(
-        lambda x: form_date(x))
+    running_com['Invoice Date'] = running_com['Invoice Date'].map(lambda x: form_date(x))
+    entries_need_fixing['Invoice Date'] = entries_need_fixing['Invoice Date'].map(lambda x: form_date(x))
     entries_need_fixing['Date Added'] = entries_need_fixing['Date Added'].map(lambda x: form_date(x))
-    master_lookup['Last Used'] = master_lookup['Last Used'].map(
-        lambda x: form_date(x))
-    master_lookup['Date Added'] = master_lookup['Date Added'].map(
-        lambda x: form_date(x))
+    master_lookup['Last Used'] = master_lookup['Last Used'].map(lambda x: form_date(x))
+    master_lookup['Date Added'] = master_lookup['Date Added'].map(lambda x: form_date(x))
     # %% Get ready to save files.
     # Check if the files we're going to save are open already.
     currentTime = time.strftime('%Y-%m-%d-%H%M')
@@ -797,8 +754,7 @@ def main(filepaths, path_to_running_com, field_mappings):
     fname2 = out_dir + '\\Entries Need Fixing ' + currentTime + '.xlsx'
     fname3 = look_dir + '\\Lookup Master - Current.xlsx'
     if save_error(fname1, fname2, fname3):
-        print('---\n'
-              'One or more of these files are currently open in Excel:\n'
+        print('---\nOne or more of these files are currently open in Excel:\n'
               'Running Commissions, Entries Need Fixing, Lookup Master.\n'
               'Please close these files and try again.\n'
               '*Program terminated*')
@@ -808,22 +764,19 @@ def main(filepaths, path_to_running_com, field_mappings):
     writer1 = pd.ExcelWriter(fname1, engine='xlsxwriter',
                              datetime_format='mm/dd/yyyy')
     running_com.to_excel(writer1, sheet_name='Master', index=False)
-    files_processed.to_excel(writer1, sheet_name='Files Processed',
-                            index=False)
+    files_processed.to_excel(writer1, sheet_name='Files Processed', index=False)
     # Format everything in Excel.
     table_format(running_com, 'Master', writer1)
     table_format(files_processed, 'Files Processed', writer1)
 
     # Write the Needs Fixing file.
-    writer2 = pd.ExcelWriter(fname2, engine='xlsxwriter',
-                             datetime_format='mm/dd/yyyy')
+    writer2 = pd.ExcelWriter(fname2, engine='xlsxwriter', datetime_format='mm/dd/yyyy')
     entries_need_fixing.to_excel(writer2, sheet_name='Data', index=False)
     # Format everything in Excel.
     table_format(entries_need_fixing, 'Data', writer2)
 
     # Write the Lookup Master.
-    writer3 = pd.ExcelWriter(fname3, engine='xlsxwriter',
-                             datetime_format='mm/dd/yyyy')
+    writer3 = pd.ExcelWriter(fname3, engine='xlsxwriter', datetime_format='mm/dd/yyyy')
     master_lookup.to_excel(writer3, sheet_name='Lookup', index=False)
     # Format everything in Excel.
     table_format(master_lookup, 'Lookup', writer3)
