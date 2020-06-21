@@ -22,34 +22,34 @@ def table_format(sheet_data, sheet_name, workbook):
     sheet = workbook.sheets[sheet_name]
     sheet.freeze_panes(1, 0)
     # Set the autofilter for the sheet.
-    sheet.autofilter(0, 0, sheet_data.shape[0], sheet_data.shape[1]-1)
+    sheet.autofilter(0, 0, sheet_data.shape[0], sheet_data.shape[1] - 1)
     # Set document formatting.
-    docFormat = workbook.book.add_format({'font': 'Calibri', 'font_size': 11})
-    acctFormat = workbook.book.add_format({'font': 'Calibri', 'font_size': 11, 'num_format': 44})
-    commaFormat = workbook.book.add_format({'font': 'Calibri', 'font_size': 11, 'num_format': 3})
+    doc_format = workbook.book.add_format({'font': 'Calibri', 'font_size': 11})
+    accounting_format = workbook.book.add_format({'font': 'Calibri', 'font_size': 11, 'num_format': 44})
+    comma_format = workbook.book.add_format({'font': 'Calibri', 'font_size': 11, 'num_format': 3})
     # Format and fit each column.
     i = 0
     # Columns which get shrunk down in reports.
-    hideCols = ['Technology', 'Excel Part Link', 'Report Part Nbr Link', 'MFG Part Description', 'Focus',
-                'Part Class Name', 'Vendor ID', 'Invoice Detail Nbr', 'Assigned Account Rep',
-                'Recipient', 'DKLI Report Date', 'Invoice Date Group', 'Comments', 'Sales Channel']
-    coreCols = ['Must Contact', 'End Product', 'How Contacted', 'Information for Digikey']
+    hidden_cols = ['Technology', 'Excel Part Link', 'Report Part Nbr Link', 'MFG Part Description', 'Focus',
+                   'Part Class Name', 'Vendor ID', 'Invoice Detail Nbr', 'Assigned Account Rep',
+                   'Recipient', 'DKLI Report Date', 'Invoice Date Group', 'Comments', 'Sales Channel']
+    core_cols = ['Must Contact', 'End Product', 'How Contacted', 'Information for Digikey']
     for col in sheet_data.columns:
-        acctCols = ['Unit Price', 'Invoiced Dollars']
-        if col in acctCols:
-            formatting = acctFormat
+        accounting_cols = ['Unit Price', 'Invoiced Dollars']
+        if col in accounting_cols:
+            formatting = accounting_format
         elif col == 'Quantity':
-            formatting = commaFormat
+            formatting = comma_format
         else:
-            formatting = docFormat
-        maxWidth = max(len(str(val)) for val in sheet_data[col].values)
+            formatting = doc_format
+        max_width = max(len(str(val)) for val in sheet_data[col].values)
         # Set maximum column width at 50.
-        maxWidth = min(maxWidth, 50)
-        if col in hideCols:
-            maxWidth = 0
-        elif col in coreCols:
-            maxWidth = 25
-        sheet.set_column(i, i, maxWidth+0.8, formatting)
+        max_width = min(max_width, 50)
+        if col in hidden_cols:
+            max_width = 0
+        elif col in core_cols:
+            max_width = 25
+        sheet.set_column(i, i, max_width+0.8, formatting)
         i += 1
     # Set the autofilter for the sheet.
     sheet.autofilter(0, 0, sheet_data.shape[0], sheet_data.shape[1]-1)
@@ -83,8 +83,7 @@ def main(filepaths):
     try:
         input_data = [pd.read_excel(i) for i in filepaths]
     except XLRDError:
-        print('---\nError reading in files!\n'
-              '*Program Terminated*')
+        print('---\nError reading in files!\n*Program Terminated*')
         return
 
     # -----------------------------------------------
@@ -146,8 +145,8 @@ def main(filepaths):
                 customer_mappings.loc[match_id, 'Salesperson'] = salesperson
             elif not cust_match.any():
                 # New customer (no match), so append to mappings.
-                newCust = pd.DataFrame({'Root Customer': [cust], 'Salesperson': [salesperson]})
-                customer_mappings = customer_mappings.append(newCust, ignore_index=True, sort=False)
+                new_cust = pd.DataFrame({'Root Customer': [cust], 'Salesperson': [salesperson]})
+                customer_mappings = customer_mappings.append(new_cust, ignore_index=True, sort=False)
             else:
                 print('There appears to be a duplicate customer in rootCustomerMappings:\n'
                       + str(cust) + '\nPlease trim to one entry and try again.'

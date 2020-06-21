@@ -2,39 +2,39 @@ from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from reportlab.pdfbase.pdfmetrics import stringWidth
 import locale
+from datetime import date
 
 
-def pdfReport(salesperson, data, priorComm, priorDue, salesDraw):
+def pdf_report(salesperson, data, prior_comm, priorDue, salesDraw):
     locale.setlocale(locale.LC_ALL, '')
 
     # Initialize report pdf.
-    report = canvas.Canvas('Quarterly Sales Report - '
-                           + salesperson + '.pdf', pagesize=letter)
+    report = canvas.Canvas('Quarterly Sales Report - ' + salesperson + '.pdf', pagesize=letter)
     report.setFont('Helvetica', 12)
-    reportDate = '9/1/2019'
+    report_date = date.today().strftime('%m/%d/%Y')
 
     # Header.
     report.drawImage('TAARCOM.png', 505, 715, 100, 100)
-    priorCommStr = locale.currency(priorComm, grouping=True)
+    prior_comm_str = locale.currency(prior_comm, grouping=True)
     priorDueStr = locale.currency(priorDue, grouping=True)
-    priorCommWidth = stringWidth(priorCommStr, 'Helvetica', 10)
-    dateWidth = stringWidth(reportDate, 'Helvetica', 12)
+    prior_commWidth = stringWidth(prior_comm_str, 'Helvetica', 10)
+    dateWidth = stringWidth(report_date, 'Helvetica', 12)
     report.drawString(20, 750, 'QUARTERLY SALES REPORT')
     report.drawString(20, 735, 'TAARCOM, INC.')
-    report.drawString(600-dateWidth, 705, reportDate)
+    report.drawString(600-dateWidth, 705, report_date)
     report.drawString(20, 705, 'SALESPERSON: ' + salesperson)
     report.setLineWidth(2)
     report.line(20, 700, 600, 700)
     report.setFont('Helvetica-Bold', 10)
     report.drawString(20, 680, 'Balance due prior month:')
-    report.drawString(455-priorCommWidth, 680, 'Commissions paid last cycle:')
+    report.drawString(455-prior_commWidth, 680, 'Commissions paid last cycle:')
     report.drawString(20, 645, 'Manufacturer')
     report.drawString(250, 645, 'Months')
     report.drawString(540, 655, 'Salesperson')
     report.drawString(540, 645, 'Commission')
     report.setFont('Helvetica', 10)
     report.drawString(145, 680, priorDueStr)
-    report.drawString(600-priorCommWidth, 680, priorCommStr)
+    report.drawString(600-prior_commWidth, 680, prior_comm_str)
 
     # Keep track of the full principal names.
     princDict = {'ABR': 'Abracon', 'ATS': 'Advanced Thermal Solutions',

@@ -3,13 +3,9 @@ import numpy as np
 import time
 import datetime
 import os
-import re
-import sys
-import shutil
 from dateutil.parser import parse
-from RCExcelTools import tab_save_prep, form_date, save_error, PivotTables
+from RCExcelTools import tab_save_prep, save_error, PivotTables
 from FileLoader import load_salespeople_info, load_com_master, load_run_com, load_acct_list, load_lookup_master
-from xlrd import XLRDError
 # from PDFReportGenerator import pdfReport
 
 # Set the numerical columns.
@@ -55,7 +51,7 @@ def get_sales_comm_data(salesperson, input_data, sales_info):
         else:
             split = 1
         sales_data.loc[row, 'Actual Comm Paid'] *= split
-        sales_data.loc[row, 'Sales Commission'] = comm_pct*sales_data.loc[row, 'Actual Comm Paid']
+        sales_data.loc[row, 'Sales Commission'] = comm_pct * sales_data.loc[row, 'Actual Comm Paid']
     sales_data.reset_index(drop=True, inplace=True)
     return sales_data
 
@@ -97,12 +93,10 @@ def create_quarterly_report(comm_data, comm_qtr, salespeople, sales_info):
     # ---------------------------------------------------------------------------
     # Build the tab with commissions broken down by salesperson, then principal.
     # ---------------------------------------------------------------------------
-    sales_tab = pd.DataFrame(columns=['Salesperson', 'Principal', 'Actual Comm Paid',
-                                      'Sales Commission'])
+    sales_tab = pd.DataFrame(columns=['Salesperson', 'Principal', 'Actual Comm Paid', 'Sales Commission'])
     row = 0
     for person in salespeople:
-        sales_data = get_sales_comm_data(salesperson=person, input_data=comm_data,
-                                         sales_info=sales_info)
+        sales_data = get_sales_comm_data(salesperson=person, input_data=comm_data, sales_info=sales_info)
         sales_tab.loc[row, 'Salesperson'] = person
         sales_tab.loc[row, 'Actual Comm Paid'] = np.sum(sales_data['Actual Comm Paid'])
         sales_tab.loc[row, 'Sales Commission'] = np.sum(sales_data['Sales Commission'])
@@ -142,9 +136,9 @@ def main(run_com):
     # Load in the supporting files, exit if any aren't found.
     # --------------------------------------------------------
     sales_info = load_salespeople_info(file_dir=look_dir)
-    acctList = load_acct_list(file_dir=look_dir)
+    acct_list = load_acct_list(file_dir=look_dir)
     com_mast, master_files = load_com_master(file_dir=data_dir)
-    if any([acctList.empty, sales_info.empty, com_mast.empty, master_files.empty]):
+    if any([acct_list.empty, sales_info.empty, com_mast.empty, master_files.empty]):
         print('*Program Terminated*')
         return
     # Grab the column list for use later.
@@ -171,8 +165,7 @@ def main(run_com):
             print('*Program Terminated*')
             return
         # Fill in the Sales Report Date in Running Commissions.
-        running_com.loc[running_com['Sales Report Date'] == '',
-                        'Sales Report Date'] = time.strftime('%m/%d/%Y')
+        running_com.loc[running_com['Sales Report Date'] == '', 'Sales Report Date'] = time.strftime('%m/%d/%Y')
         # -------------------------------------------------------------------
         # Check to make sure new files aren't already in Commissions Master.
         # -------------------------------------------------------------------
@@ -233,8 +226,8 @@ def main(run_com):
             current_month = 1
             current_year += 1
         # Tag the new data as the current month/year.
-        currentYrMo = str(current_year) + '-' + str(current_month)
-        running_com['Comm Month'] = currentYrMo
+        current_yr_mo = str(current_year) + '-' + str(current_month)
+        running_com['Comm Month'] = current_yr_mo
         # No add-on since this is the first RC run.
         RC_addon = ''
     else:
@@ -243,8 +236,8 @@ def main(run_com):
         # -----------------------------------------------------------------
         current_month = last_month.month
         current_year = last_month.year
-        currentYrMo = str(current_year) + '-' + str(current_month)
-        running_com = com_mast[com_mast['Comm Month'] == currentYrMo]
+        current_yr_mo = str(current_year) + '-' + str(current_month)
+        running_com = com_mast[com_mast['Comm Month'] == current_yr_mo]
         # Indicate that this is a rerun.
         RC_addon = ' (Rerun)'
         print('No new RC supplied. Reporting on latest quarter in the Commissions Master.')
@@ -268,11 +261,11 @@ def main(run_com):
     # Tag the data by current Design Sales in the Account List.
     for cust in revenue_data['T-End Cust'].unique():
         # Check for a single match in Account List.
-        if sum(acctList['ProperName'] == cust) == 1:
+        if sum(acct_list['ProperName'] == cust) == 1:
             try:
-                sales = acctList[acctList['ProperName'] == cust]['SLS'].iloc[0]
-                custID = revenue_data[revenue_data['T-End Cust'] == cust].index
-                revenue_data.loc[custID, 'CDS'] = sales
+                sales = acct_list[acct_list['ProperName'] == cust]['SLS'].iloc[0]
+                cust_ID = revenue_data[revenue_data['T-End Cust'] == cust].index
+                revenue_data.loc[cust_ID, 'CDS'] = sales
             except KeyError:
                 print('Error reading column names in Account List!\n'
                       'Please make sure the columns ProperName and SLS are in '
@@ -286,7 +279,7 @@ def main(run_com):
         if not revenue_data.loc[row, 'CDS']:
             revenue_data.loc[row, 'CDS'] = revenue_data.loc[row, 'CM Sales']
     # Also grab the section of the data that aren't 80/20 splits.
-    splitDat = revenue_data[revenue_data['CM Split'] > 20]
+    split_data = revenue_data[revenue_data['CM Split'] > 20]
 
     # ---------------------------------------------------------
     # Combine and tag commission data for the current quarter.
@@ -331,14 +324,14 @@ def main(run_com):
         # Grab the raw data for this salesperson's design sales.
         design_data = revenue_data[revenue_data['CDS'] == person]
         # Also grab any nonstandard splits.
-        cm_data = splitDat[splitDat['CM Sales'] == person]
+        cm_data = split_data[split_data['CM Sales'] == person]
         cm_data = cm_data[cm_data['CDS'] != person]
         design_data = design_data.append(cm_data, ignore_index=True, sort=False)
         # Get rid of empty Quarter Shipped lines.
         design_data = design_data[design_data['Quarter Shipped'] != '']
         design_data.reset_index(drop=True, inplace=True)
         # Write the raw data to a file.
-        filename = (reports_dir + '\\' + person + ' Revenue Report - ' + currentYrMo + '.xlsx')
+        filename = (reports_dir + '\\' + person + ' Revenue Report - ' + current_yr_mo + '.xlsx')
         writer = pd.ExcelWriter(filename, engine='xlsxwriter', datetime_format='mm/dd/yyyy')
         tab_save_prep(writer=writer, data=design_data, sheet_name='Raw Data')
         # Try saving the report.
@@ -364,12 +357,12 @@ def main(run_com):
         qq_condensed.loc[0, 'Sales Commission'] = sum(qq_data['Sales Commission'])
         qq_condensed.loc[0, 'Design Sales'] = 'QQ'
         qq_condensed.loc[0, 'Principal'] = 'VARIOUS (MISC POOL)'
-        qq_condensed.loc[0, 'Comm Month'] = currentYrMo
+        qq_condensed.loc[0, 'Comm Month'] = current_yr_mo
         # Scale down the QQ entries based on the salesperson's share.
-        QQperson = sales_info[sales_info['Sales Initials'] == person]
+        qq_person = sales_info[sales_info['Sales Initials'] == person]
         try:
-            QQscale = QQperson['QQ Split'].iloc[0]
-            qq_condensed.loc[0, 'Sales Commission'] *= QQscale / 100
+            qq_scale = qq_person['QQ Split'].iloc[0]
+            qq_condensed.loc[0, 'Sales Commission'] *= qq_scale / 100
         except IndexError:
             # No salesperson QQ split found, so empty it out.
             qq_condensed = pd.DataFrame(columns=master_cols)
@@ -382,15 +375,15 @@ def main(run_com):
         # Append the data.
         final_report = final_report.append(qq_condensed, ignore_index=True, sort=False)
         # Total up the Paid-On Revenue and Actual/Sales Commission.
-        reportTot = pd.DataFrame(columns=['Salesperson', 'Paid-On Revenue',
-                                          'Actual Comm Paid', 'Sales Commission'], index=[0])
-        reportTot['Salesperson'] = person
-        reportTot['Principal'] = ''
-        actComm = sum(final_report['Actual Comm Paid'])
+        report_total = pd.DataFrame(columns=['Salesperson', 'Paid-On Revenue', 'Actual Comm Paid',
+                                             'Sales Commission'], index=[0])
+        report_total['Salesperson'] = person
+        report_total['Principal'] = ''
+        actual_comm = sum(final_report['Actual Comm Paid'])
         sales_comm = sum(final_report['Sales Commission'])
-        reportTot['Paid-On Revenue'] = sum(final_report['Paid-On Revenue'])
-        reportTot['Actual Comm Paid'] = actComm
-        reportTot['Sales Commission'] = sales_comm
+        report_total['Paid-On Revenue'] = sum(final_report['Paid-On Revenue'])
+        report_total['Actual Comm Paid'] = actual_comm
+        report_total['Sales Commission'] = sales_comm
         # Build table of sales by principal.
         princ_tab = data_by_princ_tab(input_data=final_report)
         # Append to Sales Totals.
@@ -401,7 +394,7 @@ def main(run_com):
         sales_tot = sales_tot.append(princ_tab[princ_tab['Principal'] != 'Grand Total'],
                                      ignore_index=True, sort=False)
         # Write report to file.
-        filename = (reports_dir + '\\' + person + ' Commission Report - ' + currentYrMo + '.xlsx')
+        filename = (reports_dir + '\\' + person + ' Commission Report - ' + current_yr_mo + '.xlsx')
         writer = pd.ExcelWriter(filename, engine='xlsxwriter', datetime_format='mm/dd/yyyy')
         # Prepare the data in Excel.
         tab_save_prep(writer=writer, data=princ_tab, sheet_name='Principals')
@@ -449,7 +442,7 @@ def main(run_com):
     # Create the overall Revenue Report.
     # -----------------------------------
     # Write the raw data to a file.
-    filename = (reports_dir + '\\' + 'Revenue Report - ' + currentYrMo + RC_addon + '.xlsx')
+    filename = (reports_dir + '\\' + 'Revenue Report - ' + current_yr_mo + RC_addon + '.xlsx')
     writer = pd.ExcelWriter(filename, engine='xlsxwriter', datetime_format='mm/dd/yyyy')
     tab_save_prep(writer=writer, data=revenue_data, sheet_name='Raw Data')
     # Try saving the report.
@@ -473,33 +466,33 @@ def main(run_com):
     # -------------------------------------------------------------------------
     if run_com:
         # Don't copy over INDIVIDUAL, MISC, or ALLOWANCE.
-        noCopy = ['INDIVIDUAL', 'UNKNOWN', 'ALLOWANCE']
-        paredID = [i for i in running_com.index
-                   if not any(j in running_com.loc[i, 'T-End Cust'].upper() for j in noCopy)]
-        for row in paredID:
+        no_copy = ['INDIVIDUAL', 'UNKNOWN', 'ALLOWANCE']
+        pared_ID = [i for i in running_com.index
+                   if not any(j in running_com.loc[i, 'T-End Cust'].upper() for j in no_copy)]
+        for row in pared_ID:
             # First match reported customer.
-            repCust = str(running_com.loc[row, 'Reported Customer']).lower()
-            POSCust = look_mast['Reported Customer'].map(lambda x: str(x).lower())
-            custMatches = look_mast[repCust == POSCust]
+            reported_cust = str(running_com.loc[row, 'Reported Customer']).lower()
+            POS_cust = look_mast['Reported Customer'].map(lambda x: str(x).lower())
+            cust_matches = look_mast[reported_cust == POS_cust]
             # Now match part number.
-            partNum = str(running_com.loc[row, 'Part Number']).lower()
+            part_num = str(running_com.loc[row, 'Part Number']).lower()
             PPN = look_mast['Part Number'].map(lambda x: str(x).lower())
-            fullMatches = custMatches[PPN == partNum]
+            full_matches = cust_matches[PPN == part_num]
             # Figure out if this entry is a duplicate of any existing entry.
             duplicate = False
-            for matchID in fullMatches.index:
-                matchCols = ['CM Sales', 'Design Sales', 'CM', 'T-Name', 'T-End Cust']
-                duplicate = all(fullMatches.loc[matchID, i] == running_com.loc[row, i] for i in matchCols)
+            for matchID in full_matches.index:
+                match_cols = ['CM Sales', 'Design Sales', 'CM', 'T-Name', 'T-End Cust']
+                duplicate = all(full_matches.loc[matchID, i] == running_com.loc[row, i] for i in match_cols)
                 if duplicate:
                     break
             # If it's not an exact duplicate, add it to the Lookup Master.
             if not duplicate:
-                lookupCols = ['CM Sales', 'Design Sales', 'CM Split', 'CM', 'T-Name', 'T-End Cust',
-                              'Reported Customer', 'Principal', 'Part Number', 'City']
-                newLookup = running_com.loc[row, lookupCols]
-                newLookup['Date Added'] = datetime.datetime.now().date()
-                newLookup['Last Used'] = datetime.datetime.now().date()
-                look_mast = look_mast.append(newLookup, ignore_index=True)
+                lookup_cols = ['CM Sales', 'Design Sales', 'CM Split', 'CM', 'T-Name', 'T-End Cust',
+                               'Reported Customer', 'Principal', 'Part Number', 'City']
+                new_lookup = running_com.loc[row, lookup_cols]
+                new_lookup['Date Added'] = datetime.datetime.now().date()
+                new_lookup['Last Used'] = datetime.datetime.now().date()
+                look_mast = look_mast.append(new_lookup, ignore_index=True)
 
         # --------------------------------------------------------------
         # Append the new Running Commissions to the Commissions Master.
@@ -515,7 +508,7 @@ def main(run_com):
     # ----------------
     filename_1 = data_dir + '\\Commissions Master.xlsx'
     filename_2 = look_dir + '\\Lookup Master - Current.xlsx'
-    filename_3 = reports_dir + '\\Running Commissions ' + currentYrMo + ' Reported' + RC_addon + '.xlsx'
+    filename_3 = reports_dir + '\\Running Commissions ' + current_yr_mo + ' Reported' + RC_addon + '.xlsx'
 
     if save_error(filename_1, filename_2, filename_3):
         print('---\nOne or more of these files are currently open in Excel:\n'
