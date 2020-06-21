@@ -243,7 +243,9 @@ def main(filepath):
               '\n*Program Terminated*')
         return
 
+    # ----------------------------------------------------------------------
     # Go through each entry in the Insight file and look for a sales match.
+    # ----------------------------------------------------------------------
     for row in insFile.index:
         # Check for individuals and CMs and note them in comments.
         if 'contract' in insFile.loc[row, 'Root Customer Class'].lower():
@@ -253,11 +255,9 @@ def main(filepath):
             city = insFile.loc[row, 'Customer City'].upper()
             # Check for matches to city and assign salesperson.
             for person in salesInfo.index:
-                cities = salesInfo['Territory Cities'][person].upper().split(
-                        ', ')
+                cities = salesInfo['Territory Cities'][person].upper().split(', ')
                 if city in cities:
-                    insFile.loc[row, 'Sales'] = salesInfo.loc[person,
-                                                              'Sales Initials']
+                    insFile.loc[row, 'Sales'] = salesInfo.loc[person, 'Sales Initials']
             # Done, so move to next line in file.
             continue
         cust = insFile.loc[row, 'Root Customer..']
@@ -285,16 +285,13 @@ def main(filepath):
                 # Look up based on city and fill in.
                 city = insFile.loc[row, 'Customer City'].upper()
                 for person in salesInfo.index:
-                    cities = salesInfo['Territory Cities'][
-                            person].upper().split(', ')
+                    cities = salesInfo['Territory Cities'][person].upper().split(', ')
                     if city in cities:
-                        insFile.loc[row, 'Sales'] = salesInfo.loc[
-                                person, 'Sales Initials']
+                        insFile.loc[row, 'Sales'] = salesInfo.loc[person, 'Sales Initials']
 
         # Convert applicable entries to numeric.
         for col in list(insFile):
-            insFile.loc[row, col] = pd.to_numeric(insFile.loc[row, col],
-                                                  errors='ignore')
+            insFile.loc[row, col] = pd.to_numeric(insFile.loc[row, col], errors='ignore')
 
     # Reorder columns and fill NaNs.
     insFile = insFile.loc[:, colNames].fillna('')
@@ -310,8 +307,7 @@ def main(filepath):
         return
 
     # Write the Digikey Insight file, which now contains salespeople.
-    writer1 = pd.ExcelWriter(fname1, engine='xlsxwriter',
-                             datetime_format='mm/dd/yyyy')
+    writer1 = pd.ExcelWriter(fname1, engine='xlsxwriter', datetime_format='mm/dd/yyyy')
     insFile.to_excel(writer1, sheet_name='Data', index=False)
     # Format in Excel.
     tableFormat(insFile, 'Data', writer1)
@@ -319,6 +315,5 @@ def main(filepath):
     # Save the files.
     writer1.save()
 
-    print('---\n'
-          'Salespeople successfully looked up!\n'
+    print('---\nSalespeople successfully looked up!\n'
           'New file saved as:\n ' + fname1 + '\n+Program Complete+')
