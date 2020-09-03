@@ -1,6 +1,6 @@
 import pandas as pd
 import os
-from xlrd import XLRDError
+from FileLoader import load_acct_list, load_root_customer_mappings, load_salespeople_info
 
 
 def tableFormat(sheetData, sheetName, wbook):
@@ -84,107 +84,31 @@ def saveError(*excelFiles):
     return False
 
 
-# %% The main function.
 def main(filepath):
     """Looks up the salespeople for a Digikey Local Insight file.
 
     Arguments:
     filepath -- The filepath to the new Digikey Insight file.
     """
-
     # Set the directory paths to the server.
-    lookDir = 'Z:/Commissions Lookup/'
+    lookup_dir = 'Z:/Commissions Lookup/'
 
-    # --------------------------------------
     # Load the Root Customer Mappings file.
-    # --------------------------------------
-    if os.path.exists(lookDir + 'rootCustomerMappings.xlsx'):
-        try:
-            rootCustMap = pd.read_excel(lookDir + 'rootCustomerMappings.xlsx',
-                                        'Sales Lookup').fillna('')
-        except XLRDError:
-            print('---\n'
-                  'Error reading sheet name for rootCustomerMappings.xlsx!\n'
-                  'Please make sure the main tab is named Sales Lookup.\n'
-                  '*Program Terminated*')
-            return
-        # Check the column names.
-        rootMapCols = ['Root Customer', 'Salesperson']
-        missCols = [i for i in rootMapCols if i not in list(rootCustMap)]
-        if missCols:
-            print('The following columns were not detected in '
-                  'rootCustomerMappings.xlsx:\n%s' %
-                  ', '.join(map(str, missCols))
-                  + '\n*Program Terminated*')
-            return
-    else:
-        print('---\n'
-              'No Root Customer Mappings file found!\n'
-              'Please make sure rootCustomerMappings.xlsx'
-              'is in the directory.\n'
-              '*Program Terminated*')
-        return
+    root_cust_map = load_root_customer_mappings(lookup_dir)
 
-    # -----------------------------------
     # Load the Master Account List file.
-    # -----------------------------------
-    if os.path.exists(lookDir + 'Master Account List.xlsx'):
-        try:
-            mastAcct = pd.read_excel(lookDir + 'Master Account List.xlsx',
-                                     'Allacct').fillna('')
-        except XLRDError:
-            print('---\n'
-                  'Error reading sheet name for Master Account List.xlsx!\n'
-                  'Please make sure the main tab is named Allacct.\n'
-                  '*Program Terminated*')
-            return
-        # Check the column names.
-        mastCols = ['ProperName', 'SLS', 'CITY']
-        missCols = [i for i in mastCols if i not in list(mastAcct)]
-        if missCols:
-            print('The following columns were not detected in '
-                  'Master Account List.xlsx:\n%s' %
-                  ', '.join(map(str, missCols))
-                  + '\nRemember to delete lines before the column '
-                  'headers.\n*Program Terminated*')
-            return
-    else:
-        print('---\n'
-              'No Master Account List file found!\n'
-              'Please make sure the Master Account List '
-              'is in the directory.\n'
-              '*Program Terminated*')
-        return
+    acct_list = load_acct_list(lookup_dir)
 
-    # --------------------------------
     # Load the Salesperson Info file.
-    # --------------------------------
-    if os.path.exists(lookDir + 'Salespeople Info.xlsx'):
-        try:
-            salesInfo = pd.read_excel(lookDir + 'Salespeople Info.xlsx',
-                                      'Info').fillna('')
-        except XLRDError:
-            print('---\n'
-                  'Error reading sheet name for Salespeople Info.xlsx!\n'
-                  'Please make sure the main tab is named Info.\n'
-                  '*Program terminated*')
-            return
-    else:
-        print('---\n'
-              'No Salespeople Info file found!\n'
-              'Please make sure Salespeople Info.xlsx is in the directory.\n'
-              '*Program terminated*')
-        return
+    salespeople_info = load_salespeople_info(lookup_dir)
     # Check for duplicate cities in the Salespeople Info.
-    cityList = [i.split(', ') for i in salesInfo['Territory Cities']
-                if i != '']
-    cityList = [j for i in cityList for j in i]
-    duplicates = set(x for x in cityList if cityList.count(x) > 1)
+    city_list = [i.split(', ') for i in salespeople_info['Territory Cities'] if i != '']
+    city_list = [j for i in city_list for j in i]
+    duplicates = set(x for x in city_list if city_list.count(x) > 1)
     if duplicates:
-        print('The following cities are in the Salespeople Info file multiple '
-              'times:\n%s' % ', '.join(map(str, duplicates))
-              + '\nPlease remove the extras and try again.\n'
-              '*Program Terminated*')
+        print('The following cities are in the Salespeople Info file multiple times:\n%s'
+              % ', '.join(map(str, duplicates)) + '\nPlease remove the extras and try again.'
+              '\n*Program Terminated*')
         return
 
     print('Looking up salespeople...')
@@ -192,51 +116,48 @@ def main(filepath):
     # Strip the root off of the filepath and leave just the filename.
     filename = os.path.basename(filepath)
 
-    # Load the Insight file.
-    insFile = pd.read_excel(filepath, None)
-    insFile = insFile[list(insFile)[0]].fillna('')
+    # Load the Digikey Insight file.
+    insight_file = pd.read_excel(filepath, None)
+    insight_file = insight_file[list(insight_file)[0]].fillna('')
 
     # -------------------------------------------
     # Clean up and match the new Digikey LI file.
     # -------------------------------------------
     # Switch the datetime objects over to strings.
-    for col in list(insFile):
+    for col in list(insight_file):
         try:
-            insFile[col] = insFile[col].dt.strftime('%Y-%m-%d')
+            insight_file[col] = insight_file[col].dt.strftime('%Y-%m-%d')
         except AttributeError:
             pass
 
     # Get the column list and input new columns.
-    colNames = list(insFile)
-    colNames[4:4] = ['Sales']
-    colNames[6:6] = ['Must Contact', 'End Product', 'How Contacted',
-                     'Information for Digikey']
-    colNames[19:19] = ['Invoiced Dollars']
-    colNames[25:25] = ['City on Acct List']
-    colNames.extend(['TAARCOM Comments', 'New T-Cust'])
+    col_names = list(insight_file)
+    col_names[4:4] = ['Sales']
+    col_names[6:6] = ['Must Contact', 'End Product', 'How Contacted', 'Information for Digikey']
+    col_names[19:19] = ['Invoiced Dollars']
+    col_names[25:25] = ['City on Acct List']
+    col_names.extend(['TAARCOM Comments', 'New T-Cust'])
 
     # Calculate the Invoiced Dollars.
     try:
-        qty = pd.to_numeric(insFile['Qty Shipped'], errors='coerce')
-        price = pd.to_numeric(insFile['Unit Price'], errors='coerce')
-        insFile['Invoiced Dollars'] = qty*price
-        insFile['Invoiced Dollars'].fillna('', inplace=True)
+        qty = pd.to_numeric(insight_file['Qty Shipped'], errors='coerce')
+        price = pd.to_numeric(insight_file['Unit Price'], errors='coerce')
+        insight_file['Invoiced Dollars'] = qty*price
+        insight_file['Invoiced Dollars'].fillna('', inplace=True)
     except KeyError:
         print('Error calculating Invoiced Dollars.\n'
-              'Please make sure Qty Shipped and Unit Price columns '
-              'are in the report.\n'
-              '(Also check that the top line of the file contains '
-              'the column names).\n'
+              'Please make sure Qty Shipped and Unit Price columns are in the report.\n'
+              '(Also check that the top line of the file contains the column names).\n'
               '*Program Terminated*')
         return
 
     # Remove the 'Send' column, if present.
     try:
-        colNames.remove('Send')
+        col_names.remove('Send')
     except ValueError:
         pass
 
-    if 'Root Customer..' not in colNames:
+    if 'Root Customer..' not in col_names:
         print('Did not find a column named "Root Customer.."\n'
               'Please make sure this column exists and try again.\n'
               'Note: also check that row 1 of the file is the column headers.'
@@ -246,71 +167,71 @@ def main(filepath):
     # ----------------------------------------------------------------------
     # Go through each entry in the Insight file and look for a sales match.
     # ----------------------------------------------------------------------
-    for row in insFile.index:
+    for row in insight_file.index:
         # Check for individuals and CMs and note them in comments.
-        if 'contract' in insFile.loc[row, 'Root Customer Class'].lower():
-            insFile.loc[row, 'TAARCOM Comments'] = 'Contract Manufacturer'
-        if 'individual' in insFile.loc[row, 'Root Customer Class'].lower():
-            insFile.loc[row, 'TAARCOM Comments'] = 'Individual'
-            city = insFile.loc[row, 'Customer City'].upper()
+        if 'contract' in insight_file.loc[row, 'Root Customer Class'].lower().rstrip():
+            insight_file.loc[row, 'TAARCOM Comments'] = 'Contract Manufacturer'
+        if 'individual' in insight_file.loc[row, 'Root Customer Class'].lower().rstrip():
+            insight_file.loc[row, 'TAARCOM Comments'] = 'Individual'
+            city = insight_file.loc[row, 'Customer City'].upper().rstrip()
             # Check for matches to city and assign salesperson.
-            for person in salesInfo.index:
-                cities = salesInfo['Territory Cities'][person].upper().split(', ')
+            for person in salespeople_info.index:
+                cities = salespeople_info['Territory Cities'][person].upper().split(', ')
                 if city in cities:
-                    insFile.loc[row, 'Sales'] = salesInfo.loc[person, 'Sales Initials']
+                    insight_file.loc[row, 'Sales'] = salespeople_info.loc[person, 'Sales Initials']
             # Done, so move to next line in file.
             continue
-        cust = insFile.loc[row, 'Root Customer..']
+        cust = str(insight_file.loc[row, 'Root Customer..']).lower().rstrip()
         # Check for customer match in account list.
-        acctMatch = mastAcct[mastAcct['ProperName'] == cust]
-        if cust and len(acctMatch) == 1:
+        acct_list_match = acct_list[acct_list['ProperName'].lower().rstrip() == cust]
+        if cust and len(acct_list_match) == 1:
             # Check if the city is different from our account list.
-            acctCity = acctMatch['CITY'].iloc[0].upper().split(', ')
-            if insFile.loc[row, 'Customer City'].upper() not in acctCity:
-                if len(acctCity) > 1:
-                    acctCity = ', '.join(acctCity)
-                insFile.loc[row, 'City on Acct List'] = acctCity
+            acct_list_city = acct_list_match['CITY'].iloc[0].upper().split(', ')
+            if insight_file.loc[row, 'Customer City'].upper().rstrip() not in acct_list_city:
+                if len(acct_list_city) > 1:
+                    acct_list_city = ', '.join(acct_list_city)
+                insight_file.loc[row, 'City on Acct List'] = acct_list_city
             # Copy over salesperson.
-            insFile.loc[row, 'Sales'] = acctMatch['SLS'].iloc[0]
+            insight_file.loc[row, 'Sales'] = acct_list_match['SLS'].iloc[0]
         else:
-            # Look for match in rootCustMap file.
-            salesMatch = rootCustMap['Root Customer'] == cust
-            match = rootCustMap[salesMatch]
+            # Look for match in root_cust_map file.
+            sales_match = str(root_cust_map['Root Customer']).lower().rstrip() == str(cust).lower().rstrip()
+            match = root_cust_map[sales_match]
             if cust and len(match) == 1:
                 # Match to salesperson if exactly one match is found.
-                insFile.loc[row, 'Sales'] = match['Salesperson'].iloc[0]
+                insight_file.loc[row, 'Sales'] = match['Salesperson'].iloc[0]
+            elif len(match) > 1:
+                print('Multiple entries found in rootCustomerMappings for %s!' % cust)
             else:
                 # Record that the customer is new.
-                insFile.loc[row, 'New T-Cust'] = 'Y'
+                insight_file.loc[row, 'New T-Cust'] = 'Y'
                 # Look up based on city and fill in.
-                city = insFile.loc[row, 'Customer City'].upper()
-                for person in salesInfo.index:
-                    cities = salesInfo['Territory Cities'][person].upper().split(', ')
+                city = insight_file.loc[row, 'Customer City'].upper().rstrip()
+                for person in salespeople_info.index:
+                    cities = salespeople_info['Territory Cities'][person].upper().split(', ')
                     if city in cities:
-                        insFile.loc[row, 'Sales'] = salesInfo.loc[person, 'Sales Initials']
+                        insight_file.loc[row, 'Sales'] = salespeople_info.loc[person, 'Sales Initials']
 
         # Convert applicable entries to numeric.
-        for col in list(insFile):
-            insFile.loc[row, col] = pd.to_numeric(insFile.loc[row, col], errors='ignore')
+        for col in list(insight_file):
+            insight_file.loc[row, col] = pd.to_numeric(insight_file.loc[row, col], errors='ignore')
 
     # Reorder columns and fill NaNs.
-    insFile = insFile.loc[:, colNames].fillna('')
+    insight_file = insight_file.loc[:, col_names].fillna('')
 
     # Try saving the files, exit with error if any file is currently open.
-    outDir = 'C:/Users/kerry/Documents/disty data/Digikey/'
-    fname1 = outDir + filename[:-5] + ' With Salespeople.xlsx'
+    output_dir = 'C:/Users/kerry/Documents/disty data/Digikey/'
+    fname1 = output_dir + filename[:-5] + ' With Salespeople.xlsx'
     if saveError(fname1):
-        print('---\n'
-              'One or more files are currently open in Excel!\n'
-              'Please close the files and try again.\n'
-              '*Program Terminated*')
+        print('---\nOne or more files are currently open in Excel!\n'
+              'Please close the files and try again.\n*Program Terminated*')
         return
 
     # Write the Digikey Insight file, which now contains salespeople.
     writer1 = pd.ExcelWriter(fname1, engine='xlsxwriter', datetime_format='mm/dd/yyyy')
-    insFile.to_excel(writer1, sheet_name='Data', index=False)
+    insight_file.to_excel(writer1, sheet_name='Data', index=False)
     # Format in Excel.
-    tableFormat(insFile, 'Data', writer1)
+    tableFormat(insight_file, 'Data', writer1)
 
     # Save the files.
     writer1.save()

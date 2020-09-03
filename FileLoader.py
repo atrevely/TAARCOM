@@ -151,8 +151,7 @@ def load_acct_list(file_dir):
     except FileNotFoundError:
         print('---\nNo Account List file found!')
     except XLRDError:
-        print('---\nAccount List tab names incorrect!\n'
-              'Make sure the main tab is named Allacct.')
+        print('---\nAccount List tab names incorrect!\nMake sure the main tab is named Allacct.')
     return acct_list
 
 
