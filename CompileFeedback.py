@@ -197,18 +197,17 @@ def main(filepaths):
     # Write the finished Insight file.
     writer1 = pd.ExcelWriter(fname1, engine='xlsxwriter', datetime_format='mm/dd/yyyy')
     final_data.to_excel(writer1, sheet_name='Master', index=False)
-    # Format as table in Excel.
     table_format(final_data, 'Master', writer1)
     # Write the Insight Master file.
     writer2 = pd.ExcelWriter(fname2, engine='xlsxwriter', datetime_format='mm/dd/yyyy')
     digikey_master.to_excel(writer2, sheet_name='Master', index=False)
     files_processed.to_excel(writer2, sheet_name='Files Processed', index=False)
-    # Format as table in Excel.
     table_format(digikey_master, 'Master', writer2)
     table_format(files_processed, 'Files Processed', writer2)
     # Write the new rootCustomerMappings file.
     writer3 = pd.ExcelWriter(fname3, engine='xlsxwriter', datetime_format='mm/dd/yyyy')
     customer_mappings.to_excel(writer3, sheet_name='Sales Lookup', index=False)
+    table_format(customer_mappings, 'Sales Lookup', writer3)
     # Save the files.
     writer1.save()
     writer2.save()
