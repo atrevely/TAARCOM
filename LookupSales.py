@@ -183,7 +183,7 @@ def main(filepath):
             continue
         cust = str(insight_file.loc[row, 'Root Customer..']).lower().rstrip()
         # Check for customer match in account list.
-        acct_list_match = acct_list[acct_list['ProperName'].lower().rstrip() == cust]
+        acct_list_match = acct_list[acct_list['ProperName'].astype(str).str.lower() == cust]
         if cust and len(acct_list_match) == 1:
             # Check if the city is different from our account list.
             acct_list_city = acct_list_match['CITY'].iloc[0].upper().split(', ')
@@ -195,7 +195,7 @@ def main(filepath):
             insight_file.loc[row, 'Sales'] = acct_list_match['SLS'].iloc[0]
         else:
             # Look for match in root_cust_map file.
-            sales_match = str(root_cust_map['Root Customer']).lower().rstrip() == str(cust).lower().rstrip()
+            sales_match = root_cust_map['Root Customer'].astype(str).str.lower() == cust
             match = root_cust_map[sales_match]
             if cust and len(match) == 1:
                 # Match to salesperson if exactly one match is found.

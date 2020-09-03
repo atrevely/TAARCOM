@@ -130,15 +130,15 @@ def main(filepaths):
     # --------------------------------------
     for row in final_data.index:
         # Get root customer and salesperson.
-        cust = final_data.loc[row, 'Root Customer..']
+        cust = str(final_data.loc[row, 'Root Customer..']).lower().rstrip()
         salesperson = final_data.loc[row, 'Sales']
         try:
-            indiv = final_data.loc[row, 'Root Customer Class'].lower() == 'individual'
+            indiv = final_data.loc[row, 'Root Customer Class'].lower().rstrip() == 'individual'
         except AttributeError:
             indiv = False
         if cust and salesperson and not indiv:
             # Find match in rootCustomerMappings.
-            cust_match = customer_mappings['Root Customer'] == cust
+            cust_match = customer_mappings['Root Customer'].astype(str).str.lower() == cust
             if sum(cust_match) == 1:
                 match_id = customer_mappings[cust_match].index
                 # Input (possibly new) salesperson.
@@ -189,10 +189,10 @@ def main(filepaths):
     new_file.loc[0, 'Filename'] = fname1
     files_processed = files_processed.append(new_file, ignore_index=True, sort=False)
     fname2 = data_dir + '\\Digikey Insight Master.xlsx'
-    if save_error(fname1, fname2):
-        print('---\nInsight Master and/or Final is currently open in Excel!\n'
-              'Please close the file and try again.\n'
-              '*Program Terminated*')
+    fname3 = look_dir + '\\rootCustomerMappings.xlsx'
+    if save_error(fname1, fname2, fname3):
+        print('---\nInsight Master, Insight Final, or rootCustomerMapings is currently open in Excel!\n'
+              'Please close the file(s) and try again.\n*Program Terminated*')
         return
     # Write the finished Insight file.
     writer1 = pd.ExcelWriter(fname1, engine='xlsxwriter', datetime_format='mm/dd/yyyy')
@@ -206,9 +206,12 @@ def main(filepaths):
     # Format as table in Excel.
     table_format(digikey_master, 'Master', writer2)
     table_format(files_processed, 'Files Processed', writer2)
+    # Write the new rootCustomerMappings file.
+    writer3 = pd.ExcelWriter(fname3, engine='xlsxwriter', datetime_format='mm/dd/yyyy')
+    customer_mappings.to_excel(writer3, sheet_name='Sales Lookup', index=False)
     # Save the files.
     writer1.save()
     writer2.save()
-    print('---\nUpdates completed successfully!\n'
-          '---\nDigikey Master updated.\n'
-          '+Program Complete+')
+    writer3.save()
+    print('---\nUpdates completed successfully!\n---\nDigikey Master updated.\n'
+          'rootCustomerMappings updated.\n+Program Complete+')
