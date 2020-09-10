@@ -9,6 +9,7 @@ import os.path
 import re
 import datetime
 from FileLoader import load_lookup_master, load_run_com, load_entries_need_fixing
+from FileSaver import prepare_save_file, save_files
 from RCExcelTools import table_format, save_error, form_date
 
 # Set the directory for the data input/output.
@@ -21,7 +22,7 @@ else:
     look_dir = os.getcwd()
     match_dir = os.getcwd()
 
-    
+
 def preprocess_by_principal(princ, sheet, sheet_name):
     """Do special pre-processing tailored to the principal input. Primarily,
     this involves renaming columns that would get looked up incorrectly
@@ -734,7 +735,8 @@ def main(filepaths, path_to_running_com, field_mappings):
     # Reorder columns to match the desired layout in column_names.
     running_com.fillna('', inplace=True)
     running_com = running_com.loc[:, column_names]
-    column_names.extend(['Distributor Matches', 'Lookup Master Matches', 'Date Added', 'Running Com Index'])
+    column_names.extend(['Distributor Matches', 'Lookup Master Matches', 'Date Added', 'Running Com Index',
+                         'Unique ID'])
     # Fix up the Entries Need Fixing file.
     entries_need_fixing = entries_need_fixing.loc[:, column_names]
     entries_need_fixing.reset_index(drop=True, inplace=True)
@@ -745,47 +747,18 @@ def main(filepaths, path_to_running_com, field_mappings):
     entries_need_fixing['Date Added'] = entries_need_fixing['Date Added'].map(lambda x: form_date(x))
     master_lookup['Last Used'] = master_lookup['Last Used'].map(lambda x: form_date(x))
     master_lookup['Date Added'] = master_lookup['Date Added'].map(lambda x: form_date(x))
-    # %% Get ready to save files.
-    # Check if the files we're going to save are open already.
+
+    # Get ready to save files.
     current_time = time.strftime('%Y-%m-%d-%H%M')
     fname1 = out_dir + '\\Running Commissions ' + current_time + '.xlsx'
     fname2 = out_dir + '\\Entries Need Fixing ' + current_time + '.xlsx'
     fname3 = look_dir + '\\Lookup Master - Current.xlsx'
-    if save_error(fname1, fname2, fname3):
-        print('---\nOne or more of these files are currently open in Excel:\n'
-              'Running Commissions, Entries Need Fixing, Lookup Master.\n'
-              'Please close these files and try again.\n'
-              '*Program terminated*')
-        return
+    writer1 = prepare_save_file(filename=fname1, tab_data=[running_com, files_processed],
+                                tab_names=['Master', 'Files Processed'])
+    writer2 = prepare_save_file(filename=fname2, tab_data=entries_need_fixing, tab_names='Data')
+    writer3 = prepare_save_file(filename=fname3, tab_data=master_lookup, tab_names='Lookup')
 
-    # Write the Running Commissions file.
-    writer1 = pd.ExcelWriter(fname1, engine='xlsxwriter',
-                             datetime_format='mm/dd/yyyy')
-    running_com.to_excel(writer1, sheet_name='Master', index=False)
-    files_processed.to_excel(writer1, sheet_name='Files Processed', index=False)
-    # Format everything in Excel.
-    table_format(running_com, 'Master', writer1)
-    table_format(files_processed, 'Files Processed', writer1)
-
-    # Write the Needs Fixing file.
-    writer2 = pd.ExcelWriter(fname2, engine='xlsxwriter', datetime_format='mm/dd/yyyy')
-    entries_need_fixing.to_excel(writer2, sheet_name='Data', index=False)
-    # Format everything in Excel.
-    table_format(entries_need_fixing, 'Data', writer2)
-
-    # Write the Lookup Master.
-    writer3 = pd.ExcelWriter(fname3, engine='xlsxwriter', datetime_format='mm/dd/yyyy')
-    master_lookup.to_excel(writer3, sheet_name='Lookup', index=False)
-    # Format everything in Excel.
-    table_format(master_lookup, 'Lookup', writer3)
-
-    # Save the files.
-    writer1.save()
-    writer2.save()
-    writer3.save()
-
-    print('---\nUpdates completed successfully!\n'
-          '---\nRunning Commissions updated.\n'
-          'Lookup Master updated.\n'
-          'Entries Need Fixing updated.\n'
-          '+Program Complete+')
+    success = save_files([writer1, writer2, writer3])
+    if success:
+        print('---\nUpdates completed successfully!\n---\nRunning Commissions updated.\n'
+              'Lookup Master updated.\nEntries Need Fixing updated.\n+Program Complete+')
