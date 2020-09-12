@@ -17,7 +17,7 @@ def prepare_save_file(filename, tab_data, tab_names):
     # Add each tab to the document.
     for data, sheet_name in zip(tab_data, tab_names):
         data.to_excel(writer, sheet_name=sheet_name, index=False)
-        table_format(filename, sheet_name, writer)
+        table_format(sheet_data=tab_data, sheet_name=sheet_name, workbook=writer)
     return writer
 
 
