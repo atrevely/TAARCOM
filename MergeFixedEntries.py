@@ -5,19 +5,19 @@ from dateutil.parser import parse
 import calendar
 import math
 import os.path
-from xlrd import XLRDError
+from FileLoader import load_entries_need_fixing, load_run_com, load_lookup_master
 from RCExcelTools import table_format, save_error, form_date
 
 # Set the directory for the data input/output.
 if os.path.exists('Z:\\'):
-    outDir = 'Z:\\MK Working Commissions'
-    lookDir = 'Z:\\Commissions Lookup'
+    out_dir = 'Z:\\MK Working Commissions'
+    look_dir = 'Z:\\Commissions Lookup'
 else:
-    outDir = os.getcwd()
-    lookDir = os.getcwd()
+    out_dir = os.getcwd()
+    look_dir = os.getcwd()
 
 
-def main(running_com):
+def main(run_com_path):
     """Replaces incomplete entries in Running Commissions with final versions.
 
     Entries in Running Commissions which need attention are copied to the
@@ -30,117 +30,29 @@ def main(running_com):
     entries when needed, and quarantining old entries that have not been
     used in 2+ years.
     """
-    # ----------------------------------------------
-    # Load up the current Running Commissions file.
-    # ----------------------------------------------
-    runningCom = pd.read_excel(running_com, 'Master', dtype=str)
-    # Convert applicable columns to numeric.
-    numCols = ['Quantity', 'Ext. Cost', 'Invoiced Dollars', 'Paid-On Revenue', 'Actual Comm Paid',
-               'Unit Cost', 'Unit Price', 'CM Split', 'Year', 'Sales Commission',
-               'Split Percentage', 'Commission Rate', 'Gross Rev Reduction', 'Shared Rev Tier Rate',
-               'CM Sales Comm', 'Design Sales Comm']
-    for col in numCols:
-        try:
-            runningCom[col] = pd.to_numeric(runningCom[col], errors='coerce').fillna('')
-        except KeyError:
-            pass
-    # Convert individual numbers to numeric in rest of columns.
-    mixedCols = [col for col in list(runningCom) if col not in numCols]
-    # Invoice/part numbers sometimes has leading zeros we'd like to keep.
-    mixedCols.remove('Invoice Number')
-    mixedCols.remove('Part Number')
-    # The INF gets read in as infinity, so skip the principal column.
-    mixedCols.remove('Principal')
-    for col in mixedCols:
-        runningCom[col] = runningCom[col].map(
-                lambda x: pd.to_numeric(x, errors='ignore'))
-    runningCom.replace('nan', '', inplace=True)
-    # Round the Actual Comm Paid field.
-    runningCom['Actual Comm Paid'] = runningCom['Actual Comm Paid'].map(lambda x: round(float(x), 2))
-    filesProcessed = pd.read_excel(running_com, 'Files Processed').fillna('')
-    comDate = running_com[-20:]
+    # Load up the necessary files.
+    running_com, files_processed = load_run_com(run_com_path)
+    com_date = run_com_path[-20:]
+    entries_need_fixing = load_entries_need_fixing(out_dir + '\\Entries Need Fixing ' + com_date)
+    lookup_master = load_lookup_master(look_dir)
     # Track commission dollars.
     try:
-        comm = pd.to_numeric(runningCom['Actual Comm Paid'],
-                             errors='raise').fillna(0)
-        totComm = sum(comm)
+        comm = pd.to_numeric(running_com['Actual Comm Paid'], errors='raise').fillna(0)
+        tot_com = sum(comm)
     except ValueError:
         print('Non-numeric entry detected in Actual Comm Paid!\n'
               'Check the Actual Comm Paid column for bad data and try again.\n'
               '*Program Teminated*')
         return
 
-    # --------------------------------------
-    # Load up the Entries Need Fixing file.
-    # --------------------------------------
-    if os.path.exists(outDir + '\\Entries Need Fixing ' + comDate):
-        try:
-            fixList = pd.read_excel(outDir + '\\Entries Need Fixing ' + comDate,
-                                    'Data', dtype=str)
-            # Convert entries to proper types, like above.
-            ENFnumCols = ['Distributor Matches', 'Lookup Master Matches',
-                          'Running Com Index']
-            numCols.extend(ENFnumCols)
-            for col in numCols:
-                try:
-                    fixList[col] = pd.to_numeric(fixList[col],
-                                                 errors='coerce').fillna('')
-                except KeyError:
-                    pass
-            for col in mixedCols:
-                fixList[col] = fixList[col].map(
-                        lambda x: pd.to_numeric(x, errors='ignore'))
-            fixList.replace('nan', '', inplace=True)
-            # Round the Actual Comm Paid field.
-            fixList['Actual Comm Paid'] = fixList['Actual Comm Paid'].map(
-                    lambda x: round(float(x), 2))
-        except XLRDError:
-            print('Error reading sheet name for Entries Need Fixing.xlsx!\n'
-                  'Please make sure the main tab is named Data.\n'
-                  '*Program Teminated*')
-            return
-    else:
-        print('No Entries Need Fixing file found!\n'
-              'Please make sure Entries Need Fixing ' + comDate
-              + ' is in the directory ' + outDir + '.\n'
-              '*Program Teminated*')
-        return
-
-    # ----------------------------------------------
-    # Read in the Master Lookup. Exit if not found.
-    # ----------------------------------------------
-    if os.path.exists(lookDir + '\\Lookup Master - Current.xlsx'):
-        mastLook = pd.read_excel(lookDir +
-                                 '\\Lookup Master - Current.xlsx').fillna('')
-        # Check the column names.
-        lookupCols = ['CM Sales', 'Design Sales', 'CM Split',
-                      'Reported Customer', 'CM', 'Part Number', 'T-Name',
-                      'T-End Cust', 'Last Used', 'Principal', 'City',
-                      'Date Added']
-        missCols = [i for i in lookupCols if i not in list(mastLook)]
-        if missCols:
-            print('The following columns were not detected in '
-                  'Lookup Master - Current.xlsx:\n%s' %
-                  ', '.join(map(str, missCols))
-                  + '\n*Program Teminated*')
-            return
-    else:
-        print('No Lookup Master found!\n'
-              'Please make sure Lookup Master - Current.xlsx is '
-              'in the directory.\n'
-              '*Program Teminated*')
-        return
-
     # ------------------------------
     # Load the Quarantined Lookups.
     # ------------------------------
-    if os.path.exists(lookDir + '\\Quarantined Lookups.xlsx'):
-        quarantined = pd.read_excel(lookDir +
-                                    '\\Quarantined Lookups.xlsx').fillna('')
+    if os.path.exists(look_dir + '\\Quarantined Lookups.xlsx'):
+        quarantined = pd.read_excel(look_dir + '\\Quarantined Lookups.xlsx').fillna('')
     else:
         print('No Quarantied Lookups file found!\n'
-              'Please make sure Quarantined Lookups.xlsx '
-              'is in the directory.\n'
+              'Please make sure Quarantined Lookups.xlsx is in the directory.\n'
               '*Program Teminated*')
         return
 
@@ -148,11 +60,11 @@ def main(running_com):
     # Get the data that's ready to be migrated.
     # ------------------------------------------
     # Grab the lines that have an End Customer.
-    endCustFixed = fixList[fixList['T-End Cust'] != '']
+    fixed_end_cust = entries_need_fixing[entries_need_fixing['T-End Cust'] != '']
     # Grab entries where salespeople are filled in.
-    CMSales = endCustFixed['CM Sales'].map(lambda x: len(x.strip()) == 2)
-    DesignSales = endCustFixed['Design Sales'].map(lambda x: len(x.strip()) == 2)
-    fixed = endCustFixed[[x or y for x, y in zip(CMSales, DesignSales)]]
+    cm_sales = fixed_end_cust['CM Sales'].map(lambda x: len(x.strip()) == 2)
+    design_sales = fixed_end_cust['Design Sales'].map(lambda x: len(x.strip()) == 2)
+    fixed = fixed_end_cust[[x or y for x, y in zip(cm_sales, design_sales)]]
     # Return if there's nothing fixed.
     if fixed.shape[0] == 0:
         print('No new fixed entries detected.\n'
@@ -161,121 +73,123 @@ def main(running_com):
               '*Program Teminated*')
         return
 
-    # %% Start the process of writing over fixed entries.
     print('Writing fixed entries...')
     # Go through each entry that's fixed and replace it in Running Commissions.
     for row in fixed.index:
         # Fill in the Sales Commission info.
-        salesComm = 0.45*fixed.loc[row, 'Actual Comm Paid']
-        fixed.loc[row, 'Sales Commission'] = salesComm
+        sales_com = 0.45 * fixed.loc[row, 'Actual Comm Paid']
+        fixed.loc[row, 'Sales Commission'] = sales_com
         if fixed.loc[row, 'CM Sales']:
             # Grab split with default to 20.
             split = fixed.loc[row, 'CM Split'] or 20
         else:
             # No CM Sales, so no split.
             split = 0
-        fixed.loc[row, 'CM Sales Comm'] = split*salesComm/100
-        fixed.loc[row, 'Design Sales Comm'] = (100 - split)*salesComm/100
+        fixed.loc[row, 'CM Sales Comm'] = split * sales_com / 100
+        fixed.loc[row, 'Design Sales Comm'] = (100 - split) * sales_com / 100
         # -------------------------------
         # Make sure the date makes sense.
         # -------------------------------
-        dateError = False
-        dateGiven = fixed.loc[row, 'Invoice Date']
+        date_error = False
+        date_given = fixed.loc[row, 'Invoice Date']
         # Check if the date is read in as a float/int, and convert to string.
-        if isinstance(dateGiven, (float, int)):
-            dateGiven = str(int(dateGiven))
+        if isinstance(date_given, (float, int)):
+            date_given = str(int(date_given))
         # Check if Pandas read it in as a Timestamp object.
         # If so, turn it back into a string (a bit roundabout, oh well).
-        elif isinstance(dateGiven, (pd.Timestamp,  datetime.datetime)):
-            dateGiven = str(dateGiven)
+        elif isinstance(date_given, (pd.Timestamp,  datetime.datetime)):
+            date_given = str(date_given)
         # Try parsing the date.
         try:
-            date = parse(dateGiven).date()
+            date = parse(date_given).date()
             # Make sure the date actually makes sense.
-            currentYear = int(time.strftime('%Y'))
-            if currentYear - date.year not in [0, 1]:
-                dateError = True
+            cuurent_year = int(time.strftime('%Y'))
+            if cuurent_year - date.year not in [0, 1]:
+                date_error = True
             else:
                 # Cast date format into mm/dd/yyyy.
                 fixed.loc[row, 'Invoice Date'] = date
                 # Fill in quarter/year/month data.
                 fixed.loc[row, 'Year'] = date.year
                 fixed.loc[row, 'Month'] = calendar.month_name[date.month][0:3]
-                Qtr = str(math.ceil(date.month/3))
-                fixed.loc[row, 'Quarter Shipped'] = (str(date.year) + 'Q' + Qtr)
+                qtr = str(math.ceil(date.month/3))
+                fixed.loc[row, 'Quarter Shipped'] = (str(date.year) + 'Q' + qtr)
         except (ValueError, TypeError):
             # The date isn't recognized by the parser.
-            dateError = True
+            date_error = True
         except KeyError:
             print('There is no Invoice Date column in Entries Need Fixing!\n'
                   'Please check to make sure an Invoice Date column exists.\n'
                   'Note: Spelling, whitespace, and capitalization matter.\n'
                   '---')
-            dateError = True
+            date_error = True
         # ---------------------------------------------------------------
         # If no error found in date, finish filling out the fixed entry.
         # ---------------------------------------------------------------
-        if not dateError:
+        if not date_error:
             # Check for match in commission dollars.
             try:
-                RCIndex = pd.to_numeric(fixed.loc[row, 'Running Com Index'], errors='raise')
+                id_match_loc = running_com[running_com['Unique ID'] == fixed.loc[row, 'Unique ID']].index.tolist()
+                if len(id_match_loc) == 0:
+                    print('WARNING! No match found for unique ID %s.' % fixed.loc[row, 'Unique ID'])
+                elif len(id_match_loc) > 1:
+                    print('WARNING! Multiple matches found for unique ID %s.' % fixed.loc[row, 'Unique ID'])
+                id_match_loc = id_match_loc[0]
             except ValueError:
-                print('Error reading Running Com Index!\n'
-                      'Make sure all values are numeric.\n'
+                print('Error reading Running Com Index!\nMake sure all values are numeric.\n'
                       '*Program Teminated*')
                 return
-            ENFcomm = fixed.loc[row, 'Actual Comm Paid']
-            RCcomm = runningCom.loc[RCIndex, 'Actual Comm Paid']
-            if RCcomm == ENFcomm:
+            enf_comm = fixed.loc[row, 'Actual Comm Paid']
+            rc_comm = running_com.loc[id_match_loc, 'Actual Comm Paid']
+            if rc_comm == enf_comm:
                 # Replace the Running Commissions entry with the fixed one.
-                runningCom.loc[RCIndex, :] = fixed.loc[row, list(runningCom)]
+                running_com.loc[id_match_loc, :] = fixed.loc[row, list(running_com)]
             else:
                 print('Mismatch in commission dollars found in Entries Need Fixing on row '
                       + str(row + 2) + '\n Check to make sure lines were not '
-                      'deleted from the Running Commissions.\n'
-                      '*Program Terminated*')
+                      'deleted from the Running Commissions.\n*Program Terminated*')
                 return
             # Delete the fixed entry from the Needs Fixing file.
-            fixList.drop(row, inplace=True)
+            entries_need_fixing.drop(row, inplace=True)
 
     # Make sure all the dates are formatted correctly.
-    runningCom['Invoice Date'] = runningCom['Invoice Date'].map(lambda x: form_date(x))
-    fixList['Invoice Date'] = fixList['Invoice Date'].map(lambda x: form_date(x))
-    mastLook['Last Used'] = mastLook['Last Used'].map(lambda x: form_date(x))
-    mastLook['Date Added'] = mastLook['Date Added'].map(lambda x: form_date(x))
+    running_com['Invoice Date'] = running_com['Invoice Date'].map(lambda x: form_date(x))
+    entries_need_fixing['Invoice Date'] = entries_need_fixing['Invoice Date'].map(lambda x: form_date(x))
+    lookup_master['Last Used'] = lookup_master['Last Used'].map(lambda x: form_date(x))
+    lookup_master['Date Added'] = lookup_master['Date Added'].map(lambda x: form_date(x))
     # Go through each column and convert applicable entries to numeric.
-    cols = list(runningCom)
+    cols = list(running_com)
     # Invoice number sometimes has leading zeros we'd like to keep.
     cols.remove('Invoice Number')
     # The INF gets read in as infinity, so skip the principal column.
     cols.remove('Principal')
     for col in cols:
-        runningCom[col] = pd.to_numeric(runningCom[col], errors='ignore')
-        fixList[col] = pd.to_numeric(fixList[col], errors='ignore')
+        running_com[col] = pd.to_numeric(running_com[col], errors='ignore')
+        entries_need_fixing[col] = pd.to_numeric(entries_need_fixing[col], errors='ignore')
     # Check to make sure commission dollars still match.
-    comm = pd.to_numeric(runningCom['Actual Comm Paid'],
+    comm = pd.to_numeric(running_com['Actual Comm Paid'],
                          errors='coerce').fillna(0)
-    if sum(comm) != totComm:
+    if sum(comm) != tot_com:
         print('Commission dollars do not match after fixing entries!\n'
               'Make sure Entries Need fixing aligns properly with Running Commissions.\n'
               'This error was potentially caused by adding or removing rows in either file.\n'
               '*Program Terminated*')
         return
     # Re-index the fix list and drop nans in Lookup Master.
-    fixList.reset_index(drop=True, inplace=True)
-    mastLook.fillna('', inplace=True)
+    entries_need_fixing.reset_index(drop=True, inplace=True)
+    lookup_master.fillna('', inplace=True)
     # Check for entries that are too old and quarantine them.
     twoYearsAgo = datetime.datetime.today() - datetime.timedelta(days=720)
     try:
-        lastUsed = mastLook['Last Used'].map(lambda x: pd.Timestamp(x))
+        lastUsed = lookup_master['Last Used'].map(lambda x: pd.Timestamp(x))
         lastUsed = lastUsed.map(lambda x: x.strftime('%Y%m%d'))
     except (AttributeError, ValueError):
         print('Error reading one or more dates in the Lookup Master!\n'
               'Make sure the Last Used column is all MM/DD/YYYY format.\n---')
         return
     dateCutoff = lastUsed < twoYearsAgo.strftime('%Y%m%d')
-    oldEntries = mastLook[dateCutoff].reset_index(drop=True)
-    mastLook = mastLook[~dateCutoff].reset_index(drop=True)
+    oldEntries = lookup_master[dateCutoff].reset_index(drop=True)
+    lookup_master = lookup_master[~dateCutoff].reset_index(drop=True)
     if oldEntries.shape[0] > 0:
         # Record the date we quarantined the entries.
         oldEntries.loc[:, 'Date Quarantined'] = datetime.datetime.now().date()
@@ -286,10 +200,10 @@ def main(running_com):
         print(str(len(oldEntries)) + ' entries quarantied for being more than 2 years old.\n---')
 
     # Check if the files we're going to save are open already.
-    fname1 = outDir + '\\Running Commissions ' + comDate
-    fname2 = outDir + '\\Entries Need Fixing ' + comDate
-    fname3 = lookDir + '\\Lookup Master - Current.xlsx'
-    fname4 = lookDir + '\\Quarantined Lookups.xlsx'
+    fname1 = out_dir + '\\Running Commissions ' + com_date
+    fname2 = out_dir + '\\Entries Need Fixing ' + com_date
+    fname3 = look_dir + '\\Lookup Master - Current.xlsx'
+    fname4 = look_dir + '\\Quarantined Lookups.xlsx'
     if save_error(fname1, fname2, fname3, fname4):
         print('---\nOne or more files are currently open in Excel!\n'
               'Please close the files and try again.\n'
@@ -298,23 +212,23 @@ def main(running_com):
 
     # Write the Running Commissions file.
     writer1 = pd.ExcelWriter(fname1, engine='xlsxwriter', datetime_format='mm/dd/yyyy')
-    runningCom.to_excel(writer1, sheet_name='Master', index=False)
-    filesProcessed.to_excel(writer1, sheet_name='Files Processed', index=False)
+    running_com.to_excel(writer1, sheet_name='Master', index=False)
+    files_processed.to_excel(writer1, sheet_name='Files Processed', index=False)
     # Format as table in Excel.
-    table_format(runningCom, 'Master', writer1)
-    table_format(filesProcessed, 'Files Processed', writer1)
+    table_format(running_com, 'Master', writer1)
+    table_format(files_processed, 'Files Processed', writer1)
 
     # Write the Needs Fixing file.
     writer2 = pd.ExcelWriter(fname2, engine='xlsxwriter', datetime_format='mm/dd/yyyy')
-    fixList.to_excel(writer2, sheet_name='Data', index=False)
+    entries_need_fixing.to_excel(writer2, sheet_name='Data', index=False)
     # Format as table in Excel.
-    table_format(fixList, 'Data', writer2)
+    table_format(entries_need_fixing, 'Data', writer2)
 
     # Write the Lookup Master file.
     writer3 = pd.ExcelWriter(fname3, engine='xlsxwriter', datetime_format='mm/dd/yyyy')
-    mastLook.to_excel(writer3, sheet_name='Lookup', index=False)
+    lookup_master.to_excel(writer3, sheet_name='Lookup', index=False)
     # Format as table in Excel.
-    table_format(mastLook, 'Lookup', writer3)
+    table_format(lookup_master, 'Lookup', writer3)
 
     # Write the Quarantined Lookups file.
     writer4 = pd.ExcelWriter(fname4, engine='xlsxwriter', datetime_format='mm/dd/yyyy')
