@@ -23,10 +23,10 @@ def prepare_save_file(filename, tab_data, tab_names):
 
 def save_files(writer_ojects):
     """Attempt to save files, aborting if errors are encountered."""
-    if not all(writer_ojects):
-        return False
     if not isinstance(writer_ojects, list):
         writer_ojects = [writer_ojects]
+    if not all(writer_ojects):
+        return False
     for writer in writer_ojects:
         writer.save()
     return True
