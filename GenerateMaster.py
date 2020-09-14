@@ -8,9 +8,10 @@ import math
 import os.path
 import re
 import datetime
+from uuid import uuid4
 from FileLoader import load_lookup_master, load_run_com, load_entries_need_fixing
 from FileSaver import prepare_save_file, save_files
-from RCExcelTools import table_format, save_error, form_date
+from RCExcelTools import save_error, form_date
 
 # Set the directory for the data input/output.
 if os.path.exists('Z:\\'):
@@ -487,7 +488,7 @@ def main(filepaths, path_to_running_com, field_mappings):
                     pass
 
             # Do special processing for principal, if applicable.
-            process_by_principal(principal, sheet, sheet_name, disty_map)
+            process_by_principal(princ=principal, sheet=sheet, sheet_name=sheet_name, disty_map=disty_map)
             # Drop entries with emtpy part number or reported customer.
             try:
                 sheet.drop(sheet[sheet['Part Number'] == ''].index, inplace=True)
@@ -604,6 +605,8 @@ def main(filepaths, path_to_running_com, field_mappings):
         # ------------------------------------------
         # Try to find a match in the Lookup Master.
         # ------------------------------------------
+        # First assign a new Unique ID to this entry.
+        running_com.loc[row, 'Unique ID'] = uuid4()
         lookup_matches = 0
         # Don't look up correction lines.
         if 'correction' not in str(running_com.loc[row, 'T-Notes']).lower():
