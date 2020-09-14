@@ -305,7 +305,7 @@ def main(filepaths, path_to_running_com, field_mappings):
     column_names[7:7] = ['Principal', 'Distributor']
     column_names[18:18] = ['CM Sales Comm', 'Design Sales Comm', 'Sales Commission']
     column_names[22:22] = ['Quarter Shipped', 'Month', 'Year']
-    column_names.extend(['CM Split', 'Paid Date', 'From File', 'Sales Report Date'])
+    column_names.extend(['CM Split', 'Paid Date', 'From File', 'Sales Report Date', 'Unique ID'])
 
     # -------------------------------------------------------------------
     # Check to see if there's an existing Running Commissions to append
