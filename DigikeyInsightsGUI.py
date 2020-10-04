@@ -1,11 +1,14 @@
 import sys
 import os.path
 from PyQt5 import QtCore, QtGui
-from PyQt5.QtWidgets import QMainWindow, QPushButton, QApplication, \
-                            QFileDialog, QTextEdit
+from PyQt5.QtWidgets import QMainWindow, QPushButton, QApplication, QFileDialog, QTextEdit
 from PyQt5.QtCore import pyqtSlot
 import LookupSales
 import CompileFeedback
+
+LOOKUPS_DIR = 'Z:/Commissions Lookup/'
+if not os.path.exists(LOOKUPS_DIR):
+    LOOKUPS_DIR = os.getcwd()
 
 
 class Stream(QtCore.QObject):
@@ -33,7 +36,7 @@ class GenMast(QMainWindow):
         self.filenames = []
 
         # Custom output stream.
-        sys.stdout = Stream(newText=self.onUpdateText)
+        sys.stdout = Stream(newText=self.on_update_text)
         # Show welcome message.
         print('Welcome to the TAARCOM Digikey Insights Manager.\n'
               'Version m.10042020\n'
@@ -43,20 +46,17 @@ class GenMast(QMainWindow):
               '---')
 
         # Try finding/loading the supporting files.
-        lookups_dir = 'Z:/Commissions Lookup/'
-        if not os.path.exists(lookups_dir + 'rootCustomerMappings.xlsx'):
+        if not os.path.exists(os.path.join(LOOKUPS_DIR, 'rootCustomerMappings.xlsx')):
             print('No Root Customer Mappings found!\n'
-                  'Please make sure rootCustomerMappings'
-                  'is in the directory.\n'
-                  '***')
+                  'Please make sure rootCustomerMappings is in the directory.\n***')
 
-    def onUpdateText(self, text):
+    def on_update_text(self, text):
         """Write console output to text widget."""
-        cursor = self.textBox.textCursor()
+        cursor = self.text_box.textCursor()
         cursor.movePosition(QtGui.QTextCursor.End)
         cursor.insertText(text)
-        self.textBox.setTextCursor(cursor)
-        self.textBox.ensureCursorVisible()
+        self.text_box.setTextCursor(cursor)
+        self.text_box.ensureCursorVisible()
 
     def closeEvent(self, event):
         """Shuts down application on close."""
@@ -68,86 +68,79 @@ class GenMast(QMainWindow):
         """Creates UI window on launch."""
 
         # Button for looking up salespeople in Insight Report.
-        self.btnLookSales = QPushButton('Lookup \n Salespeople \n'
-                                        'for \n Insight File', self)
-        self.btnLookSales.move(650, 400)
-        self.btnLookSales.resize(150, 150)
-        self.btnLookSales.clicked.connect(self.lookSalesClicked)
-        self.btnLookSales.setToolTip('Returns a Digikey LI file with '
-                                     'salespeople looked up from Account List '
-                                     'and rootCustomerMappings.')
+        self.btn_lookup_sales = QPushButton('Lookup \n Salespeople \n for \n Insight File', self)
+        self.btn_lookup_sales.move(650, 400)
+        self.btn_lookup_sales.resize(150, 150)
+        self.btn_lookup_sales.clicked.connect(self.lookup_sales_clicked)
+        self.btn_lookup_sales.setToolTip('Returns a Digikey LI file with salespeople looked '
+                                         'up from Account List and rootCustomerMappings.')
 
         # Button for copying over comments.
-        self.btnCompileFeedback = QPushButton('Compile \n Feedback', self)
-        self.btnCompileFeedback.move(650, 200)
-        self.btnCompileFeedback.resize(150, 150)
-        self.btnCompileFeedback.clicked.connect(self.compileFeedbackClicked)
-        self.btnCompileFeedback.setToolTip('Combine individual reports with '
-                                           'feedback into one file, and '
-                                           'append that file to Digikey '
-                                           'Insight Master.')
+        self.btn_compile_feedback = QPushButton('Compile \n Feedback', self)
+        self.btn_compile_feedback.move(650, 200)
+        self.btn_compile_feedback.resize(150, 150)
+        self.btn_compile_feedback.clicked.connect(self.compile_feedback_clicked)
+        self.btn_compile_feedback.setToolTip('Combine individual reports with '
+                                             'feedback into one file, and '
+                                             'append that file to Digikey Insight Master.')
 
         # Button for clearing selections.
-        self.btnClearAll = QPushButton('Clear \n File Selections', self)
-        self.btnClearAll.move(450, 30)
-        self.btnClearAll.resize(150, 100)
-        self.btnClearAll.clicked.connect(self.clearAllClicked)
+        self.btn_clear_all = QPushButton('Clear \n File Selections', self)
+        self.btn_clear_all.move(450, 30)
+        self.btn_clear_all.resize(150, 100)
+        self.btn_clear_all.clicked.connect(self.clear_all_clicked)
 
         # Button for selecting new file to lookup salespeople.
-        self.btnOpenInsight = QPushButton('Select New \n Digikey Insight \n'
-                                          'File',
-                                          self)
-        self.btnOpenInsight.move(50, 30)
-        self.btnOpenInsight.resize(150, 100)
-        self.btnOpenInsight.clicked.connect(self.openInsightClicked)
-        self.btnOpenInsight.setToolTip('Select a brand new Digikey LI file.')
+        self.btn_open_insight = QPushButton('Select New \n Digikey Insight \n File', self)
+        self.btn_open_insight.move(50, 30)
+        self.btn_open_insight.resize(150, 100)
+        self.btn_open_insight.clicked.connect(self.open_insight_clicked)
+        self.btn_open_insight.setToolTip('Select a brand new Digikey LI file.')
 
         # Button for selecting files to append to master.
-        self.btnOpenFinished = QPushButton('Select Files \n with Feedback',
-                                           self)
-        self.btnOpenFinished.move(250, 30)
-        self.btnOpenFinished.resize(150, 100)
-        self.btnOpenFinished.clicked.connect(self.openFinishedClicked)
-        self.btnOpenFinished.setToolTip('Select a batch of finished files '
-                                        'that have feedback from salespeople.')
+        self.btn_open_finished = QPushButton('Select Files \n with Feedback', self)
+        self.btn_open_finished.move(250, 30)
+        self.btn_open_finished.resize(150, 100)
+        self.btn_open_finished.clicked.connect(self.open_finished_clicked)
+        self.btn_open_finished.setToolTip('Select a batch of finished files '
+                                          'that have feedback from salespeople.')
 
         # Create the text output widget.
-        self.textBox = QTextEdit(self, readOnly=True)
-        self.textBox.ensureCursorVisible()
-        self.textBox.setLineWrapColumnOrWidth(500)
-        self.textBox.setLineWrapMode(QTextEdit.FixedPixelWidth)
-        self.textBox.setFixedWidth(550)
-        self.textBox.setFixedHeight(400)
-        self.textBox.move(50, 150)
+        self.text_box = QTextEdit(self, readOnly=True)
+        self.text_box.ensureCursorVisible()
+        self.text_box.setLineWrapColumnOrWidth(500)
+        self.text_box.setLineWrapMode(QTextEdit.FixedPixelWidth)
+        self.text_box.setFixedWidth(550)
+        self.text_box.setFixedHeight(400)
+        self.text_box.move(50, 150)
 
         # Set window size and title, then show the window.
         self.setGeometry(300, 300, 900, 600)
         self.setWindowTitle('Digikey Insights Manager 2.0')
         self.show()
 
-    def lookSalesClicked(self):
+    def lookup_sales_clicked(self):
         """Send the LookupSales execution to a worker thread."""
-        self.lockButtons()
-        worker = Worker(self.lookSalesExecute)
+        self.lock_buttons()
+        worker = Worker(self.look_sales_execute)
         if self.threadpool.activeThreadCount() == 0:
             self.threadpool.start(worker)
 
-    def compileFeedbackClicked(self):
+    def compile_feedback_clicked(self):
         """Send the WriteComments execution to a worker thread."""
-        self.lockButtons()
-        worker = Worker(self.compileFeedbackExecute)
+        self.lock_buttons()
+        worker = Worker(self.compile_feedback_execute)
         if self.threadpool.activeThreadCount() == 0:
             self.threadpool.start(worker)
 
-    def clearAllClicked(self):
+    def clear_all_clicked(self):
         """Clear the filename variables."""
         self.filenames = []
         self.filename = []
-        print('All file selections cleared.\n'
-              '---')
-        self.restoreButtons()
+        print('All file selections cleared.\n---')
+        self.restore_buttons()
 
-    def compileFeedbackExecute(self):
+    def compile_feedback_execute(self):
         """Runs function for compiling feedback and appending to Master."""
         # Check to make sure we've selected files.
         if self.filenames:
@@ -156,24 +149,18 @@ class GenMast(QMainWindow):
                 CompileFeedback.main(self.filenames)
             except Exception as error:
                 print('Unexpected Python error:\n'
-                      + str(error)
-                      + '\nPlease contact your local coder.')
+                      + str(error) + '\nPlease contact your local coder.')
             # Clear files.
             self.filenames = []
         elif not self.filenames:
             print('No finished Insight files selected!\n'
-                  'Use the Select Commission Files button to select files.\n'
-                  '---')
-        self.restoreButtons()
+                  'Use the Select Commission Files button to select files.\n---')
+        self.restore_buttons()
 
-    def lookSalesExecute(self):
+    def look_sales_execute(self):
         """Runs function for looking up salespeople."""
         # Check to see if we're ready to process.
-        lookups_dir = 'Z:/Commissions Lookup/'
-        print(os.getcwd())
-        if not os.path.exists(lookups_dir):
-            lookups_dir = os.getcwd()
-        map_exists = os.path.exists(os.path.join(lookups_dir, 'rootCustomerMappings.xlsx'))
+        map_exists = os.path.exists(os.path.join(LOOKUPS_DIR, 'rootCustomerMappings.xlsx'))
         if self.filename and map_exists:
             # Run the GenerateMaster.py file.
             try:
@@ -188,48 +175,42 @@ class GenMast(QMainWindow):
         elif not self.filename:
             print('No Insight file selected!\n'
                   'Use the Select Digikey Insight button to select files.\n---')
-        self.restoreButtons()
+        self.restore_buttons()
 
-    def openInsightClicked(self):
+    def open_insight_clicked(self):
         """Provide filepath for new data to process using LookupSales."""
         # Let us know we're clearing old selections.
         if self.filename:
             print('Selecting new file, old selection cleared...')
 
         # Grab the filenames to be passed into LookupSales.
-        self.filename, _ = QFileDialog.getOpenFileName(
-                self, filter="Excel files (*.xls *.xlsx *.xlsm)")
+        self.filename, _ = QFileDialog.getOpenFileName(self, filter="Excel files (*.xls *.xlsx *.xlsm)")
 
         # Check if the current master got uploaded as a new file.
         if 'Digikey Insight Master' in self.filename:
-            print('Master uploaded as new file.\n'
-                  'Try uploading files again.\n'
-                  '---')
+            print('Master uploaded as new file.\nTry uploading files again.\n---')
             return
 
         # Print out the selected filenames.
         if self.filename:
             print('File selected: ' + self.filename + '\n---')
             # Turn off/on the correct buttons.
-            self.btnCompileFeedback.setEnabled(False)
-            self.btnLookSales.setEnabled(True)
+            self.btn_compile_feedback.setEnabled(False)
+            self.btn_lookup_sales.setEnabled(True)
 
-    def openFinishedClicked(self):
+    def open_finished_clicked(self):
         """Provide filepath for new data to process using AppendInsights."""
         # Let us know we're clearing old selections.
         if self.filenames:
             print('Selecting new files, old selections cleared...')
 
         # Grab the filenames to be passed into AppendInsights.
-        self.filenames, _ = QFileDialog.getOpenFileNames(
-                self, filter="Excel files (*.xls *.xlsx *.xlsm)")
+        self.filenames, _ = QFileDialog.getOpenFileNames(self, filter="Excel files (*.xls *.xlsx *.xlsm)")
 
         # Check if the current master got uploaded as a new file.
         for name in self.filenames:
             if 'Digikey Insight Master' in name:
-                print('Master uploaded as new file.\n'
-                      'Try uploading files again.\n'
-                      '---')
+                print('Master uploaded as new file.\nTry uploading files again.\n---')
                 return
 
         # Print out the selected filenames.
@@ -239,22 +220,22 @@ class GenMast(QMainWindow):
                 print(file)
             print('---')
             # Turn off/on the correct buttons.
-            self.btnCompileFeedback.setEnabled(True)
-            self.btnLookSales.setEnabled(False)
+            self.btn_compile_feedback.setEnabled(True)
+            self.btn_lookup_sales.setEnabled(False)
 
-    def lockButtons(self):
-        self.btnOpenInsight.setEnabled(False)
-        self.btnLookSales.setEnabled(False)
-        self.btnOpenFinished.setEnabled(False)
-        self.btnClearAll.setEnabled(False)
-        self.btnCompileFeedback.setEnabled(False)
+    def lock_buttons(self):
+        self.btn_open_insight.setEnabled(False)
+        self.btn_lookup_sales.setEnabled(False)
+        self.btn_open_finished.setEnabled(False)
+        self.btn_clear_all.setEnabled(False)
+        self.btn_compile_feedback.setEnabled(False)
 
-    def restoreButtons(self):
-        self.btnOpenInsight.setEnabled(True)
-        self.btnLookSales.setEnabled(True)
-        self.btnOpenFinished.setEnabled(True)
-        self.btnClearAll.setEnabled(True)
-        self.btnCompileFeedback.setEnabled(True)
+    def restore_buttons(self):
+        self.btn_open_insight.setEnabled(True)
+        self.btn_lookup_sales.setEnabled(True)
+        self.btn_open_finished.setEnabled(True)
+        self.btn_clear_all.setEnabled(True)
+        self.btn_compile_feedback.setEnabled(True)
 
 
 class Worker(QtCore.QRunnable):

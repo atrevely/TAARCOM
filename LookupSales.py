@@ -13,30 +13,18 @@ def tableFormat(sheetData, sheetName, wbook):
     # Set the autofilter for the sheet.
     sheet.autofilter(0, 0, sheetData.shape[0], sheetData.shape[1]-1)
     # Set document formatting.
-    docFormat = wbook.book.add_format({'font': 'Calibri',
-                                       'font_size': 11})
-    acctFormat = wbook.book.add_format({'font': 'Calibri',
-                                        'font_size': 11,
-                                        'num_format': 44})
-    commaFormat = wbook.book.add_format({'font': 'Calibri',
-                                         'font_size': 11,
-                                         'num_format': 3})
-    newFormat = wbook.book.add_format({'font': 'Calibri',
-                                       'font_size': 11,
-                                       'bg_color': 'yellow'})
-    movedFormat = wbook.book.add_format({'font': 'Calibri',
-                                         'font_size': 11,
-                                         'bg_color': '#FF9900'})
+    docFormat = wbook.book.add_format({'font': 'Calibri', 'font_size': 11})
+    acctFormat = wbook.book.add_format({'font': 'Calibri', 'font_size': 11, 'num_format': 44})
+    commaFormat = wbook.book.add_format({'font': 'Calibri', 'font_size': 11, 'num_format': 3})
+    newFormat = wbook.book.add_format({'font': 'Calibri', 'font_size': 11, 'bg_color': 'yellow'})
+    movedFormat = wbook.book.add_format({'font': 'Calibri', 'font_size': 11, 'bg_color': '#FF9900'})
     # Format and fit each column.
     i = 0
     # Columns which get shrunk down in reports.
-    hideCols = ['Technology', 'Excel Part Link', 'Report Part Nbr Link',
-                'MFG Part Description', 'Focus', 'Part Class Name',
-                'Vendor ID', 'Invoice Detail Nbr', 'Assigned Account Rep',
-                'Recipient', 'DKLI Report Date', 'Invoice Date Group',
-                'Comments', 'Sales Channel']
-    coreCols = ['Must Contact', 'End Product', 'How Contacted',
-                'Information for Digikey']
+    hideCols = ['Technology', 'Excel Part Link', 'Report Part Nbr Link', 'MFG Part Description',
+                'Focus', 'Part Class Name',  'Vendor ID', 'Invoice Detail Nbr', 'Assigned Account Rep',
+                'Recipient', 'DKLI Report Date', 'Invoice Date Group', 'Comments', 'Sales Channel']
+    coreCols = ['Must Contact', 'End Product', 'How Contacted', 'Information for Digikey']
     for col in sheetData.columns:
         acctCols = ['Unit Price', 'Invoiced Dollars']
         if col in acctCols:
@@ -57,19 +45,15 @@ def tableFormat(sheetData, sheetName, wbook):
     # Highlight new root customer and moved city rows.
     try:
         for row in sheetData.index:
-            ind = sheetData.loc[row, 'TAARCOM Comments'] == 'Individual'
+            ind = sheetData.loc[row, 'TAARCOM Comments'].lower() == 'individual'
             if sheetData.loc[row, 'Sales'] == '' and not ind:
-                sheet.write(row+1, 4, sheetData.loc[row, 'Root Customer..'],
-                            newFormat)
+                sheet.write(row + 1, 4, sheetData.loc[row, 'Root Customer..'], newFormat)
             elif any(sheetData.loc[row, 'City on Acct List']):
-                sheet.write(row+1, 4, sheetData.loc[row, 'Root Customer..'],
-                            movedFormat)
-                sheet.write(row+1, 24, sheetData.loc[row, 'City on Acct List'],
-                            movedFormat)
+                sheet.write(row + 1, 4, sheetData.loc[row, 'Root Customer..'],  movedFormat)
+                sheet.write(row + 1, 24, sheetData.loc[row, 'City on Acct List'], movedFormat)
     except KeyError:
         print('Error locating Sales and/or City on Acct List columns.\n'
-              'Unable to highlight without these columns.\n'
-              '---')
+              'Unable to highlight without these columns.\n---')
 
 
 def saveError(*excelFiles):
@@ -143,6 +127,8 @@ def main(filepath):
     col_names[19:19] = ['Invoiced Dollars']
     col_names[25:25] = ['City on Acct List']
     col_names.extend(['TAARCOM Comments', 'New T-Cust'])
+    # Remove potential duplicated columns.
+    col_names = pd.Series(col_names).drop_duplicates().tolist()
 
     # Calculate the Invoiced Dollars.
     try:
@@ -227,7 +213,10 @@ def main(filepath):
 
     # Try saving the files, exit with error if any file is currently open.
     output_dir = 'C:/Users/kerry/Documents/disty data/Digikey/'
-    fname1 = output_dir + filename[:-5] + ' With Salespeople.xlsx'
+    if not os.path.exists(output_dir):
+        print('Output directory %s not found!\nUsing current directory for saving files.' % output_dir)
+        output_dir = os.getcwd()
+    fname1 = os.path.join(output_dir, filename[:-5] + ' With Salespeople.xlsx')
     if saveError(fname1):
         print('---\nOne or more files are currently open in Excel!\n'
               'Please close the files and try again.\n*Program Terminated*')
