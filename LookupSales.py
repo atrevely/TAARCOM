@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 import os
 from FileLoader import load_acct_list, load_root_customer_mappings, load_salespeople_info
 
@@ -46,11 +47,13 @@ def tableFormat(sheetData, sheetName, wbook):
     try:
         for row in sheetData.index:
             ind = sheetData.loc[row, 'TAARCOM Comments'].lower() == 'individual'
+            root_cust_loc = int(np.where(sheetData.columns == 'Root Customer..')[0])
+            city_loc = int(np.where(sheetData.columns == 'City on Acct List')[0])
             if sheetData.loc[row, 'Sales'] == '' and not ind:
-                sheet.write(row + 1, 4, sheetData.loc[row, 'Root Customer..'], newFormat)
+                sheet.write(row + 1, root_cust_loc, sheetData.loc[row, 'Root Customer..'], newFormat)
             elif any(sheetData.loc[row, 'City on Acct List']):
-                sheet.write(row + 1, 4, sheetData.loc[row, 'Root Customer..'],  movedFormat)
-                sheet.write(row + 1, 24, sheetData.loc[row, 'City on Acct List'], movedFormat)
+                sheet.write(row + 1, root_cust_loc, sheetData.loc[row, 'Root Customer..'],  movedFormat)
+                sheet.write(row + 1, city_loc, sheetData.loc[row, 'City on Acct List'], movedFormat)
     except KeyError:
         print('Error locating Sales and/or City on Acct List columns.\n'
               'Unable to highlight without these columns.\n---')
