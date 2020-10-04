@@ -36,14 +36,15 @@ class GenMast(QMainWindow):
         sys.stdout = Stream(newText=self.onUpdateText)
         # Show welcome message.
         print('Welcome to the TAARCOM Digikey Insights Manager.\n'
+              'Version m.10042020\n'
               'Messages and updates will display below.\n'
               '______________________________________________________\n'
               'REMINDER: Did you pull the latest version from GitHub?\n'
               '---')
 
         # Try finding/loading the supporting files.
-        lookDir = 'Z:/Commissions Lookup/'
-        if not os.path.exists(lookDir + 'rootCustomerMappings.xlsx'):
+        lookups_dir = 'Z:/Commissions Lookup/'
+        if not os.path.exists(lookups_dir + 'rootCustomerMappings.xlsx'):
             print('No Root Customer Mappings found!\n'
                   'Please make sure rootCustomerMappings'
                   'is in the directory.\n'
@@ -168,26 +169,25 @@ class GenMast(QMainWindow):
     def lookSalesExecute(self):
         """Runs function for looking up salespeople."""
         # Check to see if we're ready to process.
-        lookDir = 'Z:/Commissions Lookup/'
-        mapExists = os.path.exists(lookDir + 'rootCustomerMappings.xlsx')
-        if self.filename and mapExists:
+        lookups_dir = 'Z:/Commissions Lookup/'
+        print(os.getcwd())
+        if not os.path.exists(lookups_dir):
+            lookups_dir = os.getcwd()
+        map_exists = os.path.exists(os.path.join(lookups_dir, 'rootCustomerMappings.xlsx'))
+        if self.filename and map_exists:
             # Run the GenerateMaster.py file.
             try:
                 LookupSales.main(self.filename)
             except Exception as error:
-                print('Unexpected Python error:\n'
-                      + str(error)
-                      + '\nPlease contact your local coder.')
+                print('Unexpected Python error:\n' + str(error) + '\nPlease contact your local coder.')
             # Clear file.
             self.filename = []
-        elif not mapExists:
+        elif not map_exists:
             print('File rootCustomerMappings.xlsx not found!\n'
-                  'Please check file location and try again.\n'
-                  '---')
+                  'Please check file location and try again.\n---')
         elif not self.filename:
             print('No Insight file selected!\n'
-                  'Use the Select Commission Files button to select files.\n'
-                  '---')
+                  'Use the Select Digikey Insight button to select files.\n---')
         self.restoreButtons()
 
     def openInsightClicked(self):

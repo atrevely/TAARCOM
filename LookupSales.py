@@ -92,6 +92,8 @@ def main(filepath):
     """
     # Set the directory paths to the server.
     lookup_dir = 'Z:/Commissions Lookup/'
+    if not os.path.exists(lookup_dir):
+        lookup_dir = os.getcwd()
 
     # Load the Root Customer Mappings file.
     root_cust_map = load_root_customer_mappings(lookup_dir)
@@ -101,6 +103,10 @@ def main(filepath):
 
     # Load the Salesperson Info file.
     salespeople_info = load_salespeople_info(lookup_dir)
+
+    if any(i.empty for i in (root_cust_map, acct_list, salespeople_info)):
+        return
+
     # Check for duplicate cities in the Salespeople Info.
     city_list = [i.split(', ') for i in salespeople_info['Territory Cities'] if i != '']
     city_list = [j for i in city_list for j in i]

@@ -146,7 +146,7 @@ def load_acct_list(file_dir):
         if missing_cols:
             print('---\nThe following columns were not found in the Account List: '
                   + ', '.join(missing_cols) + '\nPlease check for these column '
-                  'names and try again.')
+                  'names (case-sensitive) and try again.')
             acct_list = pd.Series([])
     except FileNotFoundError:
         print('---\nNo Account List file found!')
