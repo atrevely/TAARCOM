@@ -122,10 +122,15 @@ def main(filepath):
 
     # Get the column list and input new columns.
     col_names = list(insight_file)
-    col_names[4:4] = ['Sales']
-    col_names[6:6] = ['Must Contact', 'End Product', 'How Contacted', 'Information for Digikey']
-    col_names[19:19] = ['Invoiced Dollars']
-    col_names[25:25] = ['City on Acct List']
+    if 'Sales' not in col_names:
+        col_names[4:4] = ['Sales']
+    col_group = ('Must Contact', 'End Product', 'How Contacted', 'Information for Digikey')
+    if any(i for i in col_group if i not in col_names):
+        col_names[6:6] = [i for i in col_group if i not in col_names]
+    if 'Invoiced Dollars' not in col_names:
+        col_names[19:19] = ['Invoiced Dollars']
+    if 'City on Acct List' not in col_names:
+        col_names[25:25] = ['City on Acct List']
     col_names.extend(['TAARCOM Comments', 'New T-Cust'])
     # Remove potential duplicated columns.
     col_names = pd.Series(col_names).drop_duplicates().tolist()
