@@ -51,7 +51,7 @@ def tableFormat(sheetData, sheetName, wbook):
             city_loc = int(np.where(sheetData.columns == 'City on Acct List')[0])
             if not ind and sheetData.loc[row, 'New T-Cust']:
                 sheet.write(row + 1, root_cust_loc, sheetData.loc[row, 'Root Customer..'], newFormat)
-            elif any(sheetData.loc[row, 'City on Acct List']):
+            elif sheetData.loc[row, 'Customer City'] not in sheetData.loc[row, 'City on Acct List'].split(', '):
                 sheet.write(row + 1, root_cust_loc, sheetData.loc[row, 'Root Customer..'],  movedFormat)
                 sheet.write(row + 1, city_loc, sheetData.loc[row, 'City on Acct List'], movedFormat)
     except KeyError:
