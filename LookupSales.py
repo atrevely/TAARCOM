@@ -95,7 +95,7 @@ def main(filepath):
         return
 
     # Check for duplicate cities in the Salespeople Info.
-    city_list = [i.split(', ') for i in salespeople_info['Territory Cities'] if i != '']
+    city_list = [str(i).split(', ') for i in salespeople_info['Territory Cities'] if i != '']
     city_list = [j for i in city_list for j in i]
     duplicates = set(x for x in city_list if city_list.count(x) > 1)
     if duplicates:

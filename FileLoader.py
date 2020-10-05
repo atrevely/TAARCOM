@@ -22,6 +22,10 @@ def load_salespeople_info(file_dir):
             print('---\nThe following columns were not found in Salespeople Info: '
                   + ', '.join(missing_cols) + '\nPlease check for these columns and try again.')
             sales_info = pd.Series([])
+        for col in ['Salesperson', 'Territory Cities', 'Sales Initials']:
+            sales_info[col] = sales_info[col].fillna('')
+        for col in ['Sales Percentage', 'QQ Split']:
+            sales_info[col] = sales_info[col].fillna(0)
     except FileNotFoundError:
         print('---\nNo Salespeople Info file found!\n'
               'Please make sure Salespeople Info.xlsx is in the directory:\n' + file_dir)
