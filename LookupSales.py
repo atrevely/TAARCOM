@@ -46,10 +46,10 @@ def tableFormat(sheetData, sheetName, wbook):
     # Highlight new root customer and moved city rows.
     try:
         for row in sheetData.index:
-            ind = sheetData.loc[row, 'TAARCOM Comments'].lower() == 'individual'
+            ind = str(sheetData.loc[row, 'TAARCOM Comments']).lower().rstrip() == 'individual'
             root_cust_loc = int(np.where(sheetData.columns == 'Root Customer..')[0])
             city_loc = int(np.where(sheetData.columns == 'City on Acct List')[0])
-            if sheetData.loc[row, 'Sales'] == '' and not ind:
+            if not ind and sheetData.loc[row, 'New T-Cust']:
                 sheet.write(row + 1, root_cust_loc, sheetData.loc[row, 'Root Customer..'], newFormat)
             elif any(sheetData.loc[row, 'City on Acct List']):
                 sheet.write(row + 1, root_cust_loc, sheetData.loc[row, 'Root Customer..'],  movedFormat)
@@ -169,14 +169,14 @@ def main(filepath):
     # ----------------------------------------------------------------------
     for row in insight_file.index:
         # Check for individuals and CMs and note them in comments.
-        if 'contract' in insight_file.loc[row, 'Root Customer Class'].lower().rstrip():
+        if 'contract' in str(insight_file.loc[row, 'Root Customer Class']).lower().rstrip():
             insight_file.loc[row, 'TAARCOM Comments'] = 'Contract Manufacturer'
-        if 'individual' in insight_file.loc[row, 'Root Customer Class'].lower().rstrip():
+        if 'individual' in str(insight_file.loc[row, 'Root Customer Class']).lower().rstrip():
             insight_file.loc[row, 'TAARCOM Comments'] = 'Individual'
-            city = insight_file.loc[row, 'Customer City'].upper().rstrip()
+            city = str(insight_file.loc[row, 'Customer City']).upper().rstrip()
             # Check for matches to city and assign salesperson.
             for person in salespeople_info.index:
-                cities = salespeople_info['Territory Cities'][person].upper().split(', ')
+                cities = str(salespeople_info['Territory Cities'][person]).upper().rstrip().split(', ')
                 if city in cities:
                     insight_file.loc[row, 'Sales'] = salespeople_info.loc[person, 'Sales Initials']
             # Done, so move to next line in file.
@@ -186,8 +186,8 @@ def main(filepath):
         acct_list_match = acct_list[acct_list['ProperName'].astype(str).str.lower() == cust]
         if cust and len(acct_list_match) == 1:
             # Check if the city is different from our account list.
-            acct_list_city = acct_list_match['CITY'].iloc[0].upper().split(', ')
-            if insight_file.loc[row, 'Customer City'].upper().rstrip() not in acct_list_city:
+            acct_list_city = str(acct_list_match['CITY'].iloc[0]).upper().split(', ')
+            if str(insight_file.loc[row, 'Customer City']).upper().rstrip() not in acct_list_city:
                 if len(acct_list_city) > 1:
                     acct_list_city = ', '.join(acct_list_city)
                 insight_file.loc[row, 'City on Acct List'] = acct_list_city
