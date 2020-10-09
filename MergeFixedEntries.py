@@ -97,7 +97,7 @@ def main(run_com_path):
             date_given = str(int(date_given))
         # Check if Pandas read it in as a Timestamp object.
         # If so, turn it back into a string (a bit roundabout, oh well).
-        elif isinstance(date_given, (pd.Timestamp,  datetime.datetime)):
+        elif isinstance(date_given, (pd.Timestamp,  datetime.datetime, datetime.date)):
             date_given = str(date_given)
         # Try parsing the date.
         try:
