@@ -10,7 +10,7 @@ import MergeFixedEntries
 import SalesReportGenerator
 import CommTools
 
-VERSION = 'Development v2.3.212'
+VERSION = 'Master v2.3.10092020'
 if os.path.exists('Z:\\Commissions Lookup'):
     look_dir = 'Z:\\Commissions Lookup'
 else:
@@ -45,7 +45,7 @@ class GenMast(QMainWindow):
         self.filenames = []
         self.master = []
         # Show welcome message.
-        print('Welcome to the TAARCOM Commissions Manager ' + VERSION + '!\n'
+        print('Welcome to the TAARCOM Commissions Manager!\nVersion: ' + VERSION + '\n'
               'Messages and updates will display below.\n'
               '_______________________________________________________________'
               '\nREMINDER: Did you check for updates on GitHub?\n'

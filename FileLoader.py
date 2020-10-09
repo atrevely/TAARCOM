@@ -108,6 +108,7 @@ def load_run_com(file_path):
     return running_com, files_processed
 
 
+# TODO: This can probably be combined with load_run_com.
 def load_entries_need_fixing(file_dir):
     """Load and prepare the Entries Need Fixing file."""
     entries_need_fixing = pd.Series([])
@@ -131,7 +132,10 @@ def load_entries_need_fixing(file_dir):
                       + '\nPlease check the column names and try again.')
                 return pd.Series([])
         # Now remove the nans.
-        entries_need_fixing.replace('nan', '', inplace=True)
+        entries_need_fixing.replace(['nan', np.nan], '', inplace=True)
+        entries_need_fixing['Invoice Date'] = entries_need_fixing['Invoice Date'].map(lambda x: form_date(x))
+        # Make sure that the CM Splits aren't blank or zero.
+        entries_need_fixing['CM Split'] = entries_need_fixing['CM Split'].replace(['', '0', 0], 20)
     except FileNotFoundError:
         print('No matching Entries Need Fixing file found for this Running Commissions file!')
     except XLRDError:
