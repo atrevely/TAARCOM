@@ -40,7 +40,7 @@ def load_com_master(file_dir):
     com_mast = pd.Series([])
     master_files = pd.Series([])
     try:
-        com_mast = pd.read_excel(file_dir + '\\Commissions Master.xlsx', 'Master Data', dtype=str)
+        com_mast = pd.read_excel(file_dir + '\\Commissions Master.xlsx', 'Master', dtype=str)
         master_files = pd.read_excel(file_dir + '\\Commissions Master.xlsx', 'Files Processed').fillna('')
         # Force numerical columns to be numeric.
         for col in num_cols:
@@ -68,7 +68,7 @@ def load_com_master(file_dir):
         print('---\nNo Commissions Master file found!')
     except XLRDError:
         print('---\nCommissions Master tab names incorrect!\n'
-              'Make sure the tabs are named Master Data and Files Processed.')
+              'Make sure the tabs are named Master and Files Processed.')
     return com_mast, master_files
 
 
