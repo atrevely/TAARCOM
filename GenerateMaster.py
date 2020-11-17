@@ -408,7 +408,7 @@ def main(filepaths, path_to_running_com, field_mappings):
         # -------------------------------------------------------------------
         principal = filename[0:3]
         print('Principal detected as: ' + principal)
-        princList = ['ABR', 'ATP', 'ATS', 'ATO', 'COS', 'EVE', 'GLO', 'INF', 'ISS', 'LAT', 'MIL', 'OSR',
+        princList = ['ABR', 'ACH', 'ATP', 'ATS', 'ATO', 'COS', 'EVE', 'GLO', 'INF', 'ISS', 'LAT', 'MIL', 'OSR',
                      'QRF', 'SUR', 'TOP', 'TRI', 'TRU', 'XMO', 'MPS', 'NET', 'GAN', 'EFI']
         if principal not in princList:
             print('Principal supplied is not valid!\n'
