@@ -108,8 +108,7 @@ def process_by_principal(princ, sheet, sheet_name, disty_map):
         if 'Adj' in sheet_name:
             # Input missing data. Commission Rate is always 3% here.
             sheet['Commission Rate'] = 0.03
-            sheet['Paid-On Revenue'] = pd.to_numeric(sheet['Invoiced Dollars'],
-                                                     errors='coerce') * 0.7
+            sheet['Paid-On Revenue'] = pd.to_numeric(sheet['Invoiced Dollars'], errors='coerce') * 0.7
             sheet['Actual Comm Paid'] = sheet['Paid-On Revenue'] * 0.03
             # These are paid on resale.
             sheet['Comm Source'] = 'Resale'
@@ -145,7 +144,7 @@ def process_by_principal(princ, sheet, sheet_name, disty_map):
                     sheet.loc[row, 'City'] = sheet.loc[row, 'Sales Region']
                     # Check for distributor in Customer
                     cust = sheet.loc[row, 'Reported Customer']
-                    dist_name = re.sub('[^a-zA-Z0-9]', '', str(cust).lower())
+                    dist_name = re.sub(r'[^a-zA-Z0-9]', '', str(cust).lower())
                     # Find matches in the Distributor Abbreviations.
                     dist_matches = [i for i in disty_map['Search Abbreviation']
                                     if i in dist_name]
@@ -279,7 +278,6 @@ def process_by_principal(princ, sheet, sheet_name, disty_map):
         sheet['Comm Source'] = 'Resale'
 
 
-# %% Main function.
 def main(filepaths, path_to_running_com, field_mappings):
     """Processes commission files and appends them to Running Commissions.
 
@@ -305,7 +303,13 @@ def main(filepaths, path_to_running_com, field_mappings):
     column_names[7:7] = ['Principal', 'Distributor']
     column_names[18:18] = ['CM Sales Comm', 'Design Sales Comm', 'Sales Commission']
     column_names[22:22] = ['Quarter Shipped', 'Month', 'Year']
-    column_names.extend(['CM Split', 'Paid Date', 'From File', 'Sales Report Date', 'Unique ID'])
+    column_names.extend(['CM Split', 'Paid Date', 'From File', 'Sales Report Date', 'T-Notes', 'Unique ID'])
+    # Make sure that column names are unique.
+    seen = []
+    for col_name in column_names:
+        if col_name not in seen:
+            seen.append(col_name)
+    column_names = seen
 
     # -------------------------------------------------------------------
     # Check to see if there's an existing Running Commissions to append
@@ -330,9 +334,11 @@ def main(filepaths, path_to_running_com, field_mappings):
         # Load in the matching Entries Need Fixing file.
         ENF_path = out_dir + '\\Entries Need Fixing ' + path_to_running_com[-20:]
         entries_need_fixing = load_entries_need_fixing(file_dir=ENF_path)
-        if any([running_com.empty, files_processed.empty, entries_need_fixing.empty]):
-            print('*Program Terminated*')
+        if any([running_com.empty, files_processed.empty]):
+            print('Running commissions and/or files processed are empty!\n*Program Terminated*')
             return
+        elif entries_need_fixing is None:
+            print('No Entries Need Fixing found for the provided Running Commissions!\nProgram Terminated')
         run_com_len = len(running_com)
     # Start new Running Commissions.
     else:
@@ -379,8 +385,7 @@ def main(filepaths, path_to_running_com, field_mappings):
         missing_cols = [i for i in disty_map_cols if i not in list(disty_map)]
         if missing_cols:
             print('The following columns were not detected in distributorLookup.xlsx:\n%s' %
-                  ', '.join(map(str, missing_cols))
-                  + '\n*Program terminated*')
+                  ', '.join(map(str, missing_cols)) + '\n*Program terminated*')
             return
     else:
         print('---\nNo distributor lookup file found!\n'
@@ -439,7 +444,7 @@ def main(filepaths, path_to_running_com, field_mappings):
                 sheet = sheet.loc[:, ~sheet.columns.str.contains('^Unnamed')]
             except AttributeError:
                 pass
-            # Do specialized pre-processing tailored to principlal.
+            # Do specialized pre-processing tailored to principal.
             rename_dict = preprocess_by_principal(principal, sheet, sheet_name)
             # Iterate over each column of data that we want to append.
             for data_name in list(field_mappings):
@@ -451,8 +456,7 @@ def main(filepaths, path_to_running_com, field_mappings):
                 if len(column_name) > 1:
                     print('Found multiple matches for ' + data_name
                           + '\nMatching columns: %s' % ', '.join(map(str, column_name))
-                          + '\nPlease fix column names and try again.\n'
-                            '*Program terminated*')
+                          + '\nPlease fix column names and try again.\n*Program terminated*')
                     return
                 elif len(column_name) == 1:
                     sheet.rename(columns={column_name[0]: data_name}, inplace=True)
@@ -565,8 +569,7 @@ def main(filepaths, path_to_running_com, field_mappings):
             fname += '.xlsx'
         if save_error(fname):
             print('---\nOne or more of the raw data files are open in Excel.\n'
-                  'Please close these files and try again.\n'
-                  '*Program terminated*')
+                  'Please close these files and try again.\n*Program terminated*')
             return
         # Write the raw data file with matches.
         writer = pd.ExcelWriter(match_dir + '\\' + fname, engine='xlsxwriter', datetime_format='mm/dd/yyyy')
@@ -612,8 +615,7 @@ def main(filepaths, path_to_running_com, field_mappings):
         if 'correction' not in str(running_com.loc[row, 'T-Notes']).lower():
             # First match reported customer.
             reported_cust = str(running_com.loc[row, 'Reported Customer']).lower()
-            POS_cust = master_lookup['Reported Customer'].map(
-                lambda x: str(x).lower())
+            POS_cust = master_lookup['Reported Customer'].map(lambda x: str(x).lower())
             cust_matches = master_lookup[reported_cust == POS_cust]
             # Now match part number.
             part_num = str(running_com.loc[row, 'Part Number']).lower()
@@ -695,7 +697,7 @@ def main(filepaths, path_to_running_com, field_mappings):
         # ---------------------------------------------------
         # Strip extraneous characters and all spaces, and make lowercase.
         reported_dist = str(running_com.loc[row, 'Reported Distributor'])
-        dist_name = re.sub('[^a-zA-Z0-9]', '', reported_dist).lower()
+        dist_name = re.sub(r'[^a-zA-Z0-9]', '', reported_dist).lower()
 
         # Find matches for the dist_name in the Distributor Abbreviations.
         dist_matches = [i for i in disty_map['Search Abbreviation'] if i in dist_name]

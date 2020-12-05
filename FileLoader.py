@@ -111,7 +111,7 @@ def load_run_com(file_path):
 # TODO: This can probably be combined with load_run_com.
 def load_entries_need_fixing(file_dir):
     """Load and prepare the Entries Need Fixing file."""
-    entries_need_fixing = pd.Series([])
+    entries_need_fixing = None
     try:
         entries_need_fixing = pd.read_excel(file_dir, 'Data', dtype=str)
         # Convert entries to proper types, like above.
@@ -121,7 +121,7 @@ def load_entries_need_fixing(file_dir):
             except KeyError:
                 print('The following column was not found in ENF: ' + col
                       + '\nPlease check the column names and try again')
-                return pd.Series([])
+                return None
         mixed_cols = [col for col in list(entries_need_fixing) if col not in num_cols
                       and col not in ['Invoice Number', 'Part Number', 'Principal']]
         for col in mixed_cols:
@@ -130,7 +130,7 @@ def load_entries_need_fixing(file_dir):
             except KeyError:
                 print('The following column was not found in ENF: ' + col
                       + '\nPlease check the column names and try again.')
-                return pd.Series([])
+                return None
         # Now remove the nans.
         entries_need_fixing.replace(['nan', np.nan], '', inplace=True)
         entries_need_fixing['Invoice Date'] = entries_need_fixing['Invoice Date'].map(lambda x: form_date(x))
