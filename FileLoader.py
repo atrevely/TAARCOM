@@ -1,6 +1,8 @@
 import os
 import pandas as pd
 import numpy as np
+import datetime
+import shutil
 from xlrd import XLRDError
 from RCExcelTools import form_date
 
@@ -39,9 +41,14 @@ def load_com_master(file_dir):
     """Load and prepare the Commissions Master file. Return empty series if not found."""
     com_mast = pd.Series([])
     master_files = pd.Series([])
+    file_path = file_dir + '\\Commissions Master.xlsx'
+    today = datetime.datetime.today().strftime('%m-%d-%Y')
+    run_com_backup = file_path.replace('.xlsx', '_BACKUP_' + str(today) + '.xlsx')
+    print('Saving backup as: %s' % run_com_backup)
+    shutil.copy(file_path, run_com_backup)
     try:
-        com_mast = pd.read_excel(file_dir + '\\Commissions Master.xlsx', 'Master', dtype=str)
-        master_files = pd.read_excel(file_dir + '\\Commissions Master.xlsx', 'Files Processed').fillna('')
+        com_mast = pd.read_excel(file_path, 'Master', dtype=str)
+        master_files = pd.read_excel(file_path, 'Files Processed').fillna('')
         # Force numerical columns to be numeric.
         for col in num_cols:
             try:

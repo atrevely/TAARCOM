@@ -120,8 +120,7 @@ def main(run_com_path):
         except KeyError:
             print('There is no Invoice Date column in Entries Need Fixing!\n'
                   'Please check to make sure an Invoice Date column exists.\n'
-                  'Note: Spelling, whitespace, and capitalization matter.\n'
-                  '---')
+                  'Note: Spelling, whitespace, and capitalization matter.\n---')
             date_error = True
         # ---------------------------------------------------------------
         # If no error found in date, finish filling out the fixed entry.
@@ -167,8 +166,7 @@ def main(run_com_path):
         running_com[col] = pd.to_numeric(running_com[col], errors='ignore')
         entries_need_fixing[col] = pd.to_numeric(entries_need_fixing[col], errors='ignore')
     # Check to make sure commission dollars still match.
-    comm = pd.to_numeric(running_com['Actual Comm Paid'],
-                         errors='coerce').fillna(0)
+    comm = pd.to_numeric(running_com['Actual Comm Paid'], errors='coerce').fillna(0)
     if sum(comm) != tot_com:
         print('Commission dollars do not match after fixing entries!\n'
               'Make sure Entries Need fixing aligns properly with Running Commissions.\n'
@@ -179,25 +177,24 @@ def main(run_com_path):
     entries_need_fixing.reset_index(drop=True, inplace=True)
     lookup_master.fillna('', inplace=True)
     # Check for entries that are too old and quarantine them.
-    twoYearsAgo = datetime.datetime.today() - datetime.timedelta(days=720)
+    two_years_ago = datetime.datetime.today() - datetime.timedelta(days=720)
     try:
-        lastUsed = lookup_master['Last Used'].map(lambda x: pd.Timestamp(x))
-        lastUsed = lastUsed.map(lambda x: x.strftime('%Y%m%d'))
+        last_used = lookup_master['Last Used'].map(lambda x: pd.Timestamp(x))
+        last_used = last_used.map(lambda x: x.strftime('%Y%m%d'))
     except (AttributeError, ValueError):
         print('Error reading one or more dates in the Lookup Master!\n'
               'Make sure the Last Used column is all MM/DD/YYYY format.\n---')
         return
-    dateCutoff = lastUsed < twoYearsAgo.strftime('%Y%m%d')
-    oldEntries = lookup_master[dateCutoff].reset_index(drop=True)
-    lookup_master = lookup_master[~dateCutoff].reset_index(drop=True)
-    if oldEntries.shape[0] > 0:
+    date_cutoff = last_used < two_years_ago.strftime('%Y%m%d')
+    old_entries = lookup_master[date_cutoff].reset_index(drop=True)
+    lookup_master = lookup_master[~date_cutoff].reset_index(drop=True)
+    if old_entries.shape[0] > 0:
         # Record the date we quarantined the entries.
-        oldEntries.loc[:, 'Date Quarantined'] = datetime.datetime.now().date()
+        old_entries.loc[:, 'Date Quarantined'] = datetime.datetime.now().date()
         # Add deprecated entries to the quarantine.
-        quarantined = quarantined.append(oldEntries,  ignore_index=True,
-                                         sort=False)
+        quarantined = quarantined.append(old_entries, ignore_index=True, sort=False)
         # Notify us of changes.
-        print(str(len(oldEntries)) + ' entries quarantied for being more than 2 years old.\n---')
+        print(str(len(old_entries)) + ' entries quarantied for being more than 2 years old.\n---')
 
     # Check if the files we're going to save are open already.
     fname1 = out_dir + '\\Running Commissions ' + com_date
@@ -206,8 +203,7 @@ def main(run_com_path):
     fname4 = look_dir + '\\Quarantined Lookups.xlsx'
     if save_error(fname1, fname2, fname3, fname4):
         print('---\nOne or more files are currently open in Excel!\n'
-              'Please close the files and try again.\n'
-              '*Program Teminated*')
+              'Please close the files and try again.\n*Program Teminated*')
         return
 
     # Write the Running Commissions file.
@@ -242,5 +238,4 @@ def main(run_com_path):
     writer3.save()
     writer4.save()
 
-    print('Fixed entries migrated successfully!\n'
-          '+Program Complete+')
+    print('Fixed entries migrated successfully!\n+Program Complete+')
