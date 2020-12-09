@@ -2,15 +2,15 @@ import sys
 import pandas as pd
 import os.path
 from PyQt5 import QtCore, QtGui
-from PyQt5.QtWidgets import QMainWindow, QPushButton, QApplication, \
-                            QFileDialog, QTextEdit
+from PyQt5.QtWidgets import QMainWindow, QPushButton, QApplication, QFileDialog, QTextEdit
 from PyQt5.QtCore import pyqtSlot
 import GenerateMaster
 import MergeFixedEntries
 import SalesReportGenerator
+import MergeByUuid
 import CommTools
 
-VERSION = 'Master v2.3.10092020'
+VERSION = 'Master v2.3.12082020'
 if os.path.exists('Z:\\Commissions Lookup'):
     look_dir = 'Z:\\Commissions Lookup'
 else:
@@ -36,8 +36,7 @@ class GenMast(QMainWindow):
         # Custom output stream.
         sys.stdout = Stream(new_text=self.onUpdateText)
         # Set working directory as current file directory.
-        dirPath = os.path.dirname(os.path.realpath(__file__))
-        os.chdir(dirPath)
+        os.chdir(os.path.dirname(os.path.realpath(__file__)))
         # Initialize the threadpool for handling worker jobs.
         self.threadpool = QtCore.QThreadPool()
         # Initialize UI and supporting filenames.
@@ -59,16 +58,13 @@ class GenMast(QMainWindow):
                 self.fieldMappings = pd.read_excel(look_dir + '\\fieldMappings.xlsx', index_col=False)
             else:
                 print('No field mappings found!\n'
-                      'Please make sure fieldMappings.xlsx is in the directory.\n'
-                      '***')
+                      'Please make sure fieldMappings.xlsx is in the directory.\n***')
             if not os.path.exists(look_dir + '\\Lookup Master - Current.xlsx'):
                 print('No Lookup Master found!\n'
-                      'Please make sure Lookup Master is in the directory.\n'
-                      '***')
+                      'Please make sure Lookup Master is in the directory.\n***')
             if not os.path.exists(look_dir + '\\distributorLookup.xlsx'):
                 print('No distributor lookup found!\n'
-                      'Please make sure distributorLookup.xlsx '
-                      'is in the directory.\n'
+                      'Please make sure distributorLookup.xlsx is in the directory.\n'
                       '***')
         else:
             print('Could not find route to ' + look_dir + '\nPlease make sure you '
@@ -92,8 +88,7 @@ class GenMast(QMainWindow):
     def initUI(self):
         """Creates UI window on launch."""
         # Button for generating the master list.
-        self.btnGenMast = QPushButton('Process Raw Files\nto '
-                                      'Running\nCommissions', self)
+        self.btnGenMast = QPushButton('Process Raw Files\nto Running\nCommissions', self)
         self.btnGenMast.move(750, 430)
         self.btnGenMast.resize(150, 150)
         self.btnGenMast.clicked.connect(self.genMastClicked)
@@ -111,8 +106,7 @@ class GenMast(QMainWindow):
                                      'commission file(s) to process.')
 
         # Button for selecting a current master to append to.
-        self.btnUploadMast = QPushButton('Select Running\n'
-                                         'Commissions\nFile', self)
+        self.btnUploadMast = QPushButton('Select Running\nCommissions\nFile', self)
         self.btnUploadMast.move(250, 30)
         self.btnUploadMast.resize(150, 100)
         self.btnUploadMast.clicked.connect(self.uploadMastClicked)
@@ -135,8 +129,7 @@ class GenMast(QMainWindow):
 
         # Button for generating sales reports.
         self.btnGenReports = QPushButton('Run Reports\n(and Migrate Data\n'
-                                         'to Comm Master,\nif applicable)',
-                                         self)
+                                         'to Comm Master,\nif applicable)', self)
         self.btnGenReports.move(750, 30)
         self.btnGenReports.resize(150, 150)
         self.btnGenReports.clicked.connect(self.genReportsClicked)
@@ -154,17 +147,24 @@ class GenMast(QMainWindow):
         self.btnClearAll.move(450, 30)
         self.btnClearAll.resize(150, 100)
         self.btnClearAll.clicked.connect(self.clearAllClicked)
-        self.btnClearAll.setToolTip('Clear all selected files from the '
-                                    'workspace.')
+        self.btnClearAll.setToolTip('Clear all selected files from the workspace.')
 
         # Button for updating Lookup Master.
-        self.btnUpdateLookup = QPushButton('Update Lookup\nMaster from RC',
-                                           self)
+        self.btnUpdateLookup = QPushButton('Update Lookup\nMaster from RC', self)
         self.btnUpdateLookup.move(50, 610)
         self.btnUpdateLookup.resize(180, 80)
         self.btnUpdateLookup.clicked.connect(self.updateLookupClicked)
         self.btnUpdateLookup.setToolTip('Update the Lookup Master using a\n'
                                         'Running Commissions file.')
+
+        # Button for updating data in Commission Master.
+        self.btnUpdateMaster = QPushButton('Update Commission\nMaster from RC', self)
+        self.btnUpdateMaster.move(250, 610)
+        self.btnUpdateMaster.resize(180, 80)
+        self.btnUpdateMaster.clicked.connect(self.updateMasterClicked)
+        self.btnUpdateMaster.setToolTip('Update the Commission Master using a\n'
+                                        'Running Commissions file, matching entries'
+                                        'by their Unique ID.')
 
         # Create the text output widget.
         self.textBox = QTextEdit(self, readOnly=True)
@@ -208,35 +208,38 @@ class GenMast(QMainWindow):
         if self.threadpool.activeThreadCount() == 0:
             self.threadpool.start(worker)
 
+    def updateMasterClicked(self):
+        """Send the UpdateLookups execution to a worker thread."""
+        self.lockButtons()
+        worker = Worker(self.updateMasterExecute)
+        if self.threadpool.activeThreadCount() == 0:
+            self.threadpool.start(worker)
+
     def clearAllClicked(self):
         """Clear the filenames and master variables."""
         self.filenames = []
         self.master = []
-        print('All file selections cleared.\n'
-              '---')
+        print('All file selections cleared.\n---')
 
     def genMastExecute(self):
         """Runs function for processing new files to master."""
         # Check to see if we're ready to process.
-        mapExists = os.path.exists(look_dir + '\\fieldMappings.xlsx')
-        if self.filenames and mapExists:
+        mappings_exist = os.path.exists(look_dir + '\\fieldMappings.xlsx')
+        if self.filenames and mappings_exist:
             # Run the GenerateMaster.py file.
             try:
                 GenerateMaster.main(self.filenames, self.master, self.fieldMappings)
             except Exception as error:
-                print('Unexpected Python error:\n'
-                      + str(error)
+                print('Unexpected Python error:\n' + str(error)
                       + '\nPlease contact your local coder.')
             # Clear the filename selections.
             self.filenames = []
-        elif not mapExists:
+        elif not mappings_exist:
             print('File fieldMappings.xlsx not found!\n'
-                  'Please check file location and try again.\n'
-                  '---')
+                  'Please check file location and try again.\n---')
         elif not self.filenames:
             print('No commission files selected!\n'
-                  'Use the Select Commission Files button to select files.\n'
-                  '---')
+                  'Use the Select Commission Files button to select files.\n---')
         self.restoreButtons()
 
     def genReportsExecute(self):
@@ -246,8 +249,7 @@ class GenMast(QMainWindow):
         try:
             SalesReportGenerator.main(self.master)
         except Exception as error:
-            print('Unexpected Python error:\n'
-                  + str(error)
+            print('Unexpected Python error:\n' + str(error)
                   + '\nPlease contact your local coder.')
         # Clear the master selection.
         self.master = []
@@ -261,12 +263,10 @@ class GenMast(QMainWindow):
             try:
                 MergeFixedEntries.main(self.master)
             except Exception as error:
-                print('Unexpected Python error:\n'
-                      + str(error)
+                print('Unexpected Python error:\n' + str(error)
                       + '\nPlease contact your local coder.')
         else:
-            print('Please upload the current Running Commissions file.\n'
-                  '---')
+            print('Please upload the current Running Commissions file.\n---')
         self.restoreButtons()
 
     def updateLookupExecute(self):
@@ -276,28 +276,35 @@ class GenMast(QMainWindow):
             try:
                 CommTools.extractLookups(self.master)
             except Exception as error:
-                print('Unexpected Python error:\n'
-                      + str(error)
+                print('Unexpected Python error:\n' + str(error)
                       + '\nPlease contact your local coder.')
         else:
-            print('Please upload a Running Commissions file.\n'
-                  '---')
+            print('Please upload a Running Commissions file.\n---')
+        self.restoreButtons()
+
+    def updateMasterExecute(self):
+        """Run the update Master Commissions via Unique ID function."""
+        if self.master:
+            # Run the GenerateMaster.py file.
+            try:
+                MergeByUuid.main(self.master)
+            except Exception as error:
+                print('Unexpected Python error:\n' + str(error)
+                      + '\nPlease contact your local coder.')
+        else:
+            print('Please upload the target Running Commissions file.\n---')
         self.restoreButtons()
 
     def uploadMastClicked(self):
         """Upload an existing Running Commissions."""
         # Grab an existing Running Commissions to append to.
-        self.master, _ = QFileDialog.getOpenFileName(
-                self, filter="Excel files (*.xls *.xlsx *.xlsm)")
+        self.master, _ = QFileDialog.getOpenFileName(self, filter="Excel files (*.xls *.xlsx *.xlsm)")
         if self.master:
             print('Current Running Commissions selected:\n'
-                  + os.path.basename(self.master)
-                  + '\n---')
+                  + os.path.basename(self.master) + '\n---')
             if 'Running Commissions' not in self.master:
-                print('Caution!\n'
-                      'The file uploaded as a Running Commissions '
-                      'does not appear to be correct.\n'
-                      '---')
+                print('Caution!\nThe file uploaded as a Running Commissions '
+                      'does not appear to be correct.\n---')
 
     def openFilesClicked(self):
         """Provide filepaths for new data to process using GenerateMaster."""
@@ -305,14 +312,11 @@ class GenMast(QMainWindow):
         if self.filenames:
             print('Selecting new files, old selections cleared...')
         # Grab the filenames to be passed into GenerateMaster.
-        self.filenames, _ = QFileDialog.getOpenFileNames(
-                self, filter="Excel files (*.xls *.xlsx *.xlsm)")
+        self.filenames, _ = QFileDialog.getOpenFileNames(self, filter="Excel files (*.xls *.xlsx *.xlsm)")
         # Check if the current master got uploaded as a new file.
         for name in self.filenames:
             if 'Running Commissions' in name:
-                print('RC uploaded as raw file.\n'
-                      'Try uploading files again.\n'
-                      '---')
+                print('RC uploaded as raw file.\nTry uploading files again.\n---')
                 return
         # Print out the selected filenames.
         if self.filenames:
@@ -329,6 +333,7 @@ class GenMast(QMainWindow):
         self.btnFixEntries.setEnabled(False)
         self.btnGenReports.setEnabled(False)
         self.btnUpdateLookup.setEnabled(False)
+        self.btnU
 
     def restoreButtons(self):
         self.btnGenMast.setEnabled(True)

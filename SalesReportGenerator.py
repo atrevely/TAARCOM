@@ -468,7 +468,7 @@ def main(run_com):
         # Don't copy over INDIVIDUAL, MISC, or ALLOWANCE.
         no_copy = ['INDIVIDUAL', 'UNKNOWN', 'ALLOWANCE']
         pared_ID = [i for i in running_com.index
-                   if not any(j in running_com.loc[i, 'T-End Cust'].upper() for j in no_copy)]
+                    if not any(j in running_com.loc[i, 'T-End Cust'].upper() for j in no_copy)]
         for row in pared_ID:
             # First match reported customer.
             reported_cust = str(running_com.loc[row, 'Reported Customer']).lower()
