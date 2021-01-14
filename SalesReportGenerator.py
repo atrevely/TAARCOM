@@ -68,10 +68,10 @@ def data_by_princ_tab(input_data):
     # Sort principals in descending order alphabetically.
     princ_tab.sort_values(by=['Principal'], inplace=True)
     princ_tab.reset_index(drop=True, inplace=True)
-    # Fill in overall totals on the next row.
-    princ_tab.loc[row + 1, 'Principal'] = 'Grand Total'
+    # Fill in overall totals on the last row.
+    princ_tab.loc[princ_tab.__len__(), 'Principal'] = 'Grand Total'
     for col in princ_tab.columns[1:]:
-        princ_tab.loc[row + 1, col] = np.sum(princ_tab[col])
+        princ_tab.loc[princ_tab.__len__(), col] = np.sum(princ_tab[col])
     return princ_tab
 
 
@@ -110,7 +110,7 @@ def create_quarterly_report(comm_data, comm_qtr, salespeople, sales_info):
     # -----------------
     # Save the report.
     # -----------------
-    filename = (reports_dir + '\\Quarterly Commission Report ' + comm_qtr + '.xlsx')
+    filename = os.path.join(reports_dir, 'Quarterly Commission Report ' + comm_qtr + '.xlsx')
     writer = pd.ExcelWriter(filename, engine='xlsxwriter', datetime_format='mm/dd/yyyy')
     tab_save_prep(writer=writer, data=comm_data, sheet_name='Comm Data')
     tab_save_prep(writer=writer, data=princ_tab, sheet_name='Principals')
@@ -135,9 +135,9 @@ def main(run_com):
     # --------------------------------------------------------
     # Load in the supporting files, exit if any aren't found.
     # --------------------------------------------------------
-    sales_info = load_salespeople_info(file_dir=look_dir)
-    acct_list = load_acct_list(file_dir=look_dir)
-    com_mast, master_files = load_com_master(file_dir=data_dir)
+    sales_info = load_salespeople_info()
+    acct_list = load_acct_list()
+    com_mast, master_files = load_com_master()
     if any([acct_list.empty, sales_info.empty, com_mast.empty, master_files.empty]):
         print('*Program Terminated*')
         return
@@ -159,7 +159,7 @@ def main(run_com):
     last_month = max(comm_months)
 
     if run_com:
-        look_mast = load_lookup_master(file_dir=look_dir)
+        look_mast = load_lookup_master()
         running_com, files_processed = load_run_com(file_path=run_com)
         if any([look_mast.empty, running_com.empty, files_processed.empty]):
             print('*Program Terminated*')
@@ -261,7 +261,7 @@ def main(run_com):
     # Tag the data by current Design Sales in the Account List.
     for cust in revenue_data['T-End Cust'].unique():
         # Check for a single match in Account List.
-        if sum(acct_list['ProperName'] == cust) == 1:
+        if np.sum(acct_list['ProperName'] == cust) == 1:
             try:
                 sales = acct_list[acct_list['ProperName'] == cust]['SLS'].iloc[0]
                 cust_ID = revenue_data[revenue_data['T-End Cust'] == cust].index

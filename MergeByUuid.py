@@ -15,8 +15,8 @@ def main(run_com_path):
     by matching the unique IDs.
     """
     # Load up the file to be merged.
-    running_com, files_processed = load_run_com(file_path=run_com_path)
-    com_mast, master_files = load_com_master(file_dir=data_dir)
+    running_com, files_processed = load_run_com()
+    com_mast, master_files = load_com_master()
     if any([com_mast.empty, running_com.empty]):
         print('*Program Terminated*')
         return
@@ -35,10 +35,10 @@ def main(run_com_path):
                 com_mast.loc[id_match_loc, :] = com_mast.loc[row, list(running_com)]
         except ValueError:
             print('Error reading Running Com Index!\nMake sure all values are numeric.\n'
-                  '*Program Teminated*')
+                  '*Program Terminated*')
             return
 
-    filename = data_dir + '\\Commissions Master.xlsx'
+    filename = os.path.join(data_dir, 'Commissions Master.xlsx')
     writer = pd.ExcelWriter(filename, engine='xlsxwriter', datetime_format='mm/dd/yyyy')
     tab_save_prep(writer=writer, data=com_mast, sheet_name='Master Data')
     tab_save_prep(writer=writer, data=master_files, sheet_name='Files Processed')

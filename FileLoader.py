@@ -6,17 +6,27 @@ import shutil
 from xlrd import XLRDError
 from RCExcelTools import form_date
 
+# Define the directories where supporting files are located.
+DIRECTORIES = {'COMM_LOOKUPS_DIR': 'Z:\\Commissions Lookup',
+               'COMM_WORKING_DIR': 'Z:\\MK Working Commissions',
+               'COMM_REPORTS_DIR': 'Z:\\MK Working Commissions\\Reports',
+               'DIGIKEY_DIR': 'W:\\'}
+# If any directories aren't found, then replace them with the current working directory.
+DIRECTORIES = {i: j if os.path.exists(j) else os.getcwd() for i, j in DIRECTORIES.items()}
+
+
 # Set the numerical columns.
 num_cols = ['Quantity', 'Ext. Cost', 'Invoiced Dollars', 'Paid-On Revenue', 'Actual Comm Paid',
             'Unit Cost', 'Unit Price', 'CM Split', 'Year', 'Sales Commission', 'Split Percentage',
             'Commission Rate', 'Gross Rev Reduction', 'Shared Rev Tier Rate']
 
 
-def load_salespeople_info(file_dir):
+def load_salespeople_info():
     """Read in Salespeople Info. Return empty series if not found or if there's an error."""
     sales_info = pd.Series([])
+    location = DIRECTORIES.get('COMM_LOOKUPS_DIR')
     try:
-        sales_info = pd.read_excel(file_dir + '\\Salespeople Info.xlsx', 'Info')
+        sales_info = pd.read_excel(os.path.join(location, 'Salespeople Info.xlsx'), 'Info')
         # Make sure the required columns are present.
         cols = ['Salesperson', 'Sales Initials', 'Sales Percentage', 'Territory Cities', 'QQ Split']
         missing_cols = [i for i in cols if i not in list(sales_info)]
@@ -30,18 +40,34 @@ def load_salespeople_info(file_dir):
             sales_info[col] = sales_info[col].fillna(0)
     except FileNotFoundError:
         print('---\nNo Salespeople Info file found!\n'
-              'Please make sure Salespeople Info.xlsx is in the directory:\n' + file_dir)
+              'Please make sure Salespeople Info.xlsx is in the following directory:\n' + location)
     except XLRDError:
         print('---\nError reading sheet name for Salespeople Info.xlsx!\n'
               'Please make sure the main tab is named Info.')
     return sales_info
 
 
-def load_com_master(file_dir):
+def load_principal_info():
+    """Load the Principal Info file."""
+    princ_info = pd.Series([])
+    location = DIRECTORIES.get('COMM_LOOKUPS_DIR')
+    try:
+        princ_info = pd.read_excel(os.path.join(location, 'Principal Info.xlsx'), 'Principal Info')
+    except FileNotFoundError:
+        print('---\nNo Principal Info file found!\n'
+              'Please make sure Principal Info.xlsx is in the following directory:\n' + location)
+    except XLRDError:
+        print('---\nError reading sheet name for Principal Info.xlsx!\n'
+              'Please make sure the main tab is named Principal Info.')
+    return princ_info
+
+
+def load_com_master():
     """Load and prepare the Commissions Master file. Return empty series if not found."""
     com_mast = pd.Series([])
     master_files = pd.Series([])
-    file_path = file_dir + '\\Commissions Master.xlsx'
+    location = DIRECTORIES.get('COMM_WORKING_DIR')
+    file_path = os.path.join(location, 'Commissions Master.xlsx')
     today = datetime.datetime.today().strftime('%m-%d-%Y')
     run_com_backup = file_path.replace('.xlsx', '_BACKUP_' + str(today) + '.xlsx')
     print('Saving backup as: %s' % run_com_backup)
@@ -150,11 +176,12 @@ def load_entries_need_fixing(file_dir):
     return entries_need_fixing
 
 
-def load_acct_list(file_dir):
+def load_acct_list():
     """Load and prepare the Account List file."""
     acct_list = pd.Series([])
+    location = DIRECTORIES.get('COMM_LOOKUPS_DIR')
     try:
-        acct_list = pd.read_excel(file_dir + '\\Master Account List.xlsx', 'Allacct').fillna('')
+        acct_list = pd.read_excel(os.path.join(location, 'Master Account List.xlsx'), 'Allacct').fillna('')
         # Make sure the required columns are present.
         cols = ['SLS', 'ProperName']
         missing_cols = [i for i in cols if i not in list(acct_list)]
@@ -164,17 +191,18 @@ def load_acct_list(file_dir):
                   'names (case-sensitive) and try again.')
             acct_list = pd.Series([])
     except FileNotFoundError:
-        print('---\nNo Account List file found!')
+        print('---\nNo Account List file found! Please make sure it is location in ' + location)
     except XLRDError:
         print('---\nAccount List tab names incorrect!\nMake sure the main tab is named Allacct.')
     return acct_list
 
 
-def load_lookup_master(file_dir):
+def load_lookup_master():
     """Load and prepare the Lookup Master."""
     master_lookup = pd.Series([])
-    if os.path.exists(file_dir + '\\Lookup Master - Current.xlsx'):
-        master_lookup = pd.read_excel(file_dir + '\\Lookup Master - Current.xlsx').fillna('')
+    location = DIRECTORIES.get('COMM_LOOKUPS_DIR')
+    try:
+        master_lookup = pd.read_excel(os.path.join(location, 'Lookup Master - Current.xlsx')).fillna('')
         # Make sure the required columns are present.
         lookup_cols = ['CM Sales', 'Design Sales', 'CM Split', 'Reported Customer', 'CM', 'Part Number',
                        'T-Name', 'T-End Cust', 'Last Used', 'Principal', 'City', 'Date Added']
@@ -185,17 +213,20 @@ def load_lookup_master(file_dir):
             return pd.Series([])
         # Set the CM Split to an int.
         master_lookup['CM Split'] = master_lookup['CM Split'].map(lambda x: int(x) if isinstance(x, float) else x)
-    else:
-        print('---\nNo Lookup Master found!\n'
-              'Please make sure Lookup Master - Current.xlsx is in the directory.')
+    except FileNotFoundError:
+        print('---\nNo Lookup Master found!\nPlease make sure Lookup Master - Current.xlsx is in ' + location)
+    except XLRDError:
+        print('Error reading sheet names.')
     return master_lookup
 
 
-def load_root_customer_mappings(file_dir):
+def load_root_customer_mappings():
     """Load and prepare the root customer mappings file."""
     customer_mappings = pd.Series([])
-    if os.path.exists(file_dir + '\\rootCustomerMappings.xlsx'):
-        customer_mappings = pd.read_excel(file_dir + '\\rootCustomerMappings.xlsx', 'Sales Lookup').fillna('')
+    location = DIRECTORIES.get('COMM_LOOKUPS_DIR')
+    try:
+        customer_mappings = pd.read_excel(os.path.join(location, 'rootCustomerMappings.xlsx'),
+                                          'Sales Lookup').fillna('')
         # Check the column names.
         map_cols = ['Root Customer', 'Salesperson']
         missing_cols = [i for i in map_cols if i not in list(customer_mappings)]
@@ -203,20 +234,27 @@ def load_root_customer_mappings(file_dir):
             print('The following columns were not detected in rootCustomerMappings.xlsx:\n%s' %
                   ', '.join(map(str, missing_cols)))
             customer_mappings = pd.Series([])
-    else:
+    except FileNotFoundError:
         print('---\nNo Root Customer Mappings file found!\n'
               'Please make sure rootCustomerMappings.xlsx is in the directory.\n')
+    except XLRDError:
+        print('Error reading sheet names.')
     return customer_mappings
 
 
-def load_digikey_master(file_dir):
+def load_digikey_master():
     """Load and prepare the digikey insights master file."""
     digikey_master = pd.Series([])
     files_processed = pd.Series([])
-    if os.path.exists(file_dir + '\\Digikey Insight Master.xlsx'):
-        digikey_master = pd.read_excel(file_dir + '\\Digikey Insight Master.xlsx', 'Master').fillna('')
-        files_processed = pd.read_excel(file_dir + '\\Digikey Insight Master.xlsx', 'Files Processed').fillna('')
-    else:
+    location = DIRECTORIES.get('DIGIKEY_DIR')
+    try:
+        digikey_master = pd.read_excel(os.path.join(location, 'Digikey Insight Master.xlsx'),
+                                       'Master').fillna('')
+        files_processed = pd.read_excel(os.path.join(location, 'Digikey Insight Master.xlsx'),
+                                        'Files Processed').fillna('')
+    except FileNotFoundError:
         print('---\nNo Digikey Insight Master file found!\n'
               'Please make sure Digikey Insight Master is in the directory.\n')
+    except XLRDError:
+        print('Error reading sheet names.')
     return digikey_master, files_processed

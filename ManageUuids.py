@@ -7,7 +7,7 @@ from FileSaver import prepare_save_file, save_files
 
 def tag_comm_master(master_location):
     """Tag all lines in Commissions Master that don't have a unique id."""
-    master_comm, master_files = load_com_master(master_location)
+    master_comm, master_files = load_com_master()
     output_file = os.path.join(master_location, 'Commissions Master_BACKUP.xlsx')
     print('Saving backup')
     writer = prepare_save_file(filename=output_file, tab_data=[master_comm, master_files],

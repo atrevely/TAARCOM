@@ -394,7 +394,7 @@ def main(filepaths, path_to_running_com, field_mappings):
         return
 
     # Read in the Lookup Master. Terminate if not found or if errors in file.
-    master_lookup = load_lookup_master(file_dir=look_dir)
+    master_lookup = load_lookup_master()
 
     # -------------------------------------------------------------------------
     # Done loading in the data and supporting files, now go to work.

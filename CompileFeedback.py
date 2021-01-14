@@ -66,10 +66,10 @@ def main(filepaths):
     # --------------------------------------------------------
     # Load in the supporting files, exit if any aren't found.
     # --------------------------------------------------------
-    sales_info = load_salespeople_info(file_dir=look_dir)
-    customer_mappings = load_root_customer_mappings(file_dir=look_dir)
-    acct_list = load_acct_list(file_dir=look_dir)
-    digikey_master, files_processed = load_digikey_master(file_dir=data_dir)
+    sales_info = load_salespeople_info()
+    customer_mappings = load_root_customer_mappings()
+    acct_list = load_acct_list()
+    digikey_master, files_processed = load_digikey_master()
 
     if any([sales_info.empty, customer_mappings.empty, acct_list.empty, digikey_master.empty]):
         print('*Program Terminated*')

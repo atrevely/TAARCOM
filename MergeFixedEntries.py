@@ -34,7 +34,7 @@ def main(run_com_path):
     running_com, files_processed = load_run_com(run_com_path)
     com_date = run_com_path[-20:]
     entries_need_fixing = load_entries_need_fixing(out_dir + '\\Entries Need Fixing ' + com_date)
-    lookup_master = load_lookup_master(look_dir)
+    lookup_master = load_lookup_master()
     # Track commission dollars.
     try:
         comm = pd.to_numeric(running_com['Actual Comm Paid'], errors='raise').fillna(0)
