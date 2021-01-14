@@ -9,12 +9,10 @@ import MergeFixedEntries
 import SalesReportGenerator
 import MergeByUuid
 import CommTools
+from FileLoader import DIRECTORIES
 
-VERSION = 'Master v2.3.12082020'
-if os.path.exists('Z:\\Commissions Lookup'):
-    look_dir = 'Z:\\Commissions Lookup'
-else:
-    look_dir = os.getcwd()
+VERSION = 'Master v2.3.01132021'
+LOOKUPS_DIR = DIRECTORIES.get('COMM_LOOKUPS_DIR')
 
 
 class Stream(QtCore.QObject):
@@ -53,23 +51,22 @@ class GenMast(QMainWindow):
         if not os.path.exists('Z:/'):
             print('No connection to Z:/ drive established! Working locally.\n---')
         # Try loading/finding the supporting files.
-        if os.path.exists(look_dir):
-            if os.path.exists(look_dir + '\\fieldMappings.xlsx'):
-                self.fieldMappings = pd.read_excel(look_dir + '\\fieldMappings.xlsx', index_col=False)
+        if os.path.exists(LOOKUPS_DIR):
+            if os.path.exists(os.path.join(LOOKUPS_DIR, 'fieldMappings.xlsx')):
+                self.fieldMappings = pd.read_excel(os.path.join(LOOKUPS_DIR, 'fieldMappings.xlsx'),
+                                                   index_col=False)
             else:
                 print('No field mappings found!\n'
-                      'Please make sure fieldMappings.xlsx is in the directory.\n***')
-            if not os.path.exists(look_dir + '\\Lookup Master - Current.xlsx'):
+                      'Please make sure fieldMappings.xlsx is located at\n%s\n***' % LOOKUPS_DIR)
+            if not os.path.exists(os.path.join(LOOKUPS_DIR, 'Lookup Master - Current.xlsx')):
                 print('No Lookup Master found!\n'
-                      'Please make sure Lookup Master is in the directory.\n***')
-            if not os.path.exists(look_dir + '\\distributorLookup.xlsx'):
+                      'Please make sure Lookup Master is located at\n%s\n***' % LOOKUPS_DIR)
+            if not os.path.exists(os.path.join(LOOKUPS_DIR, 'distributorLookup.xlsx')):
                 print('No distributor lookup found!\n'
-                      'Please make sure distributorLookup.xlsx is in the directory.\n'
-                      '***')
+                      'Please make sure distributorLookup.xlsx is located at\n%s\n***' % LOOKUPS_DIR)
         else:
-            print('Could not find route to ' + look_dir + '\nPlease make sure you '
-                  'are connected to the TAARCOM server, then relaunch the program.'
-                  '\n***')
+            print('Could connect to ' + LOOKUPS_DIR + '\nPlease make sure you '
+                  'are connected to the TAARCOM server, then relaunch the program.\n***')
 
     def onUpdateText(self, text):
         """Write console output to text widget."""
@@ -114,17 +111,13 @@ class GenMast(QMainWindow):
                                       'Running Commissions to use.')
 
         # Button for writing fixed entries.
-        self.btnFixEntries = QPushButton('Copy Fixed ENF\nEntries to\n'
-                                         'Running\nCommissions', self)
+        self.btnFixEntries = QPushButton('Copy Fixed ENF\nEntries to\nRunning\nCommissions', self)
         self.btnFixEntries.move(750, 230)
         self.btnFixEntries.resize(150, 150)
         self.btnFixEntries.clicked.connect(self.fixEntriesClicked)
-        self.btnFixEntries.setToolTip('Migrate finished lines in the Entries '
-                                      'Need Fixing file over to the '
-                                      'associated Running Commissions.\n'
-                                      'A Running Commissions needs to be '
-                                      'selected and will be matched to '
-                                      'the Entries Needs Fixing by the '
+        self.btnFixEntries.setToolTip('Migrate finished lines in the Entries Need Fixing file over to the '
+                                      'associated Running Commissions.\nA Running Commissions needs to be '
+                                      'selected and will be matched to the Entries Needs Fixing by the '
                                       'date at the end of the filenames.')
 
         # Button for generating sales reports.
@@ -133,14 +126,10 @@ class GenMast(QMainWindow):
         self.btnGenReports.move(750, 30)
         self.btnGenReports.resize(150, 150)
         self.btnGenReports.clicked.connect(self.genReportsClicked)
-        self.btnGenReports.setToolTip('Generate commission and revenue '
-                                      'reports,\nthen migrate the Running '
-                                      'Commissions data over to the '
-                                      'Commissions Master.'
-                                      '\nIf no Running Commissions is '
-                                      'provided, will run reports on most '
-                                      'recent quarter of data in the '
-                                      'Commissions Master.')
+        self.btnGenReports.setToolTip('Generate commission and revenue reports,\nthen migrate the Running '
+                                      'Commissions data over to the Commissions Master.\n'
+                                      'If no Running Commissions is provided, will run reports on most '
+                                      'recent quarter of data in the Commissions Master.')
 
         # Button for clearing filename and master choices.
         self.btnClearAll = QPushButton('Clear\nSelections', self)
@@ -224,7 +213,7 @@ class GenMast(QMainWindow):
     def genMastExecute(self):
         """Runs function for processing new files to master."""
         # Check to see if we're ready to process.
-        mappings_exist = os.path.exists(look_dir + '\\fieldMappings.xlsx')
+        mappings_exist = os.path.exists(LOOKUPS_DIR + '\\fieldMappings.xlsx')
         if self.filenames and mappings_exist:
             # Run the GenerateMaster.py file.
             try:
@@ -298,10 +287,9 @@ class GenMast(QMainWindow):
     def uploadMastClicked(self):
         """Upload an existing Running Commissions."""
         # Grab an existing Running Commissions to append to.
-        self.master, _ = QFileDialog.getOpenFileName(self, filter="Excel files (*.xls *.xlsx *.xlsm)")
+        self.master, _ = QFileDialog.getOpenFileName(self, filter='Excel files (*.xls *.xlsx *.xlsm)')
         if self.master:
-            print('Current Running Commissions selected:\n'
-                  + os.path.basename(self.master) + '\n---')
+            print('Current Running Commissions selected:\n' + os.path.basename(self.master) + '\n---')
             if 'Running Commissions' not in self.master:
                 print('Caution!\nThe file uploaded as a Running Commissions '
                       'does not appear to be correct.\n---')
@@ -312,7 +300,7 @@ class GenMast(QMainWindow):
         if self.filenames:
             print('Selecting new files, old selections cleared...')
         # Grab the filenames to be passed into GenerateMaster.
-        self.filenames, _ = QFileDialog.getOpenFileNames(self, filter="Excel files (*.xls *.xlsx *.xlsm)")
+        self.filenames, _ = QFileDialog.getOpenFileNames(self, filter='Excel files (*.xls *.xlsx *.xlsm)')
         # Check if the current master got uploaded as a new file.
         for name in self.filenames:
             if 'Running Commissions' in name:
@@ -333,7 +321,7 @@ class GenMast(QMainWindow):
         self.btnFixEntries.setEnabled(False)
         self.btnGenReports.setEnabled(False)
         self.btnUpdateLookup.setEnabled(False)
-        self.btnU
+        self.btnUpdateMaster.setEnabled(False)
 
     def restoreButtons(self):
         self.btnGenMast.setEnabled(True)
@@ -343,6 +331,7 @@ class GenMast(QMainWindow):
         self.btnFixEntries.setEnabled(True)
         self.btnGenReports.setEnabled(True)
         self.btnUpdateLookup.setEnabled(True)
+        self.btnUpdateMaster.setEnabled(True)
 
 
 class Worker(QtCore.QRunnable):
