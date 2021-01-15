@@ -5,10 +5,9 @@ from PyQt5.QtWidgets import QMainWindow, QPushButton, QApplication, QFileDialog,
 from PyQt5.QtCore import pyqtSlot
 import LookupSales
 import CompileFeedback
+from FileLoader import DIRECTORIES
 
-LOOKUPS_DIR = 'Z:/Commissions Lookup/'
-if not os.path.exists(LOOKUPS_DIR):
-    LOOKUPS_DIR = os.getcwd()
+LOOKUPS_DIR = DIRECTORIES.get('COMM_LOOKUPS_DIR')
 
 
 class Stream(QtCore.QObject):
@@ -39,11 +38,9 @@ class GenMast(QMainWindow):
         sys.stdout = Stream(newText=self.on_update_text)
         # Show welcome message.
         print('Welcome to the TAARCOM Digikey Insights Manager.\n'
-              'Version m.10042020\n'
-              'Messages and updates will display below.\n'
+              'Version m.01132021\nMessages and updates will display below.\n'
               '______________________________________________________\n'
-              'REMINDER: Did you pull the latest version from GitHub?\n'
-              '---')
+              'REMINDER: Did you pull the latest version from GitHub?\n---')
 
         # Try finding/loading the supporting files.
         if not os.path.exists(os.path.join(LOOKUPS_DIR, 'rootCustomerMappings.xlsx')):
@@ -80,9 +77,8 @@ class GenMast(QMainWindow):
         self.btn_compile_feedback.move(650, 200)
         self.btn_compile_feedback.resize(150, 150)
         self.btn_compile_feedback.clicked.connect(self.compile_feedback_clicked)
-        self.btn_compile_feedback.setToolTip('Combine individual reports with '
-                                             'feedback into one file, and '
-                                             'append that file to Digikey Insight Master.')
+        self.btn_compile_feedback.setToolTip('Combine individual reports with feedback into one file, '
+                                             'and append that file to Digikey Insight Master.')
 
         # Button for clearing selections.
         self.btn_clear_all = QPushButton('Clear \n File Selections', self)
