@@ -519,7 +519,7 @@ def main(run_com):
     if run_com:
         # Write the Commissions Master file if new RC data was added to it.
         writer1 = pd.ExcelWriter(filename_1, engine='xlsxwriter', datetime_format='mm/dd/yyyy')
-        tab_save_prep(writer=writer1, data=com_mast, sheet_name='Master Data')
+        tab_save_prep(writer=writer1, data=com_mast, sheet_name='Master')
         tab_save_prep(writer=writer1, data=master_files, sheet_name='Files Processed')
 
         # Write the Lookup Master.

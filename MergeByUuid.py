@@ -40,7 +40,7 @@ def main(run_com_path):
 
     filename = os.path.join(data_dir, 'Commissions Master.xlsx')
     writer = pd.ExcelWriter(filename, engine='xlsxwriter', datetime_format='mm/dd/yyyy')
-    tab_save_prep(writer=writer, data=com_mast, sheet_name='Master Data')
+    tab_save_prep(writer=writer, data=com_mast, sheet_name='Master')
     tab_save_prep(writer=writer, data=master_files, sheet_name='Files Processed')
     writer.save()
     print('+ Merge Complete +')
