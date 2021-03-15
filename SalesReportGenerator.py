@@ -279,7 +279,7 @@ def main(run_com):
         if not revenue_data.loc[row, 'CDS']:
             revenue_data.loc[row, 'CDS'] = revenue_data.loc[row, 'CM Sales']
     # Also grab the section of the data that aren't 80/20 splits.
-    split_data = revenue_data[revenue_data['CM Split'] > 20]
+    split_data = revenue_data[revenue_data['CM Split'] != 20]
 
     # ---------------------------------------------------------
     # Combine and tag commission data for the current quarter.

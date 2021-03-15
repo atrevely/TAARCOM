@@ -15,7 +15,7 @@ def main(run_com_path):
     by matching the unique IDs.
     """
     # Load up the file to be merged.
-    running_com, files_processed = load_run_com()
+    running_com, files_processed = load_run_com(file_path=run_com_path)
     com_mast, master_files = load_com_master()
     if any([com_mast.empty, running_com.empty]):
         print('*Program Terminated*')
