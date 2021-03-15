@@ -11,7 +11,7 @@ else:
 
 
 def main(run_com_path):
-    """Merge a file (generally a Running Commissions into the Commission Master
+    """Merge a file (generally a Running Commissions or Quarterly Commissions) into the Commission Master
     by matching the unique IDs.
     """
     # Load up the file to be merged.
@@ -31,8 +31,8 @@ def main(run_com_path):
                 print('WARNING! Multiple matches found for unique ID %s.' % running_com.loc[row, 'Unique ID'])
             else:
                 id_match_loc = id_match_loc[0]
-                # Replace the Running Commissions entry with the fixed one.
-                com_mast.loc[id_match_loc, :] = com_mast.loc[row, list(running_com)]
+                # Replace the Commissions Master entry with the fixed one.
+                com_mast.loc[id_match_loc, :] = running_com.loc[row, list(running_com)]
         except ValueError:
             print('Error reading Running Com Index!\nMake sure all values are numeric.\n'
                   '*Program Terminated*')
