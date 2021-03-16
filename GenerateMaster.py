@@ -730,6 +730,18 @@ def main(filepaths, path_to_running_com, field_mappings):
             entries_need_fixing.loc[row, 'Distributor Matches'] = len(dist_matches)
             entries_need_fixing.loc[row, 'Lookup Master Matches'] = lookup_matches
             entries_need_fixing.loc[row, 'Date Added'] = datetime.datetime.now().date()
+        else:
+            # Fill in the Sales Commission info.
+            sales_com = 0.45 * running_com.loc[row, 'Actual Comm Paid']
+            running_com.loc[row, 'Sales Commission'] = sales_com
+            if running_com.loc[row, 'CM Sales']:
+                # Grab split with default to 20.
+                split = running_com.loc[row, 'CM Split'] or 20
+            else:
+                # No CM Sales, so no split.
+                split = 0
+            running_com.loc[row, 'CM Sales Comm'] = split * sales_com / 100
+            running_com.loc[row, 'Design Sales Comm'] = (100 - split) * sales_com / 100
 
         # Update progress every 100 rows.
         if (row - run_com_len) % 100 == 0 and row > run_com_len:

@@ -31,7 +31,7 @@ def main(run_com_path):
                 print('WARNING! Multiple matches found for unique ID %s.' % running_com.loc[row, 'Unique ID'])
             else:
                 id_match_loc = id_match_loc[0]
-                # Replace the Commissions Master entry with the fixed one.
+                # Replace the target entry with the fixed/updated one.
                 com_mast.loc[id_match_loc, :] = running_com.loc[row, list(running_com)]
         except ValueError:
             print('Error reading Running Com Index!\nMake sure all values are numeric.\n'
