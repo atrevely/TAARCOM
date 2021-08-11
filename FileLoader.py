@@ -7,16 +7,14 @@ from xlrd import XLRDError
 from RCExcelTools import form_date
 
 # Define the directories where supporting files are located.
-DIRECTORIES = {'COMM_LOOKUPS_DIR': 'Z:\\Commissions Lookup',
-               'COMM_WORKING_DIR': 'Z:\\MK Working Commissions',
-               'COMM_REPORTS_DIR': 'Z:\\MK Working Commissions\\Reports',
-               'DIGIKEY_DIR': 'W:\\'}
+DIRECTORIES = {'COMM_LOOKUPS_DIR': 'Z:\\Commissions Lookup', 'COMM_WORKING_DIR': 'Z:\\MK Working Commissions',
+               'COMM_REPORTS_DIR': 'Z:\\MK Working Commissions\\Reports', 'DIGIKEY_DIR': 'W:\\'}
 # If any directories aren't found, then replace them with the current working directory.
 DIRECTORIES = {i: j if os.path.exists(j) else os.getcwd() for i, j in DIRECTORIES.items()}
 
 
 # Set the numerical columns.
-num_cols = ['Quantity', 'Ext. Cost', 'Invoiced Dollars', 'Paid-On Revenue', 'Actual Comm Paid',
+NUM_COLS = ['Quantity', 'Ext. Cost', 'Invoiced Dollars', 'Paid-On Revenue', 'Actual Comm Paid',
             'Unit Cost', 'Unit Price', 'CM Split', 'Year', 'Sales Commission', 'Split Percentage',
             'Commission Rate', 'Gross Rev Reduction', 'Shared Rev Tier Rate']
 
@@ -52,13 +50,13 @@ def load_principal_info():
     princ_info = pd.Series([])
     location = DIRECTORIES.get('COMM_LOOKUPS_DIR')
     try:
-        princ_info = pd.read_excel(os.path.join(location, 'Principal Info.xlsx'), 'Principal Info')
+        princ_info = pd.read_excel(os.path.join(location, 'principalList.xlsx'), 'Principals')
     except FileNotFoundError:
-        print('---\nNo Principal Info file found!\n'
+        print('---\nNo Principal List file found!\n'
               'Please make sure Principal Info.xlsx is in the following directory:\n' + location)
     except XLRDError:
-        print('---\nError reading sheet name for Principal Info.xlsx!\n'
-              'Please make sure the main tab is named Principal Info.')
+        print('---\nError reading sheet name for principalList.xlsx!\n'
+              'Please make sure the main tab is named Principals.')
     return princ_info
 
 
@@ -76,7 +74,7 @@ def load_com_master():
         com_mast = pd.read_excel(file_path, 'Master', dtype=str)
         master_files = pd.read_excel(file_path, 'Files Processed').fillna('')
         # Force numerical columns to be numeric.
-        for col in num_cols:
+        for col in NUM_COLS:
             try:
                 com_mast[col] = pd.to_numeric(com_mast[col], errors='coerce').fillna(0)
             except KeyError:
@@ -84,7 +82,7 @@ def load_com_master():
         # Convert individual numbers to numeric in rest of columns.
         # Invoice/part numbers sometimes have leading zeros we'd like to keep, and
         # the INF gets read in as infinity, so remove these.
-        mixed_cols = [col for col in list(com_mast) if col not in num_cols
+        mixed_cols = [col for col in list(com_mast) if col not in NUM_COLS
                       and col not in ['Invoice Number', 'Part Number', 'Principal']]
         for col in mixed_cols:
             com_mast[col] = pd.to_numeric(com_mast[col], errors='ignore')
@@ -107,18 +105,17 @@ def load_com_master():
 
 def load_run_com(file_path):
     """Load and prepare the Running Commissions file. Return empty series if not found."""
-    running_com = pd.Series([])
-    files_processed = pd.Series([])
+    running_com, files_processed = pd.Series([]), pd.Series([])
     try:
         running_com = pd.read_excel(file_path, 'Master', dtype=str)
         files_processed = pd.read_excel(file_path, 'Files Processed').fillna('')
-        for col in num_cols:
+        for col in NUM_COLS:
             try:
                 running_com[col] = pd.to_numeric(running_com[col], errors='coerce').fillna(0)
             except KeyError:
                 pass
         # Convert individual numbers to numeric in rest of columns.
-        mixed_cols = [col for col in list(running_com) if col not in num_cols
+        mixed_cols = [col for col in list(running_com) if col not in NUM_COLS
                       and col not in ['Invoice Number', 'Part Number', 'Principal']]
         for col in mixed_cols:
             try:
@@ -148,14 +145,14 @@ def load_entries_need_fixing(file_dir):
     try:
         entries_need_fixing = pd.read_excel(file_dir, 'Data', dtype=str)
         # Convert entries to proper types, like above.
-        for col in num_cols:
+        for col in NUM_COLS:
             try:
                 entries_need_fixing[col] = pd.to_numeric(entries_need_fixing[col], errors='coerce').fillna('')
             except KeyError:
                 print('The following column was not found in ENF: ' + col
                       + '\nPlease check the column names and try again')
                 return None
-        mixed_cols = [col for col in list(entries_need_fixing) if col not in num_cols
+        mixed_cols = [col for col in list(entries_need_fixing) if col not in NUM_COLS
                       and col not in ['Invoice Number', 'Part Number', 'Principal']]
         for col in mixed_cols:
             try:

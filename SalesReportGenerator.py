@@ -30,8 +30,9 @@ else:
 
 
 def get_sales_comm_data(salesperson, input_data, sales_info):
-    """Returns all the data for a particular salesperson, with sales
-    commission scaled down by split percentage.
+    """
+    Returns all the data for a particular salesperson, with sales commission scaled down
+    by split percentage.
     """
     # Determine the salesperson's commission percentage.
     sales = sales_info[sales_info['Sales Initials'] == salesperson]

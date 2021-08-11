@@ -9,25 +9,25 @@ import os.path
 import re
 import datetime
 from uuid import uuid4
-from FileLoader import load_lookup_master, load_run_com, load_entries_need_fixing
+from FileLoader import load_lookup_master, load_run_com, load_entries_need_fixing, load_principal_info
 from FileSaver import prepare_save_file, save_files
 from RCExcelTools import save_error, form_date
 
 # Set the directory for the data input/output.
 if os.path.exists('Z:\\'):
-    out_dir = 'Z:\\MK Working Commissions'
-    look_dir = 'Z:\\Commissions Lookup'
-    match_dir = 'Z:\\Matched Raw Data Files'
+    OUT_DIR = 'Z:\\MK Working Commissions'
+    LOOK_DIR = 'Z:\\Commissions Lookup'
+    MATCH_DIR = 'Z:\\Matched Raw Data Files'
 else:
-    out_dir = os.getcwd()
-    look_dir = os.getcwd()
-    match_dir = os.getcwd()
+    OUT_DIR = os.getcwd()
+    LOOK_DIR = os.getcwd()
+    MATCH_DIR = os.getcwd()
 
 
 def preprocess_by_principal(princ, sheet, sheet_name):
-    """Do special pre-processing tailored to the principal input. Primarily,
-    this involves renaming columns that would get looked up incorrectly
-    in the Field Mappings.
+    """
+    Do special pre-processing tailored to the principal input. Primarily, this involves renaming
+    columns that would get looked up incorrectly in the Field Mappings.
 
     This function modifies a dataframe inplace.
     """
@@ -194,8 +194,8 @@ def process_by_principal(princ, sheet, sheet_name, disty_map):
             sheet['Comm Source'] = 'Cost'
         elif 'Part Number' not in list(sheet) and invoice_num:
             # We need to load in the part number log.
-            if os.path.exists(look_dir + '\\Mill-Max Invoice Log.xlsx'):
-                millmax_log = pd.read_excel(look_dir + '\\Mill-Max Invoice Log.xlsx', dtype=str).fillna('')
+            if os.path.exists(LOOK_DIR + '\\Mill-Max Invoice Log.xlsx'):
+                millmax_log = pd.read_excel(LOOK_DIR + '\\Mill-Max Invoice Log.xlsx', dtype=str).fillna('')
                 print('Looking up part numbers from invoice log.\n---')
             else:
                 print('No Mill-Max Invoice Log found!\n'
@@ -279,7 +279,8 @@ def process_by_principal(princ, sheet, sheet_name, disty_map):
 
 
 def main(filepaths, path_to_running_com, field_mappings):
-    """Processes commission files and appends them to Running Commissions.
+    """
+    Processes commission files and appends them to Running Commissions.
 
     Columns in individual commission files are identified and appended to the
     Running Commissions under the appropriate column, as identified by the
@@ -332,7 +333,7 @@ def main(filepaths, path_to_running_com, field_mappings):
                   + '\n*Program terminated*')
             return
         # Load in the matching Entries Need Fixing file.
-        ENF_path = out_dir + '\\Entries Need Fixing ' + path_to_running_com[-20:]
+        ENF_path = OUT_DIR + '\\Entries Need Fixing ' + path_to_running_com[-20:]
         entries_need_fixing = load_entries_need_fixing(file_dir=ENF_path)
         if any([running_com.empty, files_processed.empty]):
             print('Running commissions and/or files processed are empty!\n*Program Terminated*')
@@ -372,9 +373,9 @@ def main(filepaths, path_to_running_com, field_mappings):
     # --------------------------------------------------------------
     # Read in disty_map. Terminate if not found or if errors in file.
     # --------------------------------------------------------------
-    if os.path.exists(look_dir + '\\distributorLookup.xlsx'):
+    if os.path.exists(LOOK_DIR + '\\distributorLookup.xlsx'):
         try:
-            disty_map = pd.read_excel(look_dir + '\\distributorLookup.xlsx', 'Distributors')
+            disty_map = pd.read_excel(LOOK_DIR + '\\distributorLookup.xlsx', 'Distributors')
         except XLRDError:
             print('---\nError reading sheet name for distributorLookup.xlsx!\n'
                   'Please make sure the main tab is named Distributors.\n'
@@ -395,6 +396,8 @@ def main(filepaths, path_to_running_com, field_mappings):
 
     # Read in the Lookup Master. Terminate if not found or if errors in file.
     master_lookup = load_lookup_master()
+    princ_info = load_principal_info()
+    principal_list = princ_info['Abbreviation'].to_list()
 
     # -------------------------------------------------------------------------
     # Done loading in the data and supporting files, now go to work.
@@ -412,8 +415,6 @@ def main(filepaths, path_to_running_com, field_mappings):
         # -------------------------------------------------------------------
         principal = filename[0:3]
         print('Principal detected as: ' + principal)
-        principal_list = ['ABR', 'ACH', 'ATP', 'ATS', 'ATO', 'COS', 'EVE', 'GLO', 'INF', 'ISS', 'LAT', 'MIL', 'OSR',
-                          'QRF', 'SUR', 'TOP', 'TRI', 'TRU', 'XMO', 'MPS', 'NET', 'GAN', 'EFI']
         if principal not in principal_list:
             print('Principal supplied is not valid!\n'
                   'Current valid principals: ' + ', '.join(map(str, principal_list))
@@ -511,23 +512,20 @@ def main(filepaths, path_to_running_com, field_mappings):
                 return
             elif 'Actual Comm Paid' not in list(sheet):
                 # Tab has no commission data, so it is ignored.
-                print('No commission dollars column found on this tab.\n'
-                      'Skipping tab.\n-')
+                print('No commission dollars column found on this tab.\nSkipping tab.\n-')
             elif 'Part Number' not in list(sheet):
                 # Tab has no part number data, so it is ignored.
-                print('No part number column found on this tab.\n'
-                      'Skipping tab.\n-')
+                print('No part number column found on this tab.\nSkipping tab.\n-')
             elif 'Invoice Date' not in list(sheet):
                 # Tab has no date column, so report and exit.
                 print('No Invoice Date column found for this tab.\n'
-                      'Please make sure the Invoice Date is mapped.\n'
-                      '*Program terminated*')
+                      'Please make sure the Invoice Date is mapped.\n*Program terminated*')
                 return
             else:
                 # Report the number of rows that have part numbers.
                 total_rows = sum(sheet['Part Number'] != '')
                 print('Found ' + str(total_rows) + ' entries in the tab ' + sheet_name
-                      + ' with valid part numbers.\n' + '-'*35)
+                      + ' with valid part numbers.\n' + ('-' * 35))
                 # Remove entries with no commissions dollars.
                 sheet['Actual Comm Paid'] = pd.to_numeric(sheet['Actual Comm Paid'], errors='coerce').fillna(0)
                 sheet = sheet[sheet['Actual Comm Paid'] != 0]
@@ -541,8 +539,7 @@ def main(filepaths, path_to_running_com, field_mappings):
                 matching_columns = [val for val in list(sheet) if val in list(field_mappings)]
                 if len(matching_columns) > 0:
                     # Sum commissions paid on sheet.
-                    print('Commissions for this tab: '
-                          + '${:,.2f}'.format(sheet['Actual Comm Paid'].sum()) + '\n-')
+                    print('Commissions for this tab: ' + '${:,.2f}'.format(sheet['Actual Comm Paid'].sum()) + '\n-')
                     total_comm += sheet['Actual Comm Paid'].sum()
                     # Strip whitespace from all strings in dataframe.
                     string_cols = [val for val in list(sheet) if sheet[val].dtype == 'object']
@@ -572,7 +569,7 @@ def main(filepaths, path_to_running_com, field_mappings):
                   'Please close these files and try again.\n*Program terminated*')
             return
         # Write the raw data file with matches.
-        writer = pd.ExcelWriter(match_dir + '\\' + fname, engine='xlsxwriter', datetime_format='mm/dd/yyyy')
+        writer = pd.ExcelWriter(os.path.join(MATCH_DIR, fname), engine='xlsxwriter', datetime_format='mm/dd/yyyy')
         for tab in list(new_data):
             new_data[tab].to_excel(writer, sheet_name=tab, index=False)
             # Format and fit each column.
@@ -596,8 +593,7 @@ def main(filepaths, path_to_running_com, field_mappings):
     # Let us know how many rows are being processed.
     num_rows = '{:,.0f}'.format(len(running_com) - run_com_len)
     if num_rows == '0':
-        print('---\nNo new valid data provided.\n'
-              'Please check the new files for missing data or column matches.\n'
+        print('---\nNo new valid data provided.\nPlease check the new files for missing data or column matches.\n'
               '*Program terminated*')
         return
     print('---\nBeginning processing on ' + num_rows + ' rows of data.')
@@ -627,10 +623,9 @@ def main(filepaths, path_to_running_com, field_mappings):
             # If we found one match we're good, so copy it over.
             if lookup_matches == 1:
                 full_match = full_match.iloc[0]
-                # If there are no salespeople, it means we found a
-                # "soft match."
-                # These have unknown End Customers and should go to
-                # Entries Need Fixing. So, set them to zero matches.
+                # If there are no salespeople, it means we found a "soft match."
+                # These have unknown End Customers and should go to Entries Need Fixing.
+                # So, set them to zero matches.
                 if full_match['CM Sales'] == full_match['Design Sales'] == '':
                     lookup_matches = 0
                 # Grab primary and secondary sales people from Lookup Master.
@@ -767,9 +762,9 @@ def main(filepaths, path_to_running_com, field_mappings):
 
     # Get ready to save files.
     current_time = time.strftime('%Y-%m-%d-%H%M')
-    fname1 = out_dir + '\\Running Commissions ' + current_time + '.xlsx'
-    fname2 = out_dir + '\\Entries Need Fixing ' + current_time + '.xlsx'
-    fname3 = look_dir + '\\Lookup Master - Current.xlsx'
+    fname1 = OUT_DIR + '\\Running Commissions ' + current_time + '.xlsx'
+    fname2 = OUT_DIR + '\\Entries Need Fixing ' + current_time + '.xlsx'
+    fname3 = LOOK_DIR + '\\Lookup Master - Current.xlsx'
     writer1 = prepare_save_file(filename=fname1, tab_data=[running_com, files_processed],
                                 tab_names=['Master', 'Files Processed'])
     writer2 = prepare_save_file(filename=fname2, tab_data=entries_need_fixing, tab_names='Data')
