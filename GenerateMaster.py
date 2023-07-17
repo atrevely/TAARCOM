@@ -277,6 +277,49 @@ def process_by_principal(princ, sheet, sheet_name, disty_map):
     if princ in ['INF', 'LAT']:
         sheet['Comm Source'] = 'Resale'
 
+    # --------------------
+    #  Fair-Rite Processing
+    # --------------------
+    if princ == 'FRC':
+        # Paid On Revenue = Ext. Cost *OR* Invoiced Dollars (wherever there is data – will be in one OR the other)
+        # Note (MD, 7/13/23) We will probably have to change this in the future
+        for i in sheet.index:
+            ext_cost = sheet.loc[i, 'Ext. Cost']
+            invoiced_dollars = sheet.loc[i, 'Invoiced Dollars']
+            if ext_cost and ext_cost > 0 and invoiced_dollars and invoiced_dollars > 0:
+                # Both ext.cost and invoiced dollars have values
+                pass
+            elif ext_cost and ext_cost > 0:
+                # Only Ext. Cost is populated --> that is our Paid-On Rev.
+                sheet.loc[i, 'Paid-On Revenue'] = ext_cost
+            elif invoiced_dollars and invoiced_dollars > 0:
+                # Only Invoiced Dollars is populated --> that is our Paid-On Rev.
+                sheet.loc[i, 'Paid-On Revenue'] = invoiced_dollars
+            else:
+                # Neither ext. cost or invoiced dollars have values
+                pass
+
+    # --------------------
+    #  Invensense Processing
+    # --------------------
+    if princ == 'INV':
+        # Paid On Revenue = Invoiced dollars * Split Percentage
+        sheet['Paid-On Revenue'] = sheet['Invoiced Dollars'] * sheet['Split Percentage']
+
+    # --------------------
+    #  Luminus Processing
+    # --------------------
+    if princ == 'LUM':
+        # Paid On Revenue = Invoiced dollars * Split Percentage
+        sheet['Paid-On Revenue'] = sheet['Invoiced Dollars'] * sheet['Split Percentage']
+
+    # --------------------
+    #  Semtech Processing
+    # --------------------
+    if princ == 'SEM':
+        # Paid On Revenue = Invoiced dollars
+        sheet['Paid-On Revenue'] = sheet['Invoiced Dollars']
+
 
 # %% Main function.
 def main(filepaths, path_to_running_com, field_mappings):
