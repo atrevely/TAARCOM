@@ -236,13 +236,13 @@ def process_by_principal(princ, sheet, sheet_name, disty_map):
             # Revenue is from cost.
             sheet['Paid-On Revenue'] = sheet['Ext. Cost']
             for row in sheet.index:
-                ext_cost = sheet.loc[row, 'Ext. Cost']
+                ext_cost_val = sheet.loc[row, 'Ext. Cost']
                 if sheet.loc[row, 'Reported Distributor'] == 'ALLIED':
                     sheet.loc[row, 'Commission Rate'] = 0.049
-                    sheet.loc[row, 'Actual Comm Paid'] = 0.049 * ext_cost
+                    sheet.loc[row, 'Actual Comm Paid'] = 0.049 * ext_cost_val
                 else:
                     sheet.loc[row, 'Commission Rate'] = 0.05
-                    sheet.loc[row, 'Actual Comm Paid'] = 0.05 * ext_cost
+                    sheet.loc[row, 'Actual Comm Paid'] = 0.05 * ext_cost_val
         sheet['Comm Source'] = 'Cost'
     # ----------------------------
     # Globtek special processing.
@@ -286,9 +286,11 @@ def process_by_principal(princ, sheet, sheet_name, disty_map):
 
         # Check to make sure Ext. Cost column exists and is numeric
         if not ext_cost:
+            print(sheet_name)
             print(sheet.dtypes)
             raise KeyError('No Ext. Cost column found on this sheet.')
         elif not invoice_dollars:
+            print(sheet_name)
             print(sheet.dtypes)
             raise KeyError('No Invoiced Dollars column found on this sheet.')
         else:
@@ -301,7 +303,7 @@ def process_by_principal(princ, sheet, sheet_name, disty_map):
                     pass
                 elif ext_cost_val > 0:
                     # Only Ext. Cost is populated --> that is our Paid-On Rev.
-                    sheet.loc[i, 'Paid-On Revenue'] = ext_cost
+                    sheet.loc[i, 'Paid-On Revenue'] = ext_cost_val
                 elif inv_doll_val > 0:
                     # Only Invoiced Dollars is populated --> that is our Paid-On Rev.
                     sheet.loc[i, 'Paid-On Revenue'] = inv_doll_val
