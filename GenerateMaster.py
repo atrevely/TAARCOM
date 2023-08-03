@@ -496,6 +496,11 @@ def main(filepaths, path_to_running_com, field_mappings):
         for sheet_name in list(new_data):
             # Rework the index just in case it got read in wrong.
             sheet = new_data[sheet_name].reset_index(drop=True)
+
+            # Make sure we read in data (i.e., first row has data, sheet intended)
+            if not sheet:
+                continue
+
             sheet.index = sheet.index.map(int)
             sheet.replace('nan', '', inplace=True)
             # Create a duplicate of the sheet that stays unchanged, aside
