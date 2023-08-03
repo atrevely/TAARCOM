@@ -498,7 +498,7 @@ def main(filepaths, path_to_running_com, field_mappings):
             sheet = new_data[sheet_name].reset_index(drop=True)
 
             # Make sure we read in data (i.e., first row has data, sheet intended)
-            if not sheet:
+            if sheet.empty:
                 continue
 
             sheet.index = sheet.index.map(int)
