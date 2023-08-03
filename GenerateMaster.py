@@ -284,8 +284,9 @@ def process_by_principal(princ, sheet, sheet_name, disty_map):
         # Paid On Revenue = Ext. Cost *OR* Invoiced Dollars (wherever there is data – will be in one OR the other)
         # Note (MD, 7/13/23) We will probably have to change this in the future
 
-        # Check to make sure Ext. Cost column exists and is numeric
-        if not ext_cost:
+        if sheet.empty:
+            pass
+        elif not ext_cost:
             print(sheet_name)
             print(sheet.dtypes)
             raise KeyError('No Ext. Cost column found on this sheet.')
@@ -315,8 +316,9 @@ def process_by_principal(princ, sheet, sheet_name, disty_map):
     #  Invensense Processing
     # --------------------
     if princ == 'INV':
-        # Check to make sure invoiced dollars column exists and is numeric
-        if not invoice_dollars:
+        if sheet.empty:
+            pass
+        elif not invoice_dollars:
             raise KeyError('No Invoiced Dollars column found on this sheet.')
         else:
             # Paid On Revenue = Invoiced dollars * Split Percentage
@@ -326,8 +328,9 @@ def process_by_principal(princ, sheet, sheet_name, disty_map):
     #  Luminus Processing
     # --------------------
     if princ == 'LUM':
-        # Check to make sure invoiced dollars column exists and is numeric
-        if not invoice_dollars:
+        if sheet.empty:
+            pass
+        elif not invoice_dollars:
             raise KeyError('No Invoiced Dollars column found on this sheet.')
         else:
             # Paid On Revenue = Invoiced dollars * Split Percentage
@@ -337,8 +340,9 @@ def process_by_principal(princ, sheet, sheet_name, disty_map):
     #  Semtech Processing
     # --------------------
     if princ == 'SEM':
-        # Check to make sure invoiced dollars column exists and is numeric
-        if not invoice_dollars:
+        if sheet.empty:
+            pass
+        elif not invoice_dollars:
             raise KeyError('No Invoiced Dollars column found on this sheet.')
         else:
             # Paid On Revenue = Invoiced dollars
