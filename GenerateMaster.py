@@ -286,26 +286,24 @@ def process_by_principal(princ, sheet, sheet_name, disty_map):
 
         if sheet.empty:
             pass
-        elif not ext_cost:
-            print(sheet_name)
-            print(sheet.dtypes)
-            raise KeyError('No Ext. Cost column found on this sheet.')
-        elif not invoice_dollars:
-            print(sheet_name)
-            print(sheet.dtypes)
-            raise KeyError('No Invoiced Dollars column found on this sheet.')
+        elif not sheet['Paid-On Revenue']:
+            raise KeyError("No Paid-On Revenue column found on this sheet.")
+        elif not sheet['Ext. Cost']:
+            raise KeyError("No Ext. Cost column found on this sheet.")
+        elif not sheet['Invoiced Dollars']:
+            raise KeyError("No Invoiced Dollars column found on this sheet.")
         else:
             for i in sheet.index:
                 ext_cost_val = sheet.loc[i, 'Ext. Cost']
                 inv_doll_val = sheet.loc[i, 'Invoiced Dollars']
 
-                if ext_cost_val > 0 and inv_doll_val > 0:
+                if ext_cost_val != 0 and inv_doll_val != 0:
                     # Both ext.cost and invoiced dollars have values
                     pass
-                elif ext_cost_val > 0:
+                elif ext_cost_val != 0:
                     # Only Ext. Cost is populated --> that is our Paid-On Rev.
                     sheet.loc[i, 'Paid-On Revenue'] = ext_cost_val
-                elif inv_doll_val > 0:
+                elif inv_doll_val != 0:
                     # Only Invoiced Dollars is populated --> that is our Paid-On Rev.
                     sheet.loc[i, 'Paid-On Revenue'] = inv_doll_val
                 else:
@@ -318,8 +316,12 @@ def process_by_principal(princ, sheet, sheet_name, disty_map):
     if princ == 'INV':
         if sheet.empty:
             pass
-        elif not invoice_dollars:
-            raise KeyError('No Invoiced Dollars column found on this sheet.')
+        elif not sheet['Paid-On Revenue']:
+            raise KeyError("No Paid-On Revenue column found on this sheet.")
+        elif not sheet['Invoiced Dollars']:
+            raise KeyError("No Invoiced Dollars column found on this sheet.")
+        elif not sheet['Split Percentage']:
+            raise KeyError("No Split Percentage column found on this sheet.")
         else:
             # Paid On Revenue = Invoiced dollars * Split Percentage
             sheet['Paid-On Revenue'] = sheet['Invoiced Dollars'] * sheet['Split Percentage']
@@ -330,8 +332,12 @@ def process_by_principal(princ, sheet, sheet_name, disty_map):
     if princ == 'LUM':
         if sheet.empty:
             pass
-        elif not invoice_dollars:
-            raise KeyError('No Invoiced Dollars column found on this sheet.')
+        elif not sheet['Paid-On Revenue']:
+            raise KeyError("No Paid-On Revenue column found on this sheet.")
+        elif not sheet['Invoiced Dollars']:
+            raise KeyError("No Invoiced Dollars column found on this sheet.")
+        elif not sheet['Split Percentage']:
+            raise KeyError("No Split Percentage column found on this sheet.")
         else:
             # Paid On Revenue = Invoiced dollars * Split Percentage
             sheet['Paid-On Revenue'] = sheet['Invoiced Dollars'] * sheet['Split Percentage']
@@ -342,8 +348,10 @@ def process_by_principal(princ, sheet, sheet_name, disty_map):
     if princ == 'SEM':
         if sheet.empty:
             pass
-        elif not invoice_dollars:
-            raise KeyError('No Invoiced Dollars column found on this sheet.')
+        elif not sheet['Paid-On Revenue']:
+            raise KeyError("No Paid-On Revenue column found on this sheet.")
+        elif not sheet['Invoiced Dollars']:
+            raise KeyError("No Invoiced Dollars column found on this sheet.")
         else:
             # Paid On Revenue = Invoiced dollars
             sheet['Paid-On Revenue'] = sheet['Invoiced Dollars']

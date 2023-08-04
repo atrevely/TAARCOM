@@ -11,7 +11,7 @@ import MergeByUuid
 import CommTools
 from FileLoader import DIRECTORIES
 
-VERSION = 'Master v2.3.01132021'
+VERSION = 'DEV-NEW v1.2.3'
 LOOKUPS_DIR = DIRECTORIES.get('COMM_LOOKUPS_DIR')
 
 
