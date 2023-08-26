@@ -349,6 +349,7 @@ def process_by_principal(princ, sheet, sheet_name, disty_map):
         if sheet.empty:
             pass
         elif 'Paid-On Revenue' not in sheet.columns:
+            print(sheet.columns)
             raise KeyError("No Paid-On Revenue column found on this sheet.")
         elif 'Invoiced Dollars' not in sheet.columns:
             raise KeyError("No Invoiced Dollars column found on this sheet.")
