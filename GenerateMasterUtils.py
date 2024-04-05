@@ -3,6 +3,17 @@ import pandas as pd
 import datetime
 from dateutil.parser import parse
 
+# Define the directories where supporting files are located.
+TAARCOM_DIRECTORIES = {'COMM_LOOKUPS_DIR': 'Z:\\Commissions Lookup', 'COMM_WORKING_DIR': 'Z:\\MK Working Commissions',
+                       'COMM_REPORTS_DIR': 'Z:\\MK Working Commissions\\Reports', 'DIGIKEY_DIR': 'W:\\'}
+# If any directories aren't found, then replace them with the current working directory.
+DIRECTORIES = {i: j if os.path.exists(j) else os.getcwd() for i, j in TAARCOM_DIRECTORIES.items()}
+
+# Columns defined as containing numerical data.
+NUMERICAL_COLUMNS = ['Quantity', 'Ext. Cost', 'Invoiced Dollars', 'Paid-On Revenue', 'Actual Comm Paid',
+                     'Unit Cost', 'Unit Price', 'CM Split', 'Year', 'Sales Commission', 'Split Percentage',
+                     'Commission Rate', 'Gross Rev Reduction', 'Shared Rev Tier Rate']
+
 
 def get_column_names(field_mappings):
     """Generate the commission file column names in the correct order."""

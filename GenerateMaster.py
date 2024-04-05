@@ -7,13 +7,15 @@ import math
 import os.path
 import re
 import datetime
+import logging
 from uuid import uuid4
-from FileLoader import load_lookup_master, load_run_com, load_entries_need_fixing, load_principal_info
+import GenerateMasterUtils as utils
+from FileIO import load_lookup_master, load_run_com, load_entries_need_fixing, load_principal_info
 from FileSaver import save_excel_file
 from RCExcelTools import save_error, form_date
 from PrincipalSpecialProcessing import process_by_principal, preprocess_by_principal
-from GenerateMasterUtils import (get_column_names, filter_duplicate_files, check_for_date_errors,
-                                 format_pct_numeric_cols)
+
+logger = logging.getLogger(__name__)
 
 # Set the directory for the data input/output.
 if os.path.exists('Z:\\'):
@@ -45,7 +47,7 @@ def main(filepaths, path_to_running_com, field_mappings):
                      file data columns.
     """
     # Get the correct column names for the commission file.
-    column_names = get_column_names(field_mappings)
+    column_names = utils.get_column_names(field_mappings)
 
     # -------------------------------------------------------------------
     # Check to see if there's an existing Running Commissions to append
@@ -53,7 +55,7 @@ def main(filepaths, path_to_running_com, field_mappings):
     # -------------------------------------------------------------------
     if path_to_running_com:
         running_com, files_processed = load_run_com(file_path=path_to_running_com)
-        print('Appending files to Running Commissions...')
+        logger.info('Appending files to Running Commissions...')
 
         # Check to make sure that all columns are present and match between the files
         missing_cols = [i for i in column_names if i not in running_com]
@@ -76,13 +78,13 @@ def main(filepaths, path_to_running_com, field_mappings):
         run_com_len = len(running_com)
     # Start new Running Commissions.
     else:
-        print('No Running Commissions file provided. Starting a new one.')
+        logger.info('No Running Commissions file provided. Starting a new one.')
         run_com_len = 0
         running_com = pd.DataFrame(columns=column_names)
         entries_need_fixing = pd.DataFrame(columns=column_names)
         files_processed = pd.DataFrame(columns=['Filename', 'Total Commissions', 'Date Added', 'Paid Date'])
 
-    filenames = filter_duplicate_files(filepaths, files_processed)
+    filenames = utils.filter_duplicate_files(filepaths, files_processed)
     # Exit if no new files are left after filtering.
     if not filenames:
         print('---\nNo new commissions files selected.\n'
@@ -195,7 +197,7 @@ def main(filepaths, path_to_running_com, field_mappings):
             raw_sheet.sort_index(inplace=True)
             new_data[sheet_name] = raw_sheet
 
-            sheet = format_pct_numeric_cols(dataframe=sheet)
+            sheet = utils.format_pct_numeric_cols(dataframe=sheet)
 
             # Do special processing for principal, if applicable.
             process_by_principal(principal=principal, sheet=sheet, sheet_name=sheet_name, disty_map=disty_map)
@@ -358,7 +360,7 @@ def main(filepaths, path_to_running_com, field_mappings):
         # -----------------------------------------------------------
         # Try parsing the date.
         invoice_date = running_com.loc[row, 'Invoice Date']
-        date_error = check_for_date_errors(date=invoice_date)
+        date_error = utils.check_for_date_errors(date=invoice_date)
 
         # If no error found in date, fill in the month/year/quarter
         if not date_error:
@@ -434,6 +436,7 @@ def main(filepaths, path_to_running_com, field_mappings):
         # Update progress every 100 rows.
         if (row - run_com_len) % 100 == 0 and row > run_com_len:
             print('Done with row ' '{:,.0f}'.format(row - run_com_len))
+
     # -----------------------------
     # Clean up the finalized data.
     # -----------------------------
@@ -455,7 +458,7 @@ def main(filepaths, path_to_running_com, field_mappings):
     master_lookup['Last Used'] = master_lookup['Last Used'].map(lambda x: form_date(x))
     master_lookup['Date Added'] = master_lookup['Date Added'].map(lambda x: form_date(x))
 
-    # Get ready to save files.
+    # Ssave the files.
     current_time = time.strftime('%Y-%m-%d-%H%M')
     fname1 = os.path.join(OUT_DIR, f'Running Commissions {current_time}.xlsx')
     fname2 = os.path.join(OUT_DIR, f'Entries Need Fixing {current_time}.xlsx')
