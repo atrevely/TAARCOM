@@ -5,7 +5,7 @@ import logging
 import traceback
 from PyQt5 import QtCore, QtGui
 from PyQt5.QtWidgets import QMainWindow, QPushButton, QApplication, QFileDialog, QWidget, QGridLayout, \
-    QPlainTextEdit, QGroupBox, QVBoxLayout, QListWidget, QListWidgetItem
+    QPlainTextEdit, QGroupBox, QVBoxLayout, QListWidget, QListWidgetItem, QLabel
 from PyQt5.QtCore import pyqtSlot
 import GenerateMaster
 import MergeFixedEntries
@@ -34,6 +34,7 @@ class GenMast(QMainWindow):
         self.button_fix_entries = QPushButton('Copy Fixed ENF to Running Commissions', self)
         self.button_generate_reports = QPushButton('Migrate and Generate Sales Reports', self)
         self.button_clear_selections = QPushButton('Clear Selections', self)
+        self.button_clear_master = QPushButton('Clear Selection', self)
         self.button_update_lookup = QPushButton('Update Lookup Master', self)
         self.button_update_master = QPushButton('Update Commission Master', self)
 
@@ -52,21 +53,44 @@ class GenMast(QMainWindow):
         # Create box for uploading and displaying raw data files.
         self.raw_files_groupbox = QGroupBox('Raw Files')
         self.raw_files_list = QListWidget()
+        files_title = QLabel()
+        files_title.setText('Current loaded files:')
         raw_files_layout = QVBoxLayout()
         raw_files_layout.addWidget(self.button_open_files)
         raw_files_layout.addWidget(self.button_clear_selections)
+        raw_files_layout.addWidget(files_title)
         raw_files_layout.addWidget(self.raw_files_list)
         self.raw_files_groupbox.setLayout(raw_files_layout)
 
-        # Add GUI elements to the grid layout.
+        # Create box for uploading and displaying running commissions file.
+        self.runcom_file_groupbox = QGroupBox('Running Commissions File')
+        self.runcom_file_list = QListWidget()
+        runcom_file_layout = QVBoxLayout()
+        runcom_file_layout.addWidget(self.button_load_run_com)
+        runcom_file_layout.addWidget(self.button_clear_master)
+        runcom_file_layout.addWidget(self.runcom_file_list)
+        self.runcom_file_groupbox.setLayout(runcom_file_layout)
+
+        # Create box for program buttons.
+        self.programs_groupbox = QGroupBox('Programs')
+        programs_layout = QGridLayout()
+        programs_layout.addWidget(self.button_generate_master, 0, 0, 1, 2)
+        programs_layout.addWidget(self.button_update_lookup, 1, 0)
+        programs_layout.addWidget(self.button_update_master, 1, 1)
+        programs_layout.addWidget(self.button_fix_entries, 2, 0)
+        programs_layout.addWidget(self.button_generate_reports, 2, 1)
+        self.programs_groupbox.setLayout(programs_layout)
+
+        # Add GUI elements to the top level grid layout.
         main_layout.addWidget(self.raw_files_groupbox, 0, 0, 1, 2)
-        main_layout.addWidget(self.button_generate_master, 2, 0)
-        main_layout.addWidget(self.button_load_run_com, 2, 1)
-        main_layout.addWidget(self.button_fix_entries, 4, 0)
-        main_layout.addWidget(self.button_generate_reports, 4, 1)
-        main_layout.addWidget(self.button_update_lookup, 3, 1)
-        main_layout.addWidget(self.button_update_master, 3, 0)
+        main_layout.addWidget(self.runcom_file_groupbox, 1, 0, 1, 2)
+        main_layout.addWidget(self.programs_groupbox, 2, 0, 1, 2)
         main_layout.addWidget(self.log_groupbox, 0, 3, 5, 5)
+
+        # Set the grid geometry.
+        main_layout.setRowStretch(0, 2)
+        main_layout.setRowStretch(1, 1)
+        main_layout.setRowStretch(2, 1)
 
         # Set window size and title, then show the window.
         self.setGeometry(100, 100, 2000, 1200)
@@ -122,7 +146,7 @@ class GenMast(QMainWindow):
         # Button for generating the master list.
         self.button_generate_master.clicked.connect(self.generate_master_clicked)
         self.button_generate_master.setToolTip('Process selected raw data files and append them to the selected '
-                                               'Running Commissions. If no Running Commissions is selected,'
+                                               'Running Commissions.\nIf no Running Commissions is selected, '
                                                'starts a new one.')
 
         # Button for selecting files to compile into master list.
@@ -136,20 +160,24 @@ class GenMast(QMainWindow):
         # Button for writing fixed entries.
         self.button_fix_entries.clicked.connect(self.fix_entries_clicked)
         self.button_fix_entries.setToolTip('Migrate finished lines in the Entries Need Fixing file over to the '
-                                           'associated Running Commissions. A Running Commissions needs to be '
+                                           'associated Running Commissions.\nA Running Commissions needs to be '
                                            'selected and will be matched to the Entries Needs Fixing by the '
                                            'date at the end of the filenames.')
 
         # Button for generating sales reports.
         self.button_generate_reports.clicked.connect(self.generate_reports_clicked)
         self.button_generate_reports.setToolTip('Generate commission and revenue reports, then migrate the Running '
-                                                'Commissions data over to the Commissions Master. '
+                                                'Commissions data over to the Commissions Master.\n'
                                                 'If no Running Commissions is provided, will run reports on most '
                                                 'recent quarter of data in the Commissions Master.')
 
         # Button for clearing filename and master choices.
         self.button_clear_selections.clicked.connect(self.clear_files_clicked)
-        self.button_clear_selections.setToolTip('Clear all selected files from the workspace.')
+        self.button_clear_selections.setToolTip('Clear all selected raw files from the workspace.')
+
+        # Button for clearing filename and master choices.
+        self.button_clear_master.clicked.connect(self.clear_master_clicked)
+        self.button_clear_master.setToolTip('Clear selected RC file from the workspace.')
 
         # Button for updating Lookup Master.
         self.button_update_lookup.clicked.connect(self.update_lookup_clicked)
@@ -162,46 +190,60 @@ class GenMast(QMainWindow):
 
     def generate_master_clicked(self):
         """Send the GenerateMaster execution to a worker thread."""
-        self.lockButtons()
-        worker = Worker(self.genMastExecute)
+        self.lock_buttons()
+        worker = Worker(self.execute_generate_master)
         if self.threadpool.activeThreadCount() == 0:
             self.threadpool.start(worker)
+        else:
+            logging.warning('Worker thread busy, aborting program.')
 
     def generate_reports_clicked(self):
         """Send the SalesReportGenerator execution to a worker thread."""
-        self.lockButtons()
+        self.lock_buttons()
         worker = Worker(self.genReportsExecute)
         if self.threadpool.activeThreadCount() == 0:
             self.threadpool.start(worker)
+        else:
+            logging.warning('Worker thread busy, aborting program.')
 
     def fix_entries_clicked(self):
         """Send the MergeFixedEntries execution to a worker thread."""
-        self.lockButtons()
+        self.lock_buttons()
         worker = Worker(self.fixEntriesExecute)
         if self.threadpool.activeThreadCount() == 0:
             self.threadpool.start(worker)
+        else:
+            logging.warning('Worker thread busy, aborting program.')
 
     def update_lookup_clicked(self):
         """Send the UpdateLookups execution to a worker thread."""
-        self.lockButtons()
+        self.lock_buttons()
         worker = Worker(self.updateLookupExecute)
         if self.threadpool.activeThreadCount() == 0:
             self.threadpool.start(worker)
+        else:
+            logging.warning('Worker thread busy, aborting program.')
 
     def update_master_clicked(self):
         """Send the UpdateLookups execution to a worker thread."""
-        self.lockButtons()
+        self.lock_buttons()
         worker = Worker(self.updateMasterExecute)
         if self.threadpool.activeThreadCount() == 0:
             self.threadpool.start(worker)
+        else:
+            logging.warning('Worker thread busy, aborting program.')
 
     def clear_files_clicked(self):
         """Clear the filenames and master variables."""
         self.filenames = []
         self.raw_files_list.clear()
-        self.master = []
 
-    def genMastExecute(self):
+    def clear_master_clicked(self):
+        """Clear the filenames and master variables."""
+        self.master = []
+        self.runcom_file_list.clear()
+
+    def execute_generate_master(self):
         """Runs function for processing new files to master."""
         # Check to see if we're ready to process.
         mappings_exist = os.path.exists(os.path.join(LOOKUPS_DIR, 'fieldMappings.xlsx'))
@@ -211,13 +253,11 @@ class GenMast(QMainWindow):
                 GenerateMaster.main(self.filenames, self.master, self.fieldMappings)
             except Exception:
                 logging.error(f'Unexpected Python error: {traceback.format_exc(0)}')
-            # Clear the filename selections.
-            self.filenames = []
         elif not mappings_exist:
             logging.warning('File fieldMappings.xlsx not found! Please check file location and try again.')
         elif not self.filenames:
             logging.warning('No commission files selected! Use the Select Commission Files button to select files.')
-        self.restoreButtons()
+        self.restore_buttons()
 
     def genReportsExecute(self):
         """Runs function for generating salesperson reports."""
@@ -230,7 +270,7 @@ class GenMast(QMainWindow):
         # Clear the master selection.
         self.master = []
         # Turn buttons back on.
-        self.restoreButtons()
+        self.restore_buttons()
 
     def fixEntriesExecute(self):
         """Copy over fixed entries to Master."""
@@ -242,7 +282,7 @@ class GenMast(QMainWindow):
                 logging.error(f'Unexpected Python error: {traceback.format_exc(0)}')
         else:
             print('Please upload the current Running Commissions file.\n---')
-        self.restoreButtons()
+        self.restore_buttons()
 
     def updateLookupExecute(self):
         """Update the Lookup Master using a Running Commissions."""
@@ -254,7 +294,7 @@ class GenMast(QMainWindow):
                 logging.error(f'Unexpected Python error: {traceback.format_exc(0)}')
         else:
             print('Please upload a Running Commissions file.\n---')
-        self.restoreButtons()
+        self.restore_buttons()
 
     def updateMasterExecute(self):
         """Run the update Master Commissions via Unique ID function."""
@@ -266,17 +306,17 @@ class GenMast(QMainWindow):
                 logging.error(f'Unexpected Python error: {traceback.format_exc(0)}')
         else:
             print('Please upload the target Running Commissions file.\n---')
-        self.restoreButtons()
+        self.restore_buttons()
 
     def upload_master_clicked(self):
         """Upload an existing Running Commissions."""
         # Grab an existing Running Commissions to append to.
         self.master, _ = QFileDialog.getOpenFileName(self, filter='Excel files (*.xls *.xlsx *.xlsm)')
         if self.master:
-            print('Current Running Commissions selected:\n' + os.path.basename(self.master) + '\n---')
+            self.runcom_file_list.clear()
+            self.runcom_file_list.addItem(QListWidgetItem(self.master))
             if 'Running Commissions' not in self.master:
-                print('Caution!\nThe file uploaded as a Running Commissions '
-                      'does not appear to be correct.\n---')
+                logging.warning('Caution! The file uploaded as a Running Commissions does not appear to be correct.')
 
     def open_files_clicked(self):
         """Provide filepaths for new data to process using GenerateMaster."""
@@ -290,25 +330,26 @@ class GenMast(QMainWindow):
         # Print out the selected filenames.
         if self.filenames:
             self.raw_files_list.clear()
-            self.raw_files_list.addItem(QListWidgetItem('Selected raw files:'))
             for file in self.filenames:
                 self.raw_files_list.addItem(QListWidgetItem(file))
 
-    def lockButtons(self):
+    def lock_buttons(self):
         self.button_generate_master.setEnabled(False)
         self.button_open_files.setEnabled(False)
         self.button_load_run_com.setEnabled(False)
         self.button_clear_selections.setEnabled(False)
+        self.button_clear_master.setEnabled(False)
         self.button_fix_entries.setEnabled(False)
         self.button_generate_reports.setEnabled(False)
         self.button_update_lookup.setEnabled(False)
         self.button_update_master.setEnabled(False)
 
-    def restoreButtons(self):
+    def restore_buttons(self):
         self.button_generate_master.setEnabled(True)
         self.button_open_files.setEnabled(True)
         self.button_load_run_com.setEnabled(True)
         self.button_clear_selections.setEnabled(True)
+        self.button_clear_master.setEnabled(True)
         self.button_fix_entries.setEnabled(True)
         self.button_generate_reports.setEnabled(True)
         self.button_update_lookup.setEnabled(True)
