@@ -6,12 +6,7 @@ import shutil
 from dateutil.parser import parse
 import win32com.client
 import pythoncom
-
-# Set the numerical columns.
-num_cols = ['Quantity', 'Ext. Cost', 'Invoiced Dollars', 'Paid-On Revenue', 'Split Percentage',
-            'Commission Rate', 'Actual Comm Paid', 'Sales Commission', 'Year', 'Unit Cost',
-            'Unit Price', 'Gross Rev Reduction', 'Shared Rev Tier Rate', 'Cust Revenue YTD',
-            'Total NDS', 'Post-Split NDS', 'CM Split', 'CM Sales Comm', 'Design Sales Comm']
+from GenerateMasterUtils import NUMERICAL_COLUMNS
 
 
 class PivotTables:
@@ -182,7 +177,7 @@ def form_date(input_date):
 def tab_save_prep(writer, data, sheet_name):
     """Prepares a commissions file for being saved."""
     # Make sure desired columns are numeric, and replace zeros in non-commission columns with blanks.
-    for col in num_cols:
+    for col in NUMERICAL_COLUMNS:
         try:
             if col not in ['Actual Comm Paid', 'Sales Commission']:
                 fill = ''
@@ -193,7 +188,7 @@ def tab_save_prep(writer, data, sheet_name):
         except KeyError:
             pass
     # Convert individual numbers to numeric in rest of columns.
-    mixed_cols = [col for col in list(data) if col not in num_cols]
+    mixed_cols = [col for col in list(data) if col not in NUMERICAL_COLUMNS]
     skip_cols = ['Invoice Number', 'Part Number', 'Principal']
     mixed_cols = [i for i in mixed_cols if i not in skip_cols]
     for col in mixed_cols:

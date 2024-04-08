@@ -200,7 +200,7 @@ class GenMast(QMainWindow):
     def generate_reports_clicked(self):
         """Send the SalesReportGenerator execution to a worker thread."""
         self.lock_buttons()
-        worker = Worker(self.genReportsExecute)
+        worker = Worker(self.execute_generate_reports)
         if self.threadpool.activeThreadCount() == 0:
             self.threadpool.start(worker)
         else:
@@ -209,7 +209,7 @@ class GenMast(QMainWindow):
     def fix_entries_clicked(self):
         """Send the MergeFixedEntries execution to a worker thread."""
         self.lock_buttons()
-        worker = Worker(self.fixEntriesExecute)
+        worker = Worker(self.execute_fix_entries)
         if self.threadpool.activeThreadCount() == 0:
             self.threadpool.start(worker)
         else:
@@ -218,7 +218,7 @@ class GenMast(QMainWindow):
     def update_lookup_clicked(self):
         """Send the UpdateLookups execution to a worker thread."""
         self.lock_buttons()
-        worker = Worker(self.updateLookupExecute)
+        worker = Worker(self.execute_update_lookups)
         if self.threadpool.activeThreadCount() == 0:
             self.threadpool.start(worker)
         else:
@@ -227,7 +227,7 @@ class GenMast(QMainWindow):
     def update_master_clicked(self):
         """Send the UpdateLookups execution to a worker thread."""
         self.lock_buttons()
-        worker = Worker(self.updateMasterExecute)
+        worker = Worker(self.execute_update_master)
         if self.threadpool.activeThreadCount() == 0:
             self.threadpool.start(worker)
         else:
@@ -259,20 +259,17 @@ class GenMast(QMainWindow):
             logging.warning('No commission files selected! Use the Select Commission Files button to select files.')
         self.restore_buttons()
 
-    def genReportsExecute(self):
+    def execute_generate_reports(self):
         """Runs function for generating salesperson reports."""
-        # Turn buttons off.
         # Run the SalesReportGenerator.py file.
         try:
             SalesReportGenerator.main(self.master)
         except Exception:
             logging.error(f'Unexpected Python error: {traceback.format_exc(0)}')
-        # Clear the master selection.
-        self.master = []
         # Turn buttons back on.
         self.restore_buttons()
 
-    def fixEntriesExecute(self):
+    def execute_fix_entries(self):
         """Copy over fixed entries to Master."""
         if self.master:
             # Run the GenerateMaster.py file.
@@ -281,31 +278,31 @@ class GenMast(QMainWindow):
             except Exception as error:
                 logging.error(f'Unexpected Python error: {traceback.format_exc(0)}')
         else:
-            print('Please upload the current Running Commissions file.\n---')
+            logging.warning('Please upload the current Running Commissions file and try again.')
         self.restore_buttons()
 
-    def updateLookupExecute(self):
+    def execute_update_lookups(self):
         """Update the Lookup Master using a Running Commissions."""
         if self.master:
             # Run the GenerateMaster.py file.
             try:
                 CommTools.extractLookups(self.master)
-            except Exception as error:
+            except Exception:
                 logging.error(f'Unexpected Python error: {traceback.format_exc(0)}')
         else:
-            print('Please upload a Running Commissions file.\n---')
+            logging.warning('Please upload a Running Commissions file and try again.')
         self.restore_buttons()
 
-    def updateMasterExecute(self):
+    def execute_update_master(self):
         """Run the update Master Commissions via Unique ID function."""
         if self.master:
             # Run the GenerateMaster.py file.
             try:
                 MergeByUuid.main(self.master)
-            except Exception as error:
+            except Exception:
                 logging.error(f'Unexpected Python error: {traceback.format_exc(0)}')
         else:
-            print('Please upload the target Running Commissions file.\n---')
+            logging.warning('Please upload the target Running Commissions file and try again.')
         self.restore_buttons()
 
     def upload_master_clicked(self):

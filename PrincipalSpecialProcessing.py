@@ -1,7 +1,10 @@
 import os
 import re
+import logging
 import pandas as pd
 import numpy as np
+
+logger = logging.getLogger(__name__)
 
 # Set the directory for the data input/output.
 if os.path.exists('Z:\\'):
@@ -31,7 +34,7 @@ def preprocess_by_principal(principal, sheet, sheet_name):
             sheet.rename(columns=rename_dict, inplace=True)
             # Combine Rep 1 % and Rep 2 %.
             if 'Rep 1 %' in list(sheet) and 'Rep 2 %' in list(sheet):
-                print('Copying Rep 2 % into empty Rep 1 % lines.\n---')
+                logger.info('Copying Rep 2 % into empty Rep 1 % lines.')
                 for row in sheet.index:
                     if sheet.loc[row, 'Rep 2 %'] and not sheet.loc[row, 'Rep 1 %']:
                         sheet.loc[row, 'Rep 1 %'] = sheet.loc[row, 'Rep 2 %']
@@ -59,8 +62,8 @@ def preprocess_by_principal(principal, sheet, sheet_name):
 
     # Return the rename_dict for future use in the matched raw file.
     if rename_dict:
-        print(f'The following columns were renamed automatically on this sheet ({principal}):')
-        [print(i + ' --> ' + j) for i, j in zip(rename_dict.keys(), rename_dict.values())]
+        logger.info(f'The following columns were renamed automatically on this sheet ({principal}):\n'
+                    f'{', '.join([f'{i} --> {j}' for i, j in zip(rename_dict.keys(), rename_dict.values())])}')
     return rename_dict
 
 
@@ -94,8 +97,8 @@ def process_by_principal(principal, sheet, sheet_name, disty_map):
                 sheet['Actual Comm Paid'] = sheet['Paid-On Revenue'] * 0.03
                 # These are paid on resale.
                 sheet['Comm Source'] = 'Resale'
-                print('Columns added from Abracon special processing:\n'
-                      'Commission Rate, Paid-On Revenue, Actual Comm Paid\n---')
+                logger.info('Columns added from Abracon special processing:'
+                            'Commission Rate, Paid-On Revenue, Actual Comm Paid')
             elif 'MoComm' in sheet_name:
                 # Fill down Distributor for their grouping scheme.
                 sheet['Reported Distributor'].replace('', np.nan, inplace=True)
@@ -109,11 +112,10 @@ def process_by_principal(principal, sheet, sheet_name, disty_map):
                 revenue = pd.to_numeric(sheet['Paid-On Revenue'], errors='coerce')
                 comm_rate = round(comm_paid / revenue, 3)
                 sheet['Commission Rate'] = comm_rate
-                print('Columns added from Abracon special processing:\nCommission Rate\n---')
+                logger.info('Columns added from Abracon special processing: Commission Rate')
             else:
-                print('Sheet not recognized!\n'
-                      'Make sure the tab name contains either MoComm or Adj in the name.\n'
-                      'Continuing without extra ABR processing.\n---')
+                logger.warning('Sheet not recognized! Make sure the tab name contains either MoComm or Adj in the name.'
+                               'Continuing without extra ABR processing.')
 
         case 'ISS':
             if 'OEM/POS' in list(sheet):
@@ -159,7 +161,7 @@ def process_by_principal(principal, sheet, sheet_name, disty_map):
             try:
                 sheet['Invoice Number']
             except KeyError:
-                print('Found no Invoice Numbers on this sheet.\n---')
+                logger.info('Found no Invoice Numbers on this sheet.')
                 invoice_num = False
             if ext_cost and not invoice_dollars:
                 # Sometimes the Totals are written in the Part Number column.
@@ -171,12 +173,12 @@ def process_by_principal(principal, sheet, sheet_name, disty_map):
             elif 'Part Number' not in list(sheet) and invoice_num:
                 # We need to load in the part number log.
                 if os.path.exists(LOOK_DIR + '\\Mill-Max Invoice Log.xlsx'):
-                    millmax_log = pd.read_excel(LOOK_DIR + '\\Mill-Max Invoice Log.xlsx', dtype=str).fillna('')
-                    print('Looking up part numbers from invoice log.\n---')
+                    millmax_log = pd.read_excel(os.path.join(LOOK_DIR, 'Mill-Max Invoice Log.xlsx'), dtype=str)
+                    millmax_log = millmax_log.fillna('')
+                    logger.info('Looking up part numbers from invoice log.')
                 else:
-                    print('No Mill-Max Invoice Log found!\n'
-                          'Please make sure the Invoice Log is in the Commission Lookup directory.\n'
-                          'Skipping tab.\n---')
+                    logger.warning('No Mill-Max Invoice Log found! Please make sure the Invoice Log is in the '
+                                   'Commission Lookup directory. Skipping tab.')
                     return
                 # Input part number from Mill-Max Invoice Log.
                 for row in sheet.index:
@@ -204,15 +206,14 @@ def process_by_principal(principal, sheet, sheet_name, disty_map):
             try:
                 sheet['Paid-On Revenue'] = sheet['Invoiced Dollars']
             except KeyError:
-                print('No Invoiced Dollars found on this sheet!\n')
+                logger.info('No Invoiced Dollars found on this sheet!')
             if 'Commission Rate' not in sheet.columns:
                 sheet['Commission Rate'] = 0.05
             if 'Actual Comm Paid' not in sheet.columns:
                 try:
                     sheet['Actual Comm Paid'] = sheet['Paid-On Revenue'] * 0.05
                 except KeyError:
-                    print('No Paid-On Revenue found, could not calculate '
-                          'Actual Comm Paid.\n---')
+                    logger.warning('No Paid-On Revenue found, could not calculate Actual Comm Paid.')
                     return
             sheet['Comm Source'] = 'Resale'
 

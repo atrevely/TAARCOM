@@ -1,7 +1,10 @@
 import os
 import pandas as pd
 import datetime
+import logging
 from dateutil.parser import parse
+
+logger = logging.getLogger(__name__)
 
 # Define the directories where supporting files are located.
 TAARCOM_DIRECTORIES = {'COMM_LOOKUPS_DIR': 'Z:\\Commissions Lookup', 'COMM_WORKING_DIR': 'Z:\\MK Working Commissions',
@@ -44,8 +47,8 @@ def filter_duplicate_files(filepaths, files_processed):
     filenames = [val for val in filenames if val not in duplicates]
     if duplicates:
         # Let us know we found duplicates and removed them.
-        print('---\nThe following files are already in Running Commissions:\n%s' %
-              ', '.join(map(str, duplicates)) + '\nDuplicate files were removed from processing.')
+        logger.warning(f'The following files are already in Running Commissions: {', '.join(map(str, duplicates))}'
+                       '\nDuplicate files were removed from processing.')
     return filenames
 
 
@@ -63,9 +66,9 @@ def check_for_date_errors(date):
         # The date isn't recognized by the parser.
         return True
     except KeyError:
-        print('---\nThere is no Invoice Date column in Running Commissions!\n'
-              'Please check to make sure an Invoice Date column exists.\n'
-              'Note: Spelling, whitespace, and capitalization matter.\n---')
+        logger.error('There is no Invoice Date column in Running Commissions! '
+                     'Please check to make sure an Invoice Date column exists. '
+                     'Note: Spelling, whitespace, and capitalization matter.')
         return True
     return False
 
