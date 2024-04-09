@@ -6,7 +6,7 @@ import shutil
 import logging
 import GenerateMasterUtils as utils
 from xlrd import XLRDError
-from RCExcelTools import form_date
+from RCExcelTools import form_date, save_error, table_format
 
 logger = logging.getLogger(__name__)
 
@@ -213,7 +213,7 @@ def load_lookup_master():
     except FileNotFoundError:
         logger.error(f'No Lookup Master found! Please make sure Lookup Master - Current.xlsx is in {location}')
     except XLRDError:
-        logger.error('Error reading sheet names.')
+        logger.error('Error loading the Lookup Master.')
     return master_lookup
 
 
@@ -279,3 +279,21 @@ def load_distributor_map():
         logger.error('No distributor lookup file found! '
                      'Please make sure distributorLookup.xlsx is in the directory.\n*Program terminated*')
     return distributor_map
+
+
+def save_excel_file(filename, tab_data, tab_names):
+    """Save a file as an Excel spreadsheet."""
+    if save_error(filename):
+        logger.error(f'The following file is currently open in Excel: {filename}'
+                     f'\nPlease close the file and try again.')
+        return None
+    if not isinstance(tab_data, list):
+        tab_data = [tab_data]
+    if not isinstance(tab_names, list):
+        tab_names = [tab_names]
+    assert len(tab_data) == len(tab_names), logger.error(f'Mismatch in size of tab data and tab names in {filename}.')
+    # Add each tab to the document.
+    with pd.ExcelWriter(filename, datetime_format='mm/dd/yyyy') as writer:
+        for data, sheet_name in zip(tab_data, tab_names):
+            data.to_excel(writer, sheet_name=sheet_name, index=False)
+            table_format(sheet_data=data, sheet_name=sheet_name, workbook=writer)

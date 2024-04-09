@@ -1,6 +1,5 @@
 import pandas as pd
 from dateutil.parser import parse
-from xlrd import XLRDError
 import time
 import calendar
 import math
@@ -10,8 +9,8 @@ import datetime
 import logging
 from uuid import uuid4
 import GenerateMasterUtils as utils
-from FileIO import load_lookup_master, load_run_com, load_entries_need_fixing, load_principal_info, load_distributor_map
-from FileSaver import save_excel_file
+from FileIO import (load_lookup_master, load_run_com, load_entries_need_fixing, load_principal_info,
+                    load_distributor_map, save_excel_file)
 from RCExcelTools import save_error, form_date
 from PrincipalSpecialProcessing import process_by_principal, preprocess_by_principal
 
@@ -201,15 +200,13 @@ def main(filepaths, path_to_running_com, field_mappings):
                 return
             elif 'Actual Comm Paid' not in list(sheet):
                 # Tab has no commission data, so it is ignored.
-                logger.info('No commission dollars column found on this tab. Skipping tab.')
+                logger.warning(f'No commission dollars column found on tab {sheet_name}. Skipping tab.')
             elif 'Part Number' not in list(sheet):
                 # Tab has no part number data, so it is ignored.
-                logger.info('No part number column found on this tab. Skipping tab.')
+                logger.warning(f'No part number column found on tab {sheet_name}. Skipping tab.')
             elif 'Invoice Date' not in list(sheet):
                 # Tab has no date column, so report and exit.
-                logger.error('No Invoice Date column found for this tab. '
-                             'Please make sure the Invoice Date is mapped.\n*Program terminated*')
-                return
+                logger.warning(f'No Invoice Date column found on tab {sheet_name}. Skipping tab.')
             else:
                 # Report the number of rows that have part numbers.
                 total_rows = sum(sheet['Part Number'] != '')
@@ -272,9 +269,9 @@ def main(filepaths, path_to_running_com, field_mappings):
                     sheet.set_column(index, index, max_width + 0.8)
                     index += 1
 
-    # Fill NaNs left over from appending.
-    running_com.fillna(value='', inplace=True)
-    # Find matches in Lookup Master and extract data from them.
+    # ----------------------------------------------------------------
+    # Done appending new data, now find matches in the Lookup Master.
+    # ----------------------------------------------------------------
     # Let us know how many rows are being processed.
     num_rows = '{:,.0f}'.format(len(running_com) - run_com_len)
     if num_rows == '0':
@@ -282,6 +279,9 @@ def main(filepaths, path_to_running_com, field_mappings):
                      '*Program terminated*')
         return
     logger.info(f'Beginning processing on {num_rows} rows of data.')
+
+    # Fill NaNs left over from appending.
+    running_com.fillna({k: '' for k in running_com if running_com[k].dtype not in [float, int]}, inplace=True)
     running_com.reset_index(inplace=True, drop=True)
 
     # Get the part numbers and customers out of the lookup for use below.
@@ -307,7 +307,7 @@ def main(filepaths, path_to_running_com, field_mappings):
             # Reset index, but keep it around for updating usage below.
             full_match = master_lookup[cust_matches & part_matches].reset_index()
             # Record number of Lookup Master matches.
-            lookup_matches = full_match.size
+            lookup_matches = full_match.shape[0]
 
             # If we found one match we're good, so copy it over.
             if lookup_matches == 1:
@@ -325,7 +325,7 @@ def main(filepaths, path_to_running_com, field_mappings):
                 running_com.loc[row, 'T-End Cust'] = full_match['T-End Cust']
                 running_com.loc[row, 'CM Split'] = full_match['CM Split']
                 # Update usage in lookup Master.
-                master_lookup.loc[full_match['index'], 'Last Used'] = datetime.datetime.now().date()
+                master_lookup.loc[full_match['index'], 'Last Used'] = pd.to_datetime()
                 # Update OOT city if not already filled in.
                 if full_match['T-Name'][0:3] == 'OOT' and not full_match['City']:
                     master_lookup.loc[full_match['index'], 'City'] = running_com.loc[row, 'City']
@@ -378,20 +378,6 @@ def main(filepaths, path_to_running_com, field_mappings):
             dist_matches = ['Empty']
 
         # -----------------------------------------------------------------
-        # Go through each column and convert applicable entries to numeric.
-        # -----------------------------------------------------------------
-        cols = list(running_com)
-        # Invoice number sometimes has leading zeros we'd like to keep.
-        cols.remove('Invoice Number')
-        # The INF gets read in as infinity, so skip the principal column.
-        cols.remove('Principal')
-        for col in cols:
-            try:
-                running_com.loc[row, col] = pd.to_numeric(running_com.loc[row, col])
-            except (ValueError, TypeError):
-                pass
-
-        # -----------------------------------------------------------------
         # If any data isn't found/parsed, copy over to Entries Need Fixing.
         # -----------------------------------------------------------------
         if lookup_matches != 1 or len(dist_matches) != 1 or date_error:
@@ -399,7 +385,7 @@ def main(filepaths, path_to_running_com, field_mappings):
             entries_need_fixing.loc[row, 'Running Com Index'] = row
             entries_need_fixing.loc[row, 'Distributor Matches'] = len(dist_matches)
             entries_need_fixing.loc[row, 'Lookup Master Matches'] = lookup_matches
-            entries_need_fixing.loc[row, 'Date Added'] = datetime.datetime.now().date()
+            entries_need_fixing.loc[row, 'Date Added'] = pd.to_datetime(datetime.datetime.now().date())
         else:
             # Fill in the Sales Commission info.
             sales_com = 0.45 * running_com.loc[row, 'Actual Comm Paid']
@@ -438,13 +424,18 @@ def main(filepaths, path_to_running_com, field_mappings):
     master_lookup['Last Used'] = master_lookup['Last Used'].map(lambda x: form_date(x))
     master_lookup['Date Added'] = master_lookup['Date Added'].map(lambda x: form_date(x))
 
-    # Ssave the files.
     logger.info('Saving files.')
     current_time = time.strftime('%Y-%m-%d-%H%M')
-    filename_RC = os.path.join(OUT_DIR, f'Running Commissions {current_time}.xlsx')
-    filename_ENF = os.path.join(OUT_DIR, f'Entries Need Fixing {current_time}.xlsx')
-    filename_LM = os.path.join(LOOK_DIR, f'Lookup Master - Current.xlsx')
-    save_excel_file(filename=filename_RC, tab_data=[running_com, files_processed],
+
+    filepath_RC = os.path.join(OUT_DIR, f'Running Commissions {current_time}.xlsx')
+    filepath_ENF = os.path.join(OUT_DIR, f'Entries Need Fixing {current_time}.xlsx')
+    filepath_LM = os.path.join(LOOK_DIR, f'Lookup Master - Current.xlsx')
+    if save_error(filepath_RC, filepath_ENF, filepath_LM):
+        logger.error('One or more of the RC/ENF/Lookup files are currently open in Excel! '
+                     'Please close the files and try again.\n*Program Teminated*')
+        return
+
+    save_excel_file(filename=filepath_RC, tab_data=[running_com, files_processed],
                     tab_names=['Master', 'Files Processed'])
-    save_excel_file(filename=filename_ENF, tab_data=entries_need_fixing, tab_names='Data')
-    save_excel_file(filename=filename_LM, tab_data=master_lookup, tab_names='Lookup')
+    save_excel_file(filename=filepath_ENF, tab_data=entries_need_fixing, tab_names='Data')
+    save_excel_file(filename=filepath_LM, tab_data=master_lookup, tab_names='Lookup')

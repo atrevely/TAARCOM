@@ -14,8 +14,8 @@ DIRECTORIES = {i: j if os.path.exists(j) else os.getcwd() for i, j in TAARCOM_DI
 
 # Columns defined as containing numerical data.
 NUMERICAL_COLUMNS = ['Quantity', 'Ext. Cost', 'Invoiced Dollars', 'Paid-On Revenue', 'Actual Comm Paid',
-                     'Unit Cost', 'Unit Price', 'CM Split', 'Year', 'Sales Commission', 'Split Percentage',
-                     'Commission Rate', 'Gross Rev Reduction', 'Shared Rev Tier Rate']
+                     'Unit Cost', 'Unit Price', 'CM Split', 'Year', 'Sales Commission']
+PERCENTAGE_COLUMNS = ['Commission Rate', 'Split Percentage', 'Gross Rev Reduction', 'Shared Rev Tier Rate']
 
 
 def get_column_names(field_mappings):
@@ -74,26 +74,23 @@ def check_for_date_errors(date):
 
 
 def format_pct_numeric_cols(dataframe):
-    # Convert applicable columns to numeric.
-    numeric_cols = ['Quantity', 'Ext. Cost', 'Invoiced Dollars', 'Paid-On Revenue', 'Actual Comm Paid',
-                    'Unit Cost', 'Unit Price']
-    for col in numeric_cols:
+    """Convert know numeric and percentage columns to their correct form."""
+    for col in NUMERICAL_COLUMNS:
         try:
             dataframe[col] = pd.to_numeric(dataframe[col], errors='coerce').fillna('')
         except KeyError:
             pass
 
-    # Fix Commission Rate if it got read in as a decimal.
-    pct_cols = ['Commission Rate', 'Split Percentage', 'Gross Rev Reduction', 'Shared Rev Tier Rate']
-    for pct_col in pct_cols:
+    for pct_col in PERCENTAGE_COLUMNS:
         try:
-            # Remove '%' sign if present.
-            col = dataframe[pct_col].astype(str).map(lambda x: x.strip('%'))
+            # Remove '%' sign if present.8
+            column_data = dataframe[pct_col].astype(str).map(lambda x: x.strip('%'))
             # Convert to numeric.
-            col = pd.to_numeric(col, errors='coerce')
-            # Identify and correct which entries are not decimal.
-            col[col > 1] /= 100
-            dataframe[pct_col] = col.fillna(0)
+            column_data = pd.to_numeric(column_data, errors='coerce')
+            # If any data is greater than 1, then we know it's percentage, so convert to decimal.
+            if (column_data > 1).any():
+                column_data /= 100
+            dataframe[pct_col] = column_data.fillna(0)
         except (KeyError, TypeError):
             pass
 

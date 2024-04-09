@@ -3,10 +3,13 @@ import numpy as np
 import time
 import datetime
 import os
+import logging
 from dateutil.parser import parse
 from RCExcelTools import tab_save_prep, save_error, PivotTables
 from FileIO import load_salespeople_info, load_com_master, load_run_com, load_acct_list, load_lookup_master
 # from PDFReportGenerator import pdfReport
+
+logger = logging.getLogger(__name__)
 
 # Set the numerical columns.
 num_cols = ['Quantity', 'Ext. Cost', 'Invoiced Dollars', 'Paid-On Revenue', 'Actual Comm Paid',
@@ -130,9 +133,7 @@ def main(run_com):
     reports are run instead on the data for the most recent month
     in Commissions Master.
     """
-    # Create the pivot tables class instance.
-    pivots = PivotTables()
-    print('Loading the data from Commissions Master...')
+    logger.info('Loading the data from Commissions Master...')
     # --------------------------------------------------------
     # Load in the supporting files, exit if any aren't found.
     # --------------------------------------------------------
@@ -140,7 +141,7 @@ def main(run_com):
     acct_list = load_acct_list()
     com_mast, master_files = load_com_master()
     if any([acct_list.empty, sales_info.empty, com_mast.empty, master_files.empty]):
-        print('*Program Terminated*')
+        logger.error('Error loading files.\n*Program Terminated*')
         return
     # Grab the column list for use later.
     master_cols = list(com_mast)
@@ -152,9 +153,9 @@ def main(run_com):
     try:
         comm_months = [parse(str(i).strip()) for i in comm_months if i != '']
     except ValueError:
-        print('Error parsing dates in Comm Month column of Commissions Master!'
-              '\nPlease check that all dates are in standard formatting and '
-              'try again.\n*Program Terminated*')
+        logger.error('Error parsing dates in Comm Month column of Commissions Master!'
+                     ' Please check that all dates are in standard formatting and '
+                     'try again.\n*Program Terminated*')
         return
     # Grab the most recent month in Commissions Master.
     last_month = max(comm_months)
@@ -163,10 +164,11 @@ def main(run_com):
         look_mast = load_lookup_master()
         running_com, files_processed = load_run_com(file_path=run_com)
         if any([look_mast.empty, running_com.empty, files_processed.empty]):
-            print('*Program Terminated*')
+            logger.error('Error loading files.\n*Program Terminated*')
             return
         # Fill in the Sales Report Date in Running Commissions.
         running_com.loc[running_com['Sales Report Date'] == '', 'Sales Report Date'] = time.strftime('%m/%d/%Y')
+
         # -------------------------------------------------------------------
         # Check to make sure new files aren't already in Commissions Master.
         # -------------------------------------------------------------------
@@ -176,9 +178,8 @@ def main(run_com):
         # Don't let duplicate files get processed.
         if duplicates:
             # Let us know we found duplicates and removed them.
-            print('---\nThe following files are already in Commissions Master:\n%s'
-                  % ', '.join(map(str, duplicates)) + '\nPlease check '
-                  'the files and try again.\n*Program Terminated*')
+            logger.error(f'The following files are already in Commissions Master: {', '.join(map(str, duplicates))}'
+                         '\nPlease check the files and try again.\n*Program Terminated*')
             return
 
         # ---------------------------------------------
@@ -205,14 +206,12 @@ def main(run_com):
                     design_pct *= 100 - running_com.loc[row, 'CM Split']
                     tot_pct = (cm_pct.iloc[0] + design_pct.iloc[0]) / 100
                 except IndexError:
-                    print('Error finding sales percentages on line '
-                          + str(row + 2) + ' in Running Commissions.')
+                    logger.warning(f'Error finding sales percentages on line {row + 2} in Running Commissions.')
             else:
                 try:
                     tot_pct = [i.iloc[0] for i in (cm_pct, design_pct) if any(i)][0]
                 except IndexError:
-                    print('No salesperson found on line ' + str(row + 2)
-                          + ' in Running Commissions.')
+                    logger.warning(f'No salesperson found on line {row + 2} in Running Commissions.')
             if tot_pct:
                 sales_comm = tot_pct * running_com.loc[row, 'Actual Comm Paid']
                 running_com.loc[row, 'Sales Commission'] = sales_comm
@@ -227,7 +226,7 @@ def main(run_com):
             current_month = 1
             current_year += 1
         # Tag the new data as the current month/year.
-        current_yr_mo = str(current_year) + '-' + str(current_month)
+        current_yr_mo = f'{current_year}-{current_month}'
         running_com['Comm Month'] = current_yr_mo
         # No add-on since this is the first RC run.
         RC_addon = ''
@@ -237,13 +236,13 @@ def main(run_com):
         # -----------------------------------------------------------------
         current_month = last_month.month
         current_year = last_month.year
-        current_yr_mo = str(current_year) + '-' + str(current_month)
+        current_yr_mo = f'{current_year}-{current_month}'
         running_com = com_mast[com_mast['Comm Month'] == current_yr_mo]
         # Indicate that this is a rerun.
         RC_addon = ' (Rerun)'
-        print('No new RC supplied. Reporting on latest quarter in the Commissions Master.')
+        logger.info('No new RC supplied. Reporting on latest quarter in the Commissions Master.')
 
-    print('Preparing report data...')
+    logger.info('Preparing report data...')
     # ------------------------------------------------------------------------
     # Combine and tag revenue data for the quarters that we're reporting on.
     # We report on the most recent 5 quarters of data for the Revenue Report.
@@ -268,9 +267,9 @@ def main(run_com):
                 cust_ID = revenue_data[revenue_data['T-End Cust'] == cust].index
                 revenue_data.loc[cust_ID, 'CDS'] = sales
             except KeyError:
-                print('Error reading column names in Account List!\n'
-                      'Please make sure the columns ProperName and SLS are in '
-                      'the Account List.\n*Program Terminated*')
+                logger.error('Error reading column names in Account List! '
+                             'Please make sure the columns ProperName and SLS are in the Account List.'
+                             '\n*Program Terminated*')
                 return
     # Fill in the CDS (current design sales) for missing entries as simply the
     # Design Sales for that line.
@@ -290,13 +289,13 @@ def main(run_com):
     try:
         com_mast_tracked['Comm Month'].map(lambda x: parse(str(x)))
     except (TypeError, ValueError):
-        print('Error reading month in Comm Month column!\n'
-              'Please make sure all months are in YYYY-MM format.\n*Program Terminated*')
+        logger.error('Error reading month in Comm Month column! '
+                     'Please make sure all months are in YYYY-MM format.\n*Program Terminated*')
         return
     # Determine how many months back we need to go.
     num_prev_mos = (current_month - 1) % 3
     months = range(current_month, current_month - num_prev_mos - 1, -1)
-    qtr_mos = [str(current_year) + '-' + str(i) for i in months]
+    qtr_mos = [f'{current_year}-{i}' for i in months]
     qtr_data = com_mast_tracked[com_mast_tracked['Comm Month'].isin(qtr_mos)]
     # Compile the quarter data.
     if run_com:
@@ -310,13 +309,16 @@ def main(run_com):
     # ---------------------------------------
     # Grab all of the salespeople initials.
     salespeople = sorted(sales_info['Sales Initials'].values)
-    print('Found the following sales initials in the Salespeople Info file: ' + ', '.join(salespeople))
+    logger.info(f'Found the following sales initials in the Salespeople Info file: {', '.join(salespeople)}')
     # Create the dataframe with the commission information by salesperson.
     sales_tot = pd.DataFrame(columns=['Salesperson', 'Principal', 'Paid-On Revenue', 'Actual Comm Paid',
                                       'Sales Commission'])
 
+    # Create the pivot tables class instance.
+    pivots = PivotTables()
+
     # Go through each salesperson and prepare their reports.
-    print('Running reports...')
+    logger.info('Running reports...')
     for person in salespeople:
         # ------------------------------------------------------------
         # Create the revenue reports for each salesperson, using only
@@ -331,17 +333,12 @@ def main(run_com):
         # Get rid of empty Quarter Shipped lines.
         design_data = design_data[design_data['Quarter Shipped'] != '']
         design_data.reset_index(drop=True, inplace=True)
+
         # Write the raw data to a file.
-        filename = (reports_dir + '\\' + person + ' Revenue Report - ' + current_yr_mo + '.xlsx')
+        filename = os.path.join(reports_dir, f'{person} Revenue Report - {current_yr_mo}.xlsx')
         writer = pd.ExcelWriter(filename, engine='xlsxwriter', datetime_format='mm/dd/yyyy')
         tab_save_prep(writer=writer, data=design_data, sheet_name='Raw Data')
-        # Try saving the report.
-        try:
-            writer.save()
-        except IOError:
-            print('---\nA salesperson report file is open in Excel!\n'
-                  'Please close the file(s) and try again.\n*Program Terminated*')
-            return
+
         # Create the revenue pivot table.
         pivots.create_pivot_table(excel_file=filename, data_sheet_name='Raw Data',
                                   pivot_sheet_name='Revenue Table',
@@ -394,20 +391,14 @@ def main(run_com):
         sales_tot = sales_tot.append(person_total, ignore_index=True, sort=False)
         sales_tot = sales_tot.append(princ_tab[princ_tab['Principal'] != 'Grand Total'],
                                      ignore_index=True, sort=False)
+
         # Write report to file.
-        filename = (reports_dir + '\\' + person + ' Commission Report - ' + current_yr_mo + '.xlsx')
+        filename = os.path.join(reports_dir, f'{person} Commission Report - {current_yr_mo}.xlsx')
         writer = pd.ExcelWriter(filename, engine='xlsxwriter', datetime_format='mm/dd/yyyy')
         # Prepare the data in Excel.
         tab_save_prep(writer=writer, data=princ_tab, sheet_name='Principals')
         tab_save_prep(writer=writer, data=final_report, sheet_name='Raw Data')
-        # Try saving the file, exit with error if file is currently open.
-        try:
-            writer.save()
-        except IOError:
-            print('---\nA salesperson report file is open in Excel!\n'
-                  'Please close the file(s) and try again.\n*Program Terminated*')
-            return
-        # Create the commission pivot table.
+
         pivots.create_pivot_table(excel_file=filename,  data_sheet_name='Raw Data',
                                   pivot_sheet_name='Comm Table', row_fields=['T-End Cust', 'Principal'],
                                   col_field='Comm Month', data_field='Sales Commission')
@@ -416,7 +407,7 @@ def main(run_com):
     # If we're at the end of a quarter, create the quarterly/PDF report.
     # -------------------------------------------------------------------
     if num_prev_mos == 2:
-        current_qtr = str(current_year) + 'Q' + str(int(current_month / 3))
+        current_qtr = f'{current_year}Q{int(current_month / 3)}'
         create_quarterly_report(comm_data=comm_data, comm_qtr=current_qtr,
                                 salespeople=salespeople, sales_info=sales_info)
         # fullName = sales['Salesperson'].iloc[0]
@@ -443,17 +434,10 @@ def main(run_com):
     # Create the overall Revenue Report.
     # -----------------------------------
     # Write the raw data to a file.
-    filename = (reports_dir + '\\' + 'Revenue Report - ' + current_yr_mo + RC_addon + '.xlsx')
+    filename = os.path.join(reports_dir, f'Revenue Report - {current_yr_mo}{RC_addon}.xlsx')
     writer = pd.ExcelWriter(filename, engine='xlsxwriter', datetime_format='mm/dd/yyyy')
     tab_save_prep(writer=writer, data=revenue_data, sheet_name='Raw Data')
-    # Try saving the report.
-    try:
-        writer.save()
-    except IOError:
-        print('---\nRevenue report file is open in Excel!\n'
-              'Please close the file(s) and try again.\n'
-              '*Program Terminated*')
-        return
+
     # Add the pivot table for revenue by quarter.
     pivots.create_pivot_table(excel_file=filename,  data_sheet_name='Raw Data',
                               pivot_sheet_name='Revenue Table',
