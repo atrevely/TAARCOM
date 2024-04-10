@@ -4,7 +4,7 @@ import numpy as np
 import datetime
 import shutil
 import logging
-import GenerateMasterUtils as utils
+import GenerateMasterUtils as Utils
 from xlrd import XLRDError
 from RCExcelTools import form_date, save_error, table_format
 
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 def load_salespeople_info():
     """Read in Salespeople Info. Return empty series if not found or if there's an error."""
     sales_info = pd.Series([])
-    location = utils.DIRECTORIES.get('COMM_LOOKUPS_DIR')
+    location = Utils.DIRECTORIES.get('COMM_LOOKUPS_DIR')
     try:
         sales_info = pd.read_excel(os.path.join(location, 'Salespeople Info.xlsx'), sheet_name='Info')
         # Make sure the required columns are present.
@@ -40,7 +40,7 @@ def load_salespeople_info():
 def load_principal_info():
     """Load the Principal Info file."""
     principal_info = pd.Series([])
-    location = utils.DIRECTORIES.get('COMM_LOOKUPS_DIR')
+    location = Utils.DIRECTORIES.get('COMM_LOOKUPS_DIR')
     try:
         principal_info = pd.read_excel(os.path.join(location, 'principalList.xlsx'), sheet_name='Principals')
     except FileNotFoundError:
@@ -54,76 +54,56 @@ def load_principal_info():
 
 def load_com_master():
     """Load and prepare the Commissions Master file. Return empty series if not found."""
-    com_mast, master_files = pd.Series([]), pd.Series([])
-    location = utils.DIRECTORIES.get('COMM_WORKING_DIR')
+    commission_master, master_files = pd.Series([]), pd.Series([])
+    location = Utils.DIRECTORIES.get('COMM_WORKING_DIR')
     file_path = os.path.join(location, 'Commissions Master.xlsx')
+
+    # Create backup file.
     today = datetime.datetime.today().strftime('%m-%d-%Y')
     run_com_backup = file_path.replace('.xlsx', f'_BACKUP_{str(today)}.xlsx')
     logger.info(f'Saving Commissions Master backup as: {run_com_backup}')
     shutil.copy(file_path, run_com_backup)
 
     try:
-        com_mast = pd.read_excel(file_path, sheet_name='Master', dtype=str)
+        commission_master = pd.read_excel(file_path, sheet_name='Master', dtype=str)
         master_files = pd.read_excel(file_path, sheet_name='Files Processed').fillna('')
-
-        # Force numerical columns to be numeric.
-        for col in utils.NUMERICAL_COLUMNS:
-            try:
-                com_mast[col] = pd.to_numeric(com_mast[col], errors='coerce').fillna(0)
-            except KeyError:
-                pass
+        commission_master = Utils.format_pct_numeric_cols(commission_master)
 
         # Convert individual numbers to numeric in rest of columns.
         # Invoice/part numbers sometimes have leading zeros we'd like to keep, and
         # the INF gets read in as infinity, so remove these.
-        mixed_cols = [col for col in list(com_mast) if col not in utils.NUMERICAL_COLUMNS
+        mixed_cols = [col for col in list(commission_master) if col not in Utils.NUMERICAL_COLUMNS
                       and col not in ['Invoice Number', 'Part Number', 'Principal']]
         for col in mixed_cols:
-            com_mast[col] = pd.to_numeric(com_mast[col], errors='ignore')
+            commission_master[col] = pd.to_numeric(commission_master[col], errors='ignore')
 
         # Now remove the nans.
-        com_mast.replace(to_replace=['nan', np.nan], value='', inplace=True)
+        commission_master.replace(to_replace=['nan', np.nan], value='', inplace=True)
 
         # Make sure all the dates are formatted correctly.
         for col in ['Invoice Date', 'Paid Date', 'Sales Report Date']:
-            com_mast[col] = com_mast[col].map(lambda x: form_date(x))
+            commission_master[col] = commission_master[col].map(lambda x: form_date(x))
 
         # Make sure that the CM Splits aren't blank or zero.
-        com_mast['CM Split'] = com_mast['CM Split'].replace(['', '0', 0], 20)
+        commission_master['CM Split'] = commission_master['CM Split'].replace(['', '0', 0], 20)
         for col in ['CM Sales', 'Design Sales', 'Principal']:
-            com_mast[col] = com_mast[col].map(lambda x: x.strip().upper())
+            commission_master[col] = commission_master[col].map(lambda x: x.strip().upper())
     except FileNotFoundError:
         logger.error('No Commissions Master file found!')
     except XLRDError:
         logger.error('Commissions Master tab names incorrect! '
                      'Make sure the tabs are named Master and Files Processed.')
-    return com_mast, master_files
+    return commission_master, master_files
 
 
 def load_run_com(file_path):
     """Load and prepare the Running Commissions file. Return empty series if not found."""
     running_com, files_processed = pd.Series([]), pd.Series([])
+
     try:
         running_com = pd.read_excel(file_path, sheet_name='Master', dtype=str)
         files_processed = pd.read_excel(file_path, sheet_name='Files Processed').fillna('')
-
-        for col in utils.NUMERICAL_COLUMNS:
-            try:
-                running_com[col] = pd.to_numeric(running_com[col], errors='coerce').fillna(0)
-            except KeyError:
-                pass
-
-        # Convert individual numbers to numeric in rest of columns.
-        mixed_cols = [col for col in list(running_com) if col not in utils.NUMERICAL_COLUMNS
-                      and col not in ['Invoice Number', 'Part Number', 'Principal']]
-
-        for col in mixed_cols:
-            try:
-                running_com[col] = pd.to_numeric(running_com[col], errors='ignore')
-            except KeyError:
-                pass
-
-        # Now remove the nans.
+        running_com = Utils.format_pct_numeric_cols(running_com)
         running_com.replace(to_replace=['nan', np.nan], value='', inplace=True)
         # Make sure all the dates are formatted correctly.
         running_com['Invoice Date'] = running_com['Invoice Date'].map(lambda x: form_date(x))
@@ -136,6 +116,7 @@ def load_run_com(file_path):
     except XLRDError:
         logger.error('Running Commissions tab names incorrect! '
                      'Make sure the tabs are named Master and Files Processed.')
+
     return running_com, files_processed
 
 
@@ -146,14 +127,14 @@ def load_entries_need_fixing(file_dir):
     try:
         entries_need_fixing = pd.read_excel(file_dir, sheet_name='Data', dtype=str)
         # Convert entries to proper types, like above.
-        for col in utils.NUMERICAL_COLUMNS:
+        for col in Utils.NUMERICAL_COLUMNS:
             try:
                 entries_need_fixing[col] = pd.to_numeric(entries_need_fixing[col], errors='coerce').fillna('')
             except KeyError:
                 logger.error(f'The following column was not found in ENF: {col}. '
                              f'Please check the column names and try again')
                 return None
-        mixed_cols = [col for col in list(entries_need_fixing) if col not in utils.NUMERICAL_COLUMNS
+        mixed_cols = [col for col in list(entries_need_fixing) if col not in Utils.NUMERICAL_COLUMNS
                       and col not in ['Invoice Number', 'Part Number', 'Principal']]
         for col in mixed_cols:
             try:
@@ -177,7 +158,7 @@ def load_entries_need_fixing(file_dir):
 def load_acct_list():
     """Load and prepare the Account List file."""
     acct_list = pd.Series([])
-    location = utils.DIRECTORIES.get('COMM_LOOKUPS_DIR')
+    location = Utils.DIRECTORIES.get('COMM_LOOKUPS_DIR')
     try:
         acct_list = pd.read_excel(os.path.join(location, 'Master Account List.xlsx'), sheet_name='Allacct').fillna('')
         # Make sure the required columns are present.
@@ -197,7 +178,8 @@ def load_acct_list():
 def load_lookup_master():
     """Load and prepare the Lookup Master."""
     master_lookup = pd.Series([])
-    location = utils.DIRECTORIES.get('COMM_LOOKUPS_DIR')
+    location = Utils.DIRECTORIES.get('COMM_LOOKUPS_DIR')
+
     try:
         master_lookup = pd.read_excel(os.path.join(location, 'Lookup Master - Current.xlsx')).fillna('')
         # Make sure the required columns are present.
@@ -214,13 +196,14 @@ def load_lookup_master():
         logger.error(f'No Lookup Master found! Please make sure Lookup Master - Current.xlsx is in {location}')
     except XLRDError:
         logger.error('Error loading the Lookup Master.')
+
     return master_lookup
 
 
 def load_root_customer_mappings():
     """Load and prepare the root customer mappings file."""
     customer_mappings = pd.Series([])
-    location = utils.DIRECTORIES.get('COMM_LOOKUPS_DIR')
+    location = Utils.DIRECTORIES.get('COMM_LOOKUPS_DIR')
     try:
         customer_mappings = pd.read_excel(os.path.join(location, 'rootCustomerMappings.xlsx'),
                                           sheet_name='Sales Lookup').fillna('')
@@ -243,7 +226,7 @@ def load_digikey_master():
     """Load and prepare the digikey insights master file."""
     digikey_master = pd.Series([])
     files_processed = pd.Series([])
-    location = utils.DIRECTORIES.get('DIGIKEY_DIR')
+    location = Utils.DIRECTORIES.get('DIGIKEY_DIR')
     try:
         digikey_master = pd.read_excel(os.path.join(location, 'Digikey Insight Master.xlsx'),
                                        sheet_name='Master').fillna('')
@@ -259,7 +242,7 @@ def load_digikey_master():
 
 def load_distributor_map():
     distributor_map = pd.Series([])
-    location = utils.DIRECTORIES.get('COMM_LOOKUPS_DIR')
+    location = Utils.DIRECTORIES.get('COMM_LOOKUPS_DIR')
     # Read in the distributor map. Terminate if not found or if errors in file.
     if os.path.exists(os.path.join(location, 'distributorLookup.xlsx')):
         try:

@@ -83,7 +83,7 @@ def format_pct_numeric_cols(dataframe):
 
     for pct_col in PERCENTAGE_COLUMNS:
         try:
-            # Remove '%' sign if present.8
+            # Remove '%' sign if present.
             column_data = dataframe[pct_col].astype(str).map(lambda x: x.strip('%'))
             # Convert to numeric.
             column_data = pd.to_numeric(column_data, errors='coerce')

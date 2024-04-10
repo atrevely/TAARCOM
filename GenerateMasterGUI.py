@@ -250,9 +250,13 @@ class GenMast(QMainWindow):
         if self.filenames and mappings_exist:
             # Run the GenerateMaster.py file.
             try:
-                GenerateMaster.main(self.filenames, self.master, self.fieldMappings)
+                success = GenerateMaster.main(self.filenames, self.master, self.fieldMappings)
+                if success:
+                    logging.info('+Program Generate Master Complete!+')
+                    self.filenames = []
+                    self.raw_files_list.clear()
             except Exception:
-                logging.error(f'Unexpected Python error: {traceback.format_exc(0)}')
+                logging.error(f'Unexpected Python error: {traceback.format_exc(0)}\n*Program Terminated*')
         elif not mappings_exist:
             logging.warning('File fieldMappings.xlsx not found! Please check file location and try again.')
         elif not self.filenames:

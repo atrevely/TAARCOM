@@ -126,12 +126,10 @@ def create_quarterly_report(comm_data, comm_qtr, salespeople, sales_info):
 
 
 def main(run_com):
-    """Generates sales reports, then appends the Running Commissions data
-    to the Commissions Master.
+    """Generates sales reports, then appends the Running Commissions data to the Commissions Master.
 
     If run_com is not supplied, then no new data is read/appended;
-    reports are run instead on the data for the most recent month
-    in Commissions Master.
+    reports are run instead on the data for the most recent month in Commissions Master.
     """
     logger.info('Loading the data from Commissions Master...')
     # --------------------------------------------------------

@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 from dateutil.parser import parse
 import time
 import calendar
@@ -8,7 +9,7 @@ import re
 import datetime
 import logging
 from uuid import uuid4
-import GenerateMasterUtils as utils
+import GenerateMasterUtils as Utils
 from FileIO import (load_lookup_master, load_run_com, load_entries_need_fixing, load_principal_info,
                     load_distributor_map, save_excel_file)
 from RCExcelTools import save_error, form_date
@@ -47,7 +48,7 @@ def main(filepaths, path_to_running_com, field_mappings):
     """
     logger.info('Starting program: Generate Master')
     # Get the correct column names for the commission file.
-    column_names = utils.get_column_names(field_mappings)
+    column_names = Utils.get_column_names(field_mappings)
 
     # -------------------------------------------------------------------
     # Check to see if there's an existing Running Commissions to append
@@ -67,26 +68,28 @@ def main(filepaths, path_to_running_com, field_mappings):
             return
 
         # Load in the matching Entries Need Fixing file.
-        ENF_path = os.path.join(OUT_DIR, 'Entries Need Fixing', path_to_running_com[-20:])
+        ENF_path = os.path.join(OUT_DIR, f'Entries Need Fixing {path_to_running_com[-20:]}')
         entries_need_fixing = load_entries_need_fixing(file_dir=ENF_path)
+
         if any([running_com.empty, files_processed.empty]):
             logger.error('Running commissions and/or files processed are empty!\n*Program Terminated*')
             return
         elif entries_need_fixing is None:
             logger.error('No Entries Need Fixing found for the provided Running Commissions!\n*Program Terminated*')
             return
-        run_com_len = len(running_com)
+        running_com_input_len = running_com.shape[0]
+
     # ---------------------------------------------------------
     # Start new Running Commissions; no existing one provided.
     # ---------------------------------------------------------
     else:
         logger.info('No Running Commissions file provided. Starting a new one.')
-        run_com_len = 0
+        running_com_input_len = 0
         running_com = pd.DataFrame(columns=column_names)
         entries_need_fixing = pd.DataFrame(columns=column_names)
         files_processed = pd.DataFrame(columns=['Filename', 'Total Commissions', 'Date Added', 'Paid Date'])
 
-    filenames = utils.filter_duplicate_files(filepaths, files_processed)
+    filenames = Utils.filter_duplicate_files(filepaths, files_processed)
     # Exit if no new files are left after filtering.
     if not filenames:
         logger.error('No new commissions files selected. Please try selecting files again.\n*Program terminated*')
@@ -97,13 +100,13 @@ def main(filepaths, path_to_running_com, field_mappings):
     input_data = [pd.read_excel(filepath, sheet_name=None, dtype=str) for filepath in filepaths]
 
     # Load the supporting files.
-    disty_map = load_distributor_map()
+    distributor_map = load_distributor_map()
     master_lookup = load_lookup_master()
-    princ_info = load_principal_info()
-    if disty_map.empty or master_lookup.empty or princ_info.empty:
+    principal_info = load_principal_info()
+    if any([distributor_map.empty, master_lookup.empty, principal_info.empty]):
         logger.error('Error loading supporting files.\n*Program terminated*')
         return
-    principal_list = princ_info['Abbreviation'].to_list()
+    principal_list = principal_info['Abbreviation'].to_list()
 
     # -------------------------------------------------------------------------
     # Done loading in the data and supporting files, now go to work.
@@ -133,7 +136,7 @@ def main(filepaths, path_to_running_com, field_mappings):
             # Rework the index just in case it got read in wrong, then clean up the dataframe.
             sheet = new_data[sheet_name].reset_index(drop=True)
             sheet.index = sheet.index.map(int)
-            sheet.replace(to_replace='nan', value='', inplace=True)
+            sheet.replace(to_replace=['nan', np.nan], value='', inplace=True)
             sheet.rename(columns=lambda x: str(x).strip(), inplace=True)
 
             # Clear out unnamed columns.
@@ -177,15 +180,18 @@ def main(filepaths, path_to_running_com, field_mappings):
             raw_sheet.sort_index(inplace=True)
             new_data[sheet_name] = raw_sheet
 
-            sheet = utils.format_pct_numeric_cols(dataframe=sheet)
+            sheet = Utils.format_pct_numeric_cols(dataframe=sheet)
 
             # Do special processing for principal, if applicable.
-            process_by_principal(principal=principal, sheet=sheet, sheet_name=sheet_name, disty_map=disty_map)
+            process_by_principal(principal=principal, sheet=sheet, sheet_name=sheet_name, disty_map=distributor_map)
 
-            # Drop entries with emtpy part number or reported customer.
+            # Drop entries with emtpy part number.
             try:
+                num_entries = sheet['Part Number'].shape[0]
                 sheet.drop(sheet[sheet['Part Number'] == ''].index, inplace=True)
                 sheet.reset_index(drop=True, inplace=True)
+                if sheet['Part Number'].shape[0] < num_entries:
+                    logger.info(f'Dropped {num_entries - sheet['Part Number'].shape[0]:,} lines with no part number.')
             except KeyError:
                 pass
 
@@ -234,10 +240,10 @@ def main(filepaths, path_to_running_com, field_mappings):
                     app_cols = matching_columns + ['From File', 'Principal']
                     running_com = pd.concat((running_com, sheet[app_cols]), ignore_index=True, sort=False)
                 else:
-                    logger.info('Found no data on this tab. Skipping.')
+                    logger.info(f'Found no data tab {sheet_name}. Skipping.')
 
         # Show total commissions.
-        logger.info('Total commissions for this file: ${:,.2f}'.format(total_comm))
+        logger.info(f'Total commissions for {filename}: ${total_comm:,.2f}')
         # Append filename and total commissions to Files Processed sheet.
         new_file = pd.DataFrame({'Filename': [filename], 'Total Commissions': [total_comm],
                                  'Date Added': [datetime.datetime.now().date()], 'Paid Date': ['']})
@@ -273,15 +279,14 @@ def main(filepaths, path_to_running_com, field_mappings):
     # Done appending new data, now find matches in the Lookup Master.
     # ----------------------------------------------------------------
     # Let us know how many rows are being processed.
-    num_rows = '{:,.0f}'.format(len(running_com) - run_com_len)
-    if num_rows == '0':
+    if running_com.shape[0] - running_com_input_len <= 0:
         logger.error('No new valid data provided. Please check the new files for missing data or column matches.\n'
                      '*Program terminated*')
         return
-    logger.info(f'Beginning processing on {num_rows} rows of data.')
+    logger.info(f'Beginning processing on {running_com.shape[0] - running_com_input_len} rows of data.')
 
     # Fill NaNs left over from appending.
-    running_com.fillna({k: '' for k in running_com if running_com[k].dtype not in [float, int]}, inplace=True)
+    running_com.replace(to_replace=np.nan, value='', inplace=True)
     running_com.reset_index(inplace=True, drop=True)
 
     # Get the part numbers and customers out of the lookup for use below.
@@ -289,7 +294,7 @@ def main(filepaths, path_to_running_com, field_mappings):
     lookup_part_numbers = master_lookup['Part Number'].map(lambda x: str(x).lower())
 
     # Iterate over each row of the newly appended data.
-    for row in range(run_com_len, len(running_com)):
+    for row in range(running_com_input_len, len(running_com)):
         # ------------------------------------------
         # Try to find a match in the Lookup Master.
         # ------------------------------------------
@@ -325,7 +330,7 @@ def main(filepaths, path_to_running_com, field_mappings):
                 running_com.loc[row, 'T-End Cust'] = full_match['T-End Cust']
                 running_com.loc[row, 'CM Split'] = full_match['CM Split']
                 # Update usage in lookup Master.
-                master_lookup.loc[full_match['index'], 'Last Used'] = pd.to_datetime()
+                master_lookup.loc[full_match['index'], 'Last Used'] = pd.to_datetime(datetime.datetime.now().date())
                 # Update OOT city if not already filled in.
                 if full_match['T-Name'][0:3] == 'OOT' and not full_match['City']:
                     master_lookup.loc[full_match['index'], 'City'] = running_com.loc[row, 'City']
@@ -341,7 +346,7 @@ def main(filepaths, path_to_running_com, field_mappings):
         # -----------------------------------------------------------
         # Try parsing the date.
         invoice_date = running_com.loc[row, 'Invoice Date']
-        date_error = utils.check_for_date_errors(date=invoice_date)
+        date_error = Utils.check_for_date_errors(date=invoice_date)
 
         # If no error found in date, fill in the month/year/quarter
         if not date_error:
@@ -367,11 +372,11 @@ def main(filepaths, path_to_running_com, field_mappings):
         dist_name = re.sub(r'[^a-zA-Z0-9]', '', reported_dist).lower()
 
         # Find matches for the dist_name in the Distributor Abbreviations.
-        dist_matches = [i for i in disty_map['Search Abbreviation'] if i in dist_name]
+        dist_matches = [i for i in distributor_map['Search Abbreviation'] if i in dist_name]
         if len(dist_matches) == 1:
             # Find and input corrected distributor name.
-            match_loc = disty_map['Search Abbreviation'] == dist_matches[0]
-            corrected_dist = disty_map[match_loc].iloc[0]['Corrected Dist']
+            match_loc = distributor_map['Search Abbreviation'] == dist_matches[0]
+            corrected_dist = distributor_map[match_loc].iloc[0]['Corrected Dist']
             running_com.loc[row, 'Distributor'] = corrected_dist
         elif not dist_name:
             running_com.loc[row, 'Distributor'] = ''
@@ -400,14 +405,13 @@ def main(filepaths, path_to_running_com, field_mappings):
             running_com.loc[row, 'Design Sales Comm'] = (100 - split) * sales_com / 100
 
         # Update progress every 100 rows.
-        if (row - run_com_len) % 100 == 0 and row > run_com_len:
-            logger.info(f'Done with row {'{:,.0f}'.format(row - run_com_len)}')
+        if (row - running_com_input_len) % 100 == 0 and row > running_com_input_len:
+            logger.info(f'Done with row {'{:,.0f}'.format(row - running_com_input_len)}')
 
     # -----------------------------
     # Clean up the finalized data.
     # -----------------------------
     # Reorder columns to match the desired layout in column_names.
-    running_com.fillna({k: '' for k in running_com if running_com[k].dtype not in [float, int]}, inplace=True)
     running_com = running_com.loc[:, column_names]
     column_names.extend(['Distributor Matches', 'Lookup Master Matches', 'Date Added', 'Running Com Index',
                          'Unique ID'])
@@ -439,3 +443,4 @@ def main(filepaths, path_to_running_com, field_mappings):
                     tab_names=['Master', 'Files Processed'])
     save_excel_file(filename=filepath_ENF, tab_data=entries_need_fixing, tab_names='Data')
     save_excel_file(filename=filepath_LM, tab_data=master_lookup, tab_names='Lookup')
+    return True
