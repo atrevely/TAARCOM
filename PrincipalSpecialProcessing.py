@@ -3,18 +3,9 @@ import re
 import logging
 import pandas as pd
 import numpy as np
+from GenerateMasterUtils import DIRECTORIES
 
 logger = logging.getLogger(__name__)
-
-# Set the directory for the data input/output.
-if os.path.exists('Z:\\'):
-    OUT_DIR = 'Z:\\MK Working Commissions'
-    LOOK_DIR = 'Z:\\Commissions Lookup'
-    MATCH_DIR = 'Z:\\Matched Raw Data Files'
-else:
-    OUT_DIR = os.getcwd()
-    LOOK_DIR = os.getcwd()
-    MATCH_DIR = os.getcwd()
 
 
 def preprocess_by_principal(principal, sheet, sheet_name):
@@ -29,8 +20,8 @@ def preprocess_by_principal(principal, sheet, sheet_name):
 
     match principal:
         case 'OSR':
-            rename_dict = {'Item': 'Unmapped', 'Material Number': 'Unmapped 2',
-                           'Customer Name': 'Unmapped 3', 'Sales Date': 'Unmapped 4'}
+            rename_dict = {'Item': 'Unmapped', 'Material Number': 'Unmapped 2', 'Customer Name': 'Unmapped 3',
+                           'Sales Date': 'Unmapped 4'}
             sheet.rename(columns=rename_dict, inplace=True)
             # Combine Rep 1 % and Rep 2 %.
             if 'Rep 1 %' in list(sheet) and 'Rep 2 %' in list(sheet):
@@ -64,7 +55,6 @@ def preprocess_by_principal(principal, sheet, sheet_name):
     if rename_dict:
         logger.info(f'The following columns were renamed automatically on this sheet ({principal}):\n'
                     f'{', '.join([f'{i} --> {j}' for i, j in zip(rename_dict.keys(), rename_dict.values())])}')
-    return rename_dict
 
 
 def process_by_principal(principal, sheet, sheet_name, disty_map):
@@ -76,8 +66,7 @@ def process_by_principal(principal, sheet, sheet_name, disty_map):
     This function modifies a dataframe inplace.
     """
     # Make sure applicable entries exist and are numeric.
-    invoice_dollars = True
-    ext_cost = True
+    invoice_dollars = ext_cost = True
     try:
         sheet['Invoiced Dollars'] = pd.to_numeric(sheet['Invoiced Dollars'], errors='coerce').fillna(0)
     except KeyError:
@@ -172,8 +161,9 @@ def process_by_principal(principal, sheet, sheet_name, disty_map):
                 sheet['Comm Source'] = 'Cost'
             elif 'Part Number' not in list(sheet) and invoice_num:
                 # We need to load in the part number log.
-                if os.path.exists(LOOK_DIR + '\\Mill-Max Invoice Log.xlsx'):
-                    millmax_log = pd.read_excel(os.path.join(LOOK_DIR, 'Mill-Max Invoice Log.xlsx'), dtype=str)
+                if os.path.exists(os.path.join(DIRECTORIES.get('COMM_LOOKUPS_DIR'), 'Mill-Max Invoice Log.xlsx')):
+                    millmax_log = pd.read_excel(os.path.join(DIRECTORIES.get('COMM_LOOKUPS_DIR'),
+                                                             'Mill-Max Invoice Log.xlsx'), dtype=str)
                     millmax_log = millmax_log.fillna('')
                     logger.info('Looking up part numbers from invoice log.')
                 else:

@@ -17,16 +17,6 @@ from PrincipalSpecialProcessing import process_by_principal, preprocess_by_princ
 
 logger = logging.getLogger(__name__)
 
-# Set the directory for the data input/output.
-if os.path.exists('Z:\\'):
-    OUT_DIR = 'Z:\\MK Working Commissions'
-    LOOK_DIR = 'Z:\\Commissions Lookup'
-    MATCH_DIR = 'Z:\\Matched Raw Data Files'
-else:
-    OUT_DIR = os.getcwd()
-    LOOK_DIR = os.getcwd()
-    MATCH_DIR = os.getcwd()
-
 
 def main(filepaths, path_to_running_com, field_mappings):
     """
@@ -68,7 +58,8 @@ def main(filepaths, path_to_running_com, field_mappings):
             return
 
         # Load in the matching Entries Need Fixing file.
-        ENF_path = os.path.join(OUT_DIR, f'Entries Need Fixing {path_to_running_com[-20:]}')
+        ENF_path = os.path.join(Utils.DIRECTORIES.get('COMM_WORKING_DIR'),
+                                f'Entries Need Fixing {path_to_running_com[-20:]}')
         entries_need_fixing = load_entries_need_fixing(file_dir=ENF_path)
 
         if any([running_com.empty, files_processed.empty]):
@@ -149,14 +140,9 @@ def main(filepaths, path_to_running_com, field_mappings):
             if sheet.empty:
                 logger.info(f'Skipping empty sheet {sheet_name}')
                 continue
-            # Create a duplicate of the sheet that stays unchanged aside from recording matches.
-            raw_sheet = sheet.copy(deep=True)
-            # Figure out if we've already added in the matches row.
-            if filename.split('.')[0][-7:] != 'Matched':
-                raw_sheet.index += 1
 
-            # Do specialized pre-processing tailored to principal.
-            rename_dict = preprocess_by_principal(principal=principal, sheet=sheet, sheet_name=sheet_name)
+            # Do specialized pre-processing tailored to principal (mostly renaming columns).
+            preprocess_by_principal(principal=principal, sheet=sheet, sheet_name=sheet_name)
 
             # Iterate over each column of data that we want to append.
             for data_name in list(field_mappings):
@@ -172,20 +158,13 @@ def main(filepaths, path_to_running_com, field_mappings):
                     return
                 elif len(column_name) == 1:
                     sheet.rename(columns={column_name[0]: data_name}, inplace=True)
-                    if column_name[0] in rename_dict.values():
-                        column_name[0] = [i for i in rename_dict.keys() if rename_dict[i] == column_name[0]][0]
-                    raw_sheet.loc[0, column_name[0]] = data_name
-
-            # Replace the old raw data sheet with the new one.
-            raw_sheet.sort_index(inplace=True)
-            new_data[sheet_name] = raw_sheet
 
             sheet = Utils.format_pct_numeric_cols(dataframe=sheet)
 
             # Do special processing for principal, if applicable.
             process_by_principal(principal=principal, sheet=sheet, sheet_name=sheet_name, disty_map=distributor_map)
 
-            # Drop entries with emtpy part number.
+            # Drop entries with emtpy part number, or skip tab if no part number column is found.
             try:
                 num_entries = sheet['Part Number'].shape[0]
                 sheet.drop(sheet[sheet['Part Number'] == ''].index, inplace=True)
@@ -193,11 +172,11 @@ def main(filepaths, path_to_running_com, field_mappings):
                 if sheet['Part Number'].shape[0] < num_entries:
                     logger.info(f'Dropped {num_entries - sheet['Part Number'].shape[0]:,} lines with no part number.')
             except KeyError:
-                pass
+                logger.warning(f'No part number column found on tab {sheet_name}. Skipping tab.')
+                continue
 
             # Now that we've renamed all of the relevant columns,
-            # append the new sheet to Running Commissions, where only the
-            # properly named columns are appended.
+            # append the new sheet to Running Commissions, where only the properly named columns are appended.
             if sheet.columns.duplicated().any():
                 duplicates = sheet.columns[sheet.columns.duplicated()].unique()
                 logger.error('Two items are being mapped to the same column!\n'
@@ -207,17 +186,11 @@ def main(filepaths, path_to_running_com, field_mappings):
             elif 'Actual Comm Paid' not in list(sheet):
                 # Tab has no commission data, so it is ignored.
                 logger.warning(f'No commission dollars column found on tab {sheet_name}. Skipping tab.')
-            elif 'Part Number' not in list(sheet):
-                # Tab has no part number data, so it is ignored.
-                logger.warning(f'No part number column found on tab {sheet_name}. Skipping tab.')
             elif 'Invoice Date' not in list(sheet):
                 # Tab has no date column, so report and exit.
                 logger.warning(f'No Invoice Date column found on tab {sheet_name}. Skipping tab.')
             else:
-                # Report the number of rows that have part numbers.
-                total_rows = sum(sheet['Part Number'] != '')
-                logger.info(f'Found {total_rows} entries in the tab {sheet_name} with valid part numbers.')
-
+                logger.info(f'Found {sheet.shape[0]} entries in the tab {sheet_name} with valid part numbers.')
                 # Remove entries with no commissions dollars.
                 sheet['Actual Comm Paid'] = pd.to_numeric(sheet['Actual Comm Paid'], errors='coerce').fillna(0)
                 sheet = sheet[sheet['Actual Comm Paid'] != 0]
@@ -230,7 +203,7 @@ def main(filepaths, path_to_running_com, field_mappings):
                 matching_columns = [val for val in list(sheet) if val in list(field_mappings)]
                 if len(matching_columns) > 0:
                     # Sum commissions paid on sheet.
-                    logger.info('Commissions for this tab: ' + '${:,.2f}'.format(sheet['Actual Comm Paid'].sum()))
+                    logger.info(f'Commissions for this tab: ${sheet['Actual Comm Paid'].sum():,.2f}')
                     total_comm += sheet['Actual Comm Paid'].sum()
                     # Strip whitespace from all strings in dataframe.
                     string_cols = [val for val in list(sheet) if sheet[val].dtype == 'object']
@@ -248,32 +221,6 @@ def main(filepaths, path_to_running_com, field_mappings):
         new_file = pd.DataFrame({'Filename': [filename], 'Total Commissions': [total_comm],
                                  'Date Added': [datetime.datetime.now().date()], 'Paid Date': ['']})
         files_processed = pd.concat((files_processed, new_file), ignore_index=True, sort=False)
-        # Save the matched raw data file.
-        new_filename = filename[:-5]
-        if filename[-12:] != 'Matched.xlsx':
-            new_filename += ' Matched.xlsx'
-        else:
-            new_filename += '.xlsx'
-        if save_error(new_filename):
-            logger.error('One or more of the raw data files are open in Excel. '
-                         'Please close these files and try again.\n*Program terminated*')
-            return
-        # Write the raw data file with matches.
-        with pd.ExcelWriter(os.path.join(MATCH_DIR, new_filename), datetime_format='mm/dd/yyyy') as writer:
-            for tab in list(new_data):
-                new_data[tab].to_excel(writer, sheet_name=tab, index=False)
-                # Format and fit each column.
-                sheet = writer.sheets[tab]
-                index = 0
-                for col in new_data[tab].columns:
-                    # Set column width and formatting.
-                    try:
-                        max_width = max(len(str(val)) for val in new_data[tab][col].values)
-                    except ValueError:
-                        max_width = 0
-                    max_width = max(10, max_width)
-                    sheet.set_column(index, index, max_width + 0.8)
-                    index += 1
 
     # ----------------------------------------------------------------
     # Done appending new data, now find matches in the Lookup Master.
@@ -431,9 +378,9 @@ def main(filepaths, path_to_running_com, field_mappings):
     logger.info('Saving files.')
     current_time = time.strftime('%Y-%m-%d-%H%M')
 
-    filepath_RC = os.path.join(OUT_DIR, f'Running Commissions {current_time}.xlsx')
-    filepath_ENF = os.path.join(OUT_DIR, f'Entries Need Fixing {current_time}.xlsx')
-    filepath_LM = os.path.join(LOOK_DIR, f'Lookup Master - Current.xlsx')
+    filepath_RC = os.path.join(Utils.DIRECTORIES.get('COMM_WORKING_DIR'), f'Running Commissions {current_time}.xlsx')
+    filepath_ENF = os.path.join(Utils.DIRECTORIES.get('COMM_WORKING_DIR'), f'Entries Need Fixing {current_time}.xlsx')
+    filepath_LM = os.path.join(Utils.DIRECTORIES.get('COMM_LOOKUPS_DIR'), f'Lookup Master - Current.xlsx')
     if save_error(filepath_RC, filepath_ENF, filepath_LM):
         logger.error('One or more of the RC/ENF/Lookup files are currently open in Excel! '
                      'Please close the files and try again.\n*Program Teminated*')
