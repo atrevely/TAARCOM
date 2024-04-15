@@ -6,18 +6,11 @@ from dateutil.parser import parse
 import calendar
 import math
 import os.path
+import GenerateMasterUtils as Utils
 from FileIO import load_entries_need_fixing, load_run_com, load_lookup_master, save_excel_file
 from RCExcelTools import save_error, form_date
 
 logger = logging.getLogger(__name__)
-
-# Set the directory for the data input/output.
-if os.path.exists('Z:\\'):
-    out_dir = 'Z:\\MK Working Commissions'
-    look_dir = 'Z:\\Commissions Lookup'
-else:
-    out_dir = os.getcwd()
-    look_dir = os.getcwd()
 
 
 def main(run_com_path):
@@ -36,7 +29,8 @@ def main(run_com_path):
     # Load up the necessary files.
     running_com, files_processed = load_run_com(run_com_path)
     com_date = run_com_path[-20:]
-    entries_need_fixing = load_entries_need_fixing(os.path.join(out_dir, f'Entries Need Fixing {com_date}'))
+    entries_need_fixing = load_entries_need_fixing(os.path.join(Utils.DIRECTORIES.get('COMM_WORKING_DIR'),
+                                                                f'Entries Need Fixing {com_date}'))
     lookup_master = load_lookup_master()
     # Track commission dollars.
     try:
@@ -50,8 +44,9 @@ def main(run_com_path):
     # ------------------------------
     # Load the Quarantined Lookups.
     # ------------------------------
-    if os.path.exists(os.path.join(look_dir, 'Quarantined Lookups.xlsx')):
-        quarantined = pd.read_excel(os.path.join(look_dir, 'Quarantined Lookups.xlsx')).fillna('')
+    if os.path.exists(os.path.join(Utils.DIRECTORIES.get('COMM_LOOKUPS_DIR'), 'Quarantined Lookups.xlsx')):
+        quarantined = pd.read_excel(os.path.join(Utils.DIRECTORIES.get('COMM_LOOKUPS_DIR'),
+                                                 'Quarantined Lookups.xlsx')).fillna('')
     else:
         logger.error('No Quarantined Lookups file found!'
                      'Please make sure Quarantined Lookups.xlsx is in the directory.\n*Program Terminated*')
@@ -194,10 +189,10 @@ def main(run_com_path):
         logger.info(f'{len(old_entries)} entries quarantined for being more than 2 years old.')
 
     # Check if the files we're going to save are open already.
-    filepath_RC = os.path.join(out_dir, f'Running Commissions {com_date}')
-    filepath_ENF = os.path.join(out_dir, f'Entries Need Fixing {com_date}')
-    filepath_LM = os.path.join(look_dir, 'Lookup Master - Current.xlsx')
-    filepath_QL = os.path.join(look_dir, 'Quarantined Lookups.xlsx')
+    filepath_RC = os.path.join(Utils.DIRECTORIES.get('COMM_WORKING_DIR'), f'Running Commissions {com_date}')
+    filepath_ENF = os.path.join(Utils.DIRECTORIES.get('COMM_WORKING_DIR'), f'Entries Need Fixing {com_date}')
+    filepath_LM = os.path.join(Utils.DIRECTORIES.get('COMM_LOOKUPS_DIR'), 'Lookup Master - Current.xlsx')
+    filepath_QL = os.path.join(Utils.DIRECTORIES.get('COMM_LOOKUPS_DIR'), 'Quarantined Lookups.xlsx')
     if save_error(filepath_RC, filepath_ENF, filepath_LM, filepath_QL):
         logger.error('One or more of the RC/ENF/Lookup/Quarantine files are currently open in Excel! '
                      'Please close the files and try again.\n*Program Teminated*')
