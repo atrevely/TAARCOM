@@ -1,7 +1,7 @@
 from uuid import uuid4
 import os
 
-from FileLoader import load_com_master
+from FileIO import load_com_master
 from FileSaver import prepare_save_file, save_files
 
 

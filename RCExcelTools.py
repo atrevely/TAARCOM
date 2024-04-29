@@ -3,15 +3,13 @@ import os
 import sys
 import re
 import shutil
+import logging
 from dateutil.parser import parse
 import win32com.client
 import pythoncom
+from GenerateMasterUtils import NUMERICAL_COLUMNS
 
-# Set the numerical columns.
-num_cols = ['Quantity', 'Ext. Cost', 'Invoiced Dollars', 'Paid-On Revenue', 'Split Percentage',
-            'Commission Rate', 'Actual Comm Paid', 'Sales Commission', 'Year', 'Unit Cost',
-            'Unit Price', 'Gross Rev Reduction', 'Shared Rev Tier Rate', 'Cust Revenue YTD',
-            'Total NDS', 'Post-Split NDS', 'CM Split', 'CM Sales Comm', 'Design Sales Comm']
+logger = logging.getLogger(__name__)
 
 
 class PivotTables:
@@ -40,8 +38,8 @@ class PivotTables:
         # Create the workbook and add the report sheet as the rightmost tab.
         wb = self.excel.Workbooks.Open(excel_file)
         if wb is None:
-            print('Error loading file :' + os.path.basename(excel_file)
-                  + '\nMake sure the file is closed and try again.')
+            logger.error(f'Error loading file: {os.path.basename(excel_file)}'
+                         '\nMake sure the file is closed and try again.')
             return
         wb.Sheets.Add(After=wb.Sheets(wb.Sheets.Count))
         pivot_sheet = wb.Worksheets(wb.Sheets.Count)
@@ -73,7 +71,7 @@ class PivotTables:
                                                     'Sum of ' + data_field, self.win32c.xlSum)
             piv_data_field.NumberFormat = '$#,##0'
         except Exception:
-            print('Pivot table could not be created in file: ' + excel_file)
+            logger.error(f'Pivot table could not be created in file: {excel_file}')
         wb.Close(SaveChanges=1)
 
 
@@ -122,12 +120,12 @@ def table_format(sheet_data, sheet_name, workbook):
             for row in sheet_data.index:
                 inv_len = len(str(sheet_data.loc[row, col]))
                 # Figure out how many places the number goes to.
-                num_padding = '0'*inv_len
+                num_padding = '0' * inv_len
                 inv_num = pd.to_numeric(sheet_data.loc[row, col], errors='ignore')
                 # The only way to continually preserve leading zeros is by
                 # adding the apostrophe label tag in front.
                 if len(num_padding) > len(str(inv_num)):
-                    inv_num = "'" + str(inv_num)
+                    inv_num = f"'{inv_num}"
                 inv_format = workbook.book.add_format({'font': 'Calibri', 'font_size': 11,
                                                        'num_format': num_padding})
                 try:
@@ -182,7 +180,7 @@ def form_date(input_date):
 def tab_save_prep(writer, data, sheet_name):
     """Prepares a commissions file for being saved."""
     # Make sure desired columns are numeric, and replace zeros in non-commission columns with blanks.
-    for col in num_cols:
+    for col in NUMERICAL_COLUMNS:
         try:
             if col not in ['Actual Comm Paid', 'Sales Commission']:
                 fill = ''
@@ -193,7 +191,7 @@ def tab_save_prep(writer, data, sheet_name):
         except KeyError:
             pass
     # Convert individual numbers to numeric in rest of columns.
-    mixed_cols = [col for col in list(data) if col not in num_cols]
+    mixed_cols = [col for col in list(data) if col not in NUMERICAL_COLUMNS]
     skip_cols = ['Invoice Number', 'Part Number', 'Principal']
     mixed_cols = [i for i in mixed_cols if i not in skip_cols]
     for col in mixed_cols:
