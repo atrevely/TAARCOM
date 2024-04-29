@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import QMainWindow, QPushButton, QApplication, QFileDialog,
 from PyQt5.QtCore import pyqtSlot
 import LookupSales
 import CompileFeedback
-from FileIO import DIRECTORIES
+from FileLoader import DIRECTORIES
 
 LOOKUPS_DIR = DIRECTORIES.get('COMM_LOOKUPS_DIR')
 

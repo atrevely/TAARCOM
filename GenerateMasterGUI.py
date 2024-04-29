@@ -1,375 +1,337 @@
 import sys
 import pandas as pd
 import os.path
-import logging
-import traceback
 from PyQt5 import QtCore, QtGui
-from PyQt5.QtWidgets import QMainWindow, QPushButton, QApplication, QFileDialog, QWidget, QGridLayout, \
-    QPlainTextEdit, QGroupBox, QVBoxLayout, QListWidget, QListWidgetItem, QLabel
+from PyQt5.QtWidgets import QMainWindow, QPushButton, QApplication, QFileDialog, QTextEdit
 from PyQt5.QtCore import pyqtSlot
 import GenerateMaster
 import MergeFixedEntries
 import SalesReportGenerator
 import MergeByUuid
 import CommTools
-from GenerateMasterUtils import DIRECTORIES
+from FileLoader import DIRECTORIES
 
-VERSION = 'Master v3.0.040424'
+VERSION = 'Master v2.3.01132021'
 LOOKUPS_DIR = DIRECTORIES.get('COMM_LOOKUPS_DIR')
+
+
+class Stream(QtCore.QObject):
+    """Redirects console output to text widget."""
+    new_text = QtCore.pyqtSignal(str)
+
+    def write(self, text):
+        self.new_text.emit(str(text))
+
+    # Pass the flush so we don't get an attribute error.
+    def flush(self):
+        pass
 
 
 class GenMast(QMainWindow):
     """Main application window."""
     def __init__(self):
         super().__init__()
-        self.main_widget = QWidget(self)
-        self.setCentralWidget(self.main_widget)
-        main_layout = QGridLayout()
-        self.main_widget.setLayout(main_layout)
-
-        # Create the buttons.
-        self.button_generate_master = QPushButton('Process Raw Files', self)
-        self.button_open_files = QPushButton('Select Raw Commission File(s)', self)
-        self.button_load_run_com = QPushButton('Select Running Commissions File', self)
-        self.button_fix_entries = QPushButton('Copy Fixed ENF to Running Commissions', self)
-        self.button_generate_reports = QPushButton('Migrate and Generate Sales Reports', self)
-        self.button_clear_selections = QPushButton('Clear Selections', self)
-        self.button_clear_master = QPushButton('Clear Selection', self)
-        self.button_update_lookup = QPushButton('Update Lookup Master', self)
-        self.button_update_master = QPushButton('Update Commission Master', self)
-
-        self.log_text_box = QTextEditLogger(self)
-        self.log_text_box.setFormatter(logging.Formatter(fmt='%(asctime)s (%(levelname)s): %(message)s',
-                                                         datefmt="%Y-%m-%d %H:%M:%S"))
-
-        # Create a nice labeled box for the logs and initialize the logger.
-        self.log_groupbox = QGroupBox('Log')
-        log_layout = QVBoxLayout()
-        log_layout.addWidget(self.log_text_box.text_widget)
-        self.log_groupbox.setLayout(log_layout)
-        logging.getLogger().addHandler(self.log_text_box)
-        logging.getLogger().setLevel(logging.DEBUG)
-
-        # Create box for uploading and displaying raw data files.
-        self.raw_files_groupbox = QGroupBox('Raw Files')
-        self.raw_files_list = QListWidget()
-        files_title = QLabel()
-        files_title.setText('Current loaded files:')
-        raw_files_layout = QVBoxLayout()
-        raw_files_layout.addWidget(self.button_open_files)
-        raw_files_layout.addWidget(self.button_clear_selections)
-        raw_files_layout.addWidget(files_title)
-        raw_files_layout.addWidget(self.raw_files_list)
-        self.raw_files_groupbox.setLayout(raw_files_layout)
-
-        # Create box for uploading and displaying running commissions file.
-        self.runcom_file_groupbox = QGroupBox('Running Commissions File')
-        self.runcom_file_list = QListWidget()
-        runcom_file_layout = QVBoxLayout()
-        runcom_file_layout.addWidget(self.button_load_run_com)
-        runcom_file_layout.addWidget(self.button_clear_master)
-        runcom_file_layout.addWidget(self.runcom_file_list)
-        self.runcom_file_groupbox.setLayout(runcom_file_layout)
-
-        # Create box for program buttons.
-        self.programs_groupbox = QGroupBox('Programs')
-        programs_layout = QGridLayout()
-        programs_layout.addWidget(self.button_generate_master, 0, 0, 1, 2)
-        programs_layout.addWidget(self.button_update_lookup, 1, 0)
-        programs_layout.addWidget(self.button_update_master, 1, 1)
-        programs_layout.addWidget(self.button_fix_entries, 2, 0)
-        programs_layout.addWidget(self.button_generate_reports, 2, 1)
-        self.programs_groupbox.setLayout(programs_layout)
-
-        # Add GUI elements to the top level grid layout.
-        main_layout.addWidget(self.raw_files_groupbox, 0, 0, 1, 2)
-        main_layout.addWidget(self.runcom_file_groupbox, 1, 0, 1, 2)
-        main_layout.addWidget(self.programs_groupbox, 2, 0, 1, 2)
-        main_layout.addWidget(self.log_groupbox, 0, 3, 5, 5)
-
-        # Set the grid geometry.
-        main_layout.setRowStretch(0, 2)
-        main_layout.setRowStretch(1, 1)
-        main_layout.setRowStretch(2, 1)
-
-        # Set window size and title, then show the window.
-        self.setGeometry(100, 100, 2000, 1200)
-        self.setWindowTitle(f'Commissions Manager {VERSION}')
-        self.show()
-
+        # Custom output stream.
+        sys.stdout = Stream(new_text=self.onUpdateText)
         # Set working directory as current file directory.
         os.chdir(os.path.dirname(os.path.realpath(__file__)))
         # Initialize the threadpool for handling worker jobs.
         self.threadpool = QtCore.QThreadPool()
-
-        # Create the widgets and layout and launch the main window.
-        self.connect_buttons()
-
+        # Initialize UI and supporting filenames.
+        self.initUI()
         self.filenames = []
         self.master = []
-
-        logging.info(f'Welcome to the TAARCOM Commissions Manager!\nVersion: {VERSION}\n'
-                     'Logs will display here.\n'
-                     '_______________________________________________________________\n'
-                     'REMINDER: Did you check for updates on GitHub?\n'
-                     'REMINDER: If new code was pulled or the branch changed, please close and relaunch the program.\n')
-
+        # Show welcome message.
+        print('Welcome to the TAARCOM Commissions Manager!\nVersion: ' + VERSION + '\n'
+              'Messages and updates will display below.\n'
+              '_______________________________________________________________'
+              '\nREMINDER: Did you check for updates on GitHub?\n'
+              'REMINDER: If new code was pulled or the branch changed, please '
+              'close and relaunch the program.\n---')
         if not os.path.exists('Z:/'):
-            logging.info('No connection to Z:/ drive established! Working locally.')
-
+            print('No connection to Z:/ drive established! Working locally.\n---')
         # Try loading/finding the supporting files.
         if os.path.exists(LOOKUPS_DIR):
             if os.path.exists(os.path.join(LOOKUPS_DIR, 'fieldMappings.xlsx')):
                 self.fieldMappings = pd.read_excel(os.path.join(LOOKUPS_DIR, 'fieldMappings.xlsx'),
                                                    index_col=False)
             else:
-                logging.warning(f'No field mappings found! '
-                                f'Please make sure fieldMappings.xlsx is located at {LOOKUPS_DIR}')
-
+                print('No field mappings found!\n'
+                      'Please make sure fieldMappings.xlsx is located at\n%s\n***' % LOOKUPS_DIR)
             if not os.path.exists(os.path.join(LOOKUPS_DIR, 'Lookup Master - Current.xlsx')):
-                logging.warning('No Lookup Master found! '
-                                f'Please make sure Lookup Master is located at {LOOKUPS_DIR}')
-
+                print('No Lookup Master found!\n'
+                      'Please make sure Lookup Master is located at\n%s\n***' % LOOKUPS_DIR)
             if not os.path.exists(os.path.join(LOOKUPS_DIR, 'distributorLookup.xlsx')):
-                logging.warning('No distributor lookup found!'
-                                f'Please make sure distributorLookup.xlsx is located at {LOOKUPS_DIR}')
+                print('No distributor lookup found!\n'
+                      'Please make sure distributorLookup.xlsx is located at\n%s\n***' % LOOKUPS_DIR)
         else:
-            logging.warning(f'Could not connect to {LOOKUPS_DIR} Please make sure you '
-                            'are connected to the TAARCOM server, then relaunch the program.')
+            print('Could connect to ' + LOOKUPS_DIR + '\nPlease make sure you '
+                  'are connected to the TAARCOM server, then relaunch the program.\n***')
+
+    def onUpdateText(self, text):
+        """Write console output to text widget."""
+        cursor = self.textBox.textCursor()
+        cursor.movePosition(QtGui.QTextCursor.End)
+        cursor.insertText(text)
+        self.textBox.setTextCursor(cursor)
+        self.textBox.ensureCursorVisible()
 
     def closeEvent(self, event):
         """Shuts down application on close."""
+        # Return stdout to defaults.
+        sys.stdout = sys.__stdout__
         super().closeEvent(event)
 
-    def connect_buttons(self):
+    def initUI(self):
         """Creates UI window on launch."""
         # Button for generating the master list.
-        self.button_generate_master.clicked.connect(self.generate_master_clicked)
-        self.button_generate_master.setToolTip('Process selected raw data files and append them to the selected '
-                                               'Running Commissions.\nIf no Running Commissions is selected, '
-                                               'starts a new one.')
+        self.btnGenMast = QPushButton('Process Raw Files\nto Running\nCommissions', self)
+        self.btnGenMast.move(750, 430)
+        self.btnGenMast.resize(150, 150)
+        self.btnGenMast.clicked.connect(self.genMastClicked)
+        self.btnGenMast.setToolTip('Process selected raw data files and '
+                                   'append them to the selected Running '
+                                   'Commissions.\nIf no Running Commissions '
+                                   'is selected, starts a new one.')
 
         # Button for selecting files to compile into master list.
-        self.button_open_files.clicked.connect(self.open_files_clicked)
-        self.button_open_files.setToolTip('Open explorer tool for selecting raw commission file(s) to process.')
+        self.btnOpenFiles = QPushButton('Select Raw\n Commission Files', self)
+        self.btnOpenFiles.move(50, 30)
+        self.btnOpenFiles.resize(150, 100)
+        self.btnOpenFiles.clicked.connect(self.openFilesClicked)
+        self.btnOpenFiles.setToolTip('Open explorer tool for selecting raw '
+                                     'commission file(s) to process.')
 
         # Button for selecting a current master to append to.
-        self.button_load_run_com.clicked.connect(self.upload_master_clicked)
-        self.button_load_run_com.setToolTip('Open explorer tool for selecting a Running Commissions to use.')
+        self.btnUploadMast = QPushButton('Select Running\nCommissions\nFile', self)
+        self.btnUploadMast.move(250, 30)
+        self.btnUploadMast.resize(150, 100)
+        self.btnUploadMast.clicked.connect(self.uploadMastClicked)
+        self.btnUploadMast.setToolTip('Open explorer tool for selecting a '
+                                      'Running Commissions to use.')
 
         # Button for writing fixed entries.
-        self.button_fix_entries.clicked.connect(self.fix_entries_clicked)
-        self.button_fix_entries.setToolTip('Migrate finished lines in the Entries Need Fixing file over to the '
-                                           'associated Running Commissions.\nA Running Commissions needs to be '
-                                           'selected and will be matched to the Entries Needs Fixing by the '
-                                           'date at the end of the filenames.')
+        self.btnFixEntries = QPushButton('Copy Fixed ENF\nEntries to\nRunning\nCommissions', self)
+        self.btnFixEntries.move(750, 230)
+        self.btnFixEntries.resize(150, 150)
+        self.btnFixEntries.clicked.connect(self.fixEntriesClicked)
+        self.btnFixEntries.setToolTip('Migrate finished lines in the Entries Need Fixing file over to the '
+                                      'associated Running Commissions.\nA Running Commissions needs to be '
+                                      'selected and will be matched to the Entries Needs Fixing by the '
+                                      'date at the end of the filenames.')
 
         # Button for generating sales reports.
-        self.button_generate_reports.clicked.connect(self.generate_reports_clicked)
-        self.button_generate_reports.setToolTip('Generate commission and revenue reports, then migrate the Running '
-                                                'Commissions data over to the Commissions Master.\n'
-                                                'If no Running Commissions is provided, will run reports on most '
-                                                'recent quarter of data in the Commissions Master.')
+        self.btnGenReports = QPushButton('Run Reports\n(and Migrate Data\n'
+                                         'to Comm Master,\nif applicable)', self)
+        self.btnGenReports.move(750, 30)
+        self.btnGenReports.resize(150, 150)
+        self.btnGenReports.clicked.connect(self.genReportsClicked)
+        self.btnGenReports.setToolTip('Generate commission and revenue reports,\nthen migrate the Running '
+                                      'Commissions data over to the Commissions Master.\n'
+                                      'If no Running Commissions is provided, will run reports on most '
+                                      'recent quarter of data in the Commissions Master.')
 
         # Button for clearing filename and master choices.
-        self.button_clear_selections.clicked.connect(self.clear_files_clicked)
-        self.button_clear_selections.setToolTip('Clear all selected raw files from the workspace.')
-
-        # Button for clearing filename and master choices.
-        self.button_clear_master.clicked.connect(self.clear_master_clicked)
-        self.button_clear_master.setToolTip('Clear selected RC file from the workspace.')
+        self.btnClearAll = QPushButton('Clear\nSelections', self)
+        self.btnClearAll.move(450, 30)
+        self.btnClearAll.resize(150, 100)
+        self.btnClearAll.clicked.connect(self.clearAllClicked)
+        self.btnClearAll.setToolTip('Clear all selected files from the workspace.')
 
         # Button for updating Lookup Master.
-        self.button_update_lookup.clicked.connect(self.update_lookup_clicked)
-        self.button_update_lookup.setToolTip('Update the Lookup Master using a Running Commissions file.')
+        self.btnUpdateLookup = QPushButton('Update Lookup\nMaster from RC', self)
+        self.btnUpdateLookup.move(50, 610)
+        self.btnUpdateLookup.resize(180, 80)
+        self.btnUpdateLookup.clicked.connect(self.updateLookupClicked)
+        self.btnUpdateLookup.setToolTip('Update the Lookup Master using a\n'
+                                        'Running Commissions file.')
 
         # Button for updating data in Commission Master.
-        self.button_update_master.clicked.connect(self.update_master_clicked)
-        self.button_update_master.setToolTip('Update the Commission Master using a Running Commissions file, '
-                                             'matching entries by their Unique ID.')
+        self.btnUpdateMaster = QPushButton('Update Commission\nMaster from RC', self)
+        self.btnUpdateMaster.move(250, 610)
+        self.btnUpdateMaster.resize(180, 80)
+        self.btnUpdateMaster.clicked.connect(self.updateMasterClicked)
+        self.btnUpdateMaster.setToolTip('Update the Commission Master using a\n'
+                                        'Running Commissions file, matching entries'
+                                        'by their Unique ID.')
 
-    def generate_master_clicked(self):
+        # Create the text output widget.
+        self.textBox = QTextEdit(self, readOnly=True)
+        self.textBox.ensureCursorVisible()
+        self.textBox.setLineWrapColumnOrWidth(600)
+        self.textBox.setLineWrapMode(QTextEdit.FixedPixelWidth)
+        self.textBox.setFixedWidth(650)
+        self.textBox.setFixedHeight(450)
+        self.textBox.move(50, 150)
+
+        # Set window size and title, then show the window.
+        self.setGeometry(100, 100, 1000, 700)
+        self.setWindowTitle('Commissions Manager ' + VERSION)
+        self.show()
+
+    def genMastClicked(self):
         """Send the GenerateMaster execution to a worker thread."""
-        self.lock_buttons()
-        worker = Worker(self.execute_generate_master)
+        self.lockButtons()
+        worker = Worker(self.genMastExecute)
         if self.threadpool.activeThreadCount() == 0:
             self.threadpool.start(worker)
-        else:
-            logging.warning('Worker thread busy, aborting program.')
 
-    def generate_reports_clicked(self):
+    def genReportsClicked(self):
         """Send the SalesReportGenerator execution to a worker thread."""
-        self.lock_buttons()
-        worker = Worker(self.execute_generate_reports)
+        self.lockButtons()
+        worker = Worker(self.genReportsExecute)
         if self.threadpool.activeThreadCount() == 0:
             self.threadpool.start(worker)
-        else:
-            logging.warning('Worker thread busy, aborting program.')
 
-    def fix_entries_clicked(self):
+    def fixEntriesClicked(self):
         """Send the MergeFixedEntries execution to a worker thread."""
-        self.lock_buttons()
-        worker = Worker(self.execute_fix_entries)
+        self.lockButtons()
+        worker = Worker(self.fixEntriesExecute)
         if self.threadpool.activeThreadCount() == 0:
             self.threadpool.start(worker)
-        else:
-            logging.warning('Worker thread busy, aborting program.')
 
-    def update_lookup_clicked(self):
+    def updateLookupClicked(self):
         """Send the UpdateLookups execution to a worker thread."""
-        self.lock_buttons()
-        worker = Worker(self.execute_update_lookups)
+        self.lockButtons()
+        worker = Worker(self.updateLookupExecute)
         if self.threadpool.activeThreadCount() == 0:
             self.threadpool.start(worker)
-        else:
-            logging.warning('Worker thread busy, aborting program.')
 
-    def update_master_clicked(self):
+    def updateMasterClicked(self):
         """Send the UpdateLookups execution to a worker thread."""
-        self.lock_buttons()
-        worker = Worker(self.execute_update_master)
+        self.lockButtons()
+        worker = Worker(self.updateMasterExecute)
         if self.threadpool.activeThreadCount() == 0:
             self.threadpool.start(worker)
-        else:
-            logging.warning('Worker thread busy, aborting program.')
 
-    def clear_files_clicked(self):
+    def clearAllClicked(self):
         """Clear the filenames and master variables."""
         self.filenames = []
-        self.raw_files_list.clear()
-
-    def clear_master_clicked(self):
-        """Clear the filenames and master variables."""
         self.master = []
-        self.runcom_file_list.clear()
+        print('All file selections cleared.\n---')
 
-    def execute_generate_master(self):
+    def genMastExecute(self):
         """Runs function for processing new files to master."""
         # Check to see if we're ready to process.
-        mappings_exist = os.path.exists(os.path.join(LOOKUPS_DIR, 'fieldMappings.xlsx'))
+        mappings_exist = os.path.exists(LOOKUPS_DIR + '\\fieldMappings.xlsx')
         if self.filenames and mappings_exist:
             # Run the GenerateMaster.py file.
             try:
-                success = GenerateMaster.main(self.filenames, self.master, self.fieldMappings)
-                if success:
-                    logging.info('+Program Generate Master Complete!+')
-                    self.filenames = []
-                    self.raw_files_list.clear()
-            except Exception:
-                logging.error(f'Unexpected Python error: {traceback.format_exc(0)}\n*Program Terminated*')
+                GenerateMaster.main(self.filenames, self.master, self.fieldMappings)
+            except Exception as error:
+                print('Unexpected Python error:\n' + str(error)
+                      + '\nPlease contact your local coder.')
+            # Clear the filename selections.
+            self.filenames = []
         elif not mappings_exist:
-            logging.warning('File fieldMappings.xlsx not found! Please check file location and try again.')
+            print('File fieldMappings.xlsx not found!\n'
+                  'Please check file location and try again.\n---')
         elif not self.filenames:
-            logging.warning('No commission files selected! Use the Select Commission Files button to select files.')
-        self.restore_buttons()
+            print('No commission files selected!\n'
+                  'Use the Select Commission Files button to select files.\n---')
+        self.restoreButtons()
 
-    def execute_generate_reports(self):
+    def genReportsExecute(self):
         """Runs function for generating salesperson reports."""
+        # Turn buttons off.
         # Run the SalesReportGenerator.py file.
         try:
             SalesReportGenerator.main(self.master)
-        except Exception:
-            logging.error(f'Unexpected Python error: {traceback.format_exc(0)}')
+        except Exception as error:
+            print('Unexpected Python error:\n' + str(error)
+                  + '\nPlease contact your local coder.')
+        # Clear the master selection.
+        self.master = []
         # Turn buttons back on.
-        self.restore_buttons()
+        self.restoreButtons()
 
-    def execute_fix_entries(self):
+    def fixEntriesExecute(self):
         """Copy over fixed entries to Master."""
         if self.master:
             # Run the GenerateMaster.py file.
             try:
                 MergeFixedEntries.main(self.master)
             except Exception as error:
-                logging.error(f'Unexpected Python error: {traceback.format_exc(0)}')
+                print('Unexpected Python error:\n' + str(error)
+                      + '\nPlease contact your local coder.')
         else:
-            logging.warning('Please upload the current Running Commissions file and try again.')
-        self.restore_buttons()
+            print('Please upload the current Running Commissions file.\n---')
+        self.restoreButtons()
 
-    def execute_update_lookups(self):
+    def updateLookupExecute(self):
         """Update the Lookup Master using a Running Commissions."""
         if self.master:
             # Run the GenerateMaster.py file.
             try:
                 CommTools.extractLookups(self.master)
-            except Exception:
-                logging.error(f'Unexpected Python error: {traceback.format_exc(0)}')
+            except Exception as error:
+                print('Unexpected Python error:\n' + str(error)
+                      + '\nPlease contact your local coder.')
         else:
-            logging.warning('Please upload a Running Commissions file and try again.')
-        self.restore_buttons()
+            print('Please upload a Running Commissions file.\n---')
+        self.restoreButtons()
 
-    def execute_update_master(self):
+    def updateMasterExecute(self):
         """Run the update Master Commissions via Unique ID function."""
         if self.master:
             # Run the GenerateMaster.py file.
             try:
                 MergeByUuid.main(self.master)
-            except Exception:
-                logging.error(f'Unexpected Python error: {traceback.format_exc(0)}')
+            except Exception as error:
+                print('Unexpected Python error:\n' + str(error)
+                      + '\nPlease contact your local coder.')
         else:
-            logging.warning('Please upload the target Running Commissions file and try again.')
-        self.restore_buttons()
+            print('Please upload the target Running Commissions file.\n---')
+        self.restoreButtons()
 
-    def upload_master_clicked(self):
+    def uploadMastClicked(self):
         """Upload an existing Running Commissions."""
         # Grab an existing Running Commissions to append to.
         self.master, _ = QFileDialog.getOpenFileName(self, filter='Excel files (*.xls *.xlsx *.xlsm)')
         if self.master:
-            self.runcom_file_list.clear()
-            self.runcom_file_list.addItem(QListWidgetItem(self.master))
+            print('Current Running Commissions selected:\n' + os.path.basename(self.master) + '\n---')
             if 'Running Commissions' not in self.master:
-                logging.warning('Caution! The file uploaded as a Running Commissions does not appear to be correct.')
+                print('Caution!\nThe file uploaded as a Running Commissions '
+                      'does not appear to be correct.\n---')
 
-    def open_files_clicked(self):
+    def openFilesClicked(self):
         """Provide filepaths for new data to process using GenerateMaster."""
+        # Let us know we're clearing old selections.
+        if self.filenames:
+            print('Selecting new files, old selections cleared...')
         # Grab the filenames to be passed into GenerateMaster.
         self.filenames, _ = QFileDialog.getOpenFileNames(self, filter='Excel files (*.xls *.xlsx *.xlsm)')
         # Check if the current master got uploaded as a new file.
         for name in self.filenames:
             if 'Running Commissions' in name:
-                logging.warning('Detected RC uploaded as raw file. Try uploading files again.')
+                print('RC uploaded as raw file.\nTry uploading files again.\n---')
                 return
         # Print out the selected filenames.
         if self.filenames:
-            self.raw_files_list.clear()
+            print('Files selected:')
             for file in self.filenames:
-                self.raw_files_list.addItem(QListWidgetItem(file))
+                print(os.path.basename(file))
+            print('---')
 
-    def lock_buttons(self):
-        self.button_generate_master.setEnabled(False)
-        self.button_open_files.setEnabled(False)
-        self.button_load_run_com.setEnabled(False)
-        self.button_clear_selections.setEnabled(False)
-        self.button_clear_master.setEnabled(False)
-        self.button_fix_entries.setEnabled(False)
-        self.button_generate_reports.setEnabled(False)
-        self.button_update_lookup.setEnabled(False)
-        self.button_update_master.setEnabled(False)
+    def lockButtons(self):
+        self.btnGenMast.setEnabled(False)
+        self.btnOpenFiles.setEnabled(False)
+        self.btnUploadMast.setEnabled(False)
+        self.btnClearAll.setEnabled(False)
+        self.btnFixEntries.setEnabled(False)
+        self.btnGenReports.setEnabled(False)
+        self.btnUpdateLookup.setEnabled(False)
+        self.btnUpdateMaster.setEnabled(False)
 
-    def restore_buttons(self):
-        self.button_generate_master.setEnabled(True)
-        self.button_open_files.setEnabled(True)
-        self.button_load_run_com.setEnabled(True)
-        self.button_clear_selections.setEnabled(True)
-        self.button_clear_master.setEnabled(True)
-        self.button_fix_entries.setEnabled(True)
-        self.button_generate_reports.setEnabled(True)
-        self.button_update_lookup.setEnabled(True)
-        self.button_update_master.setEnabled(True)
-
-
-class QTextEditLogger(logging.Handler, QtCore.QObject):
-    append_plain_text = QtCore.pyqtSignal(str)
-
-    def __init__(self, parent):
-        super().__init__()
-        QtCore.QObject.__init__(self)
-        self.text_widget = QPlainTextEdit(parent)
-        self.text_widget.setReadOnly(True)
-        self.append_plain_text.connect(self.text_widget.appendPlainText)
-
-    def emit(self, record):
-        msg = self.format(record)
-        self.append_plain_text.emit(msg)
+    def restoreButtons(self):
+        self.btnGenMast.setEnabled(True)
+        self.btnOpenFiles.setEnabled(True)
+        self.btnUploadMast.setEnabled(True)
+        self.btnClearAll.setEnabled(True)
+        self.btnFixEntries.setEnabled(True)
+        self.btnGenReports.setEnabled(True)
+        self.btnUpdateLookup.setEnabled(True)
+        self.btnUpdateMaster.setEnabled(True)
 
 
 class Worker(QtCore.QRunnable):
@@ -388,8 +350,7 @@ class Worker(QtCore.QRunnable):
 
     @pyqtSlot()
     def run(self):
-        """Initialise the runner function with passed args,
-         kwargs."""
+        """Initialise the runner function with passed args, kwargs."""
         self.fn(*self.args, **self.kwargs)
 
 
