@@ -18,7 +18,7 @@ VERSION = 'Master v3.0.040424'
 LOOKUPS_DIR = DIRECTORIES.get('COMM_LOOKUPS_DIR')
 
 
-class GenMast(QMainWindow):
+class GenerateMasterGUI(QMainWindow):
     """Main application window."""
     def __init__(self):
         super().__init__()
@@ -388,8 +388,7 @@ class Worker(QtCore.QRunnable):
 
     @pyqtSlot()
     def run(self):
-        """Initialise the runner function with passed args,
-         kwargs."""
+        """Initialize the runner function with passed args, kwargs."""
         self.fn(*self.args, **self.kwargs)
 
 
@@ -402,5 +401,5 @@ if __name__ == '__main__':
     font.setPointSize(10)
     app.setFont(font)
     # Open main window.
-    gui = GenMast()
+    gui = GenerateMasterGUI()
     sys.exit(app.exec_())
