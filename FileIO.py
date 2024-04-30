@@ -32,7 +32,7 @@ def load_salespeople_info():
         logger.error('No Salespeople Info file found!\n'
                      f'Please make sure Salespeople Info.xlsx is in the following directory: {location}')
     except XLRDError:
-        logger.error('Error reading sheet name for Salespeople Info.xlsx! '
+        logger.error('Error loading the Salespeople Info! '
                      'Please make sure the main tab is named Info.')
     return sales_info
 
@@ -47,7 +47,7 @@ def load_principal_info():
         logger.error('No Principal List file found! '
                      f'Please make sure Principal Info.xlsx is in the following directory: {location}')
     except XLRDError:
-        logger.error('Error reading sheet name for principalList.xlsx! '
+        logger.error('Error loading Principal List! '
                      'Please make sure the main tab is named Principals.')
     return principal_info
 
@@ -61,24 +61,13 @@ def load_com_master():
     # Create backup file.
     today = datetime.datetime.today().strftime('%m-%d-%Y')
     run_com_backup = file_path.replace('.xlsx', f'_BACKUP_{str(today)}.xlsx')
-    logger.info(f'Saving Commissions Master backup as: {run_com_backup}')
+    logger.info(f'Saving a Commissions Master backup as: {run_com_backup}')
     shutil.copy(file_path, run_com_backup)
 
     try:
         commission_master = pd.read_excel(file_path, sheet_name='Master', dtype=str)
-        master_files = pd.read_excel(file_path, sheet_name='Files Processed').fillna('')
+        master_files = pd.read_excel(file_path, sheet_name='Files Processed')
         commission_master = Utils.format_pct_numeric_cols(commission_master)
-
-        # Convert individual numbers to numeric in rest of columns.
-        # Invoice/part numbers sometimes have leading zeros we'd like to keep, and
-        # the INF gets read in as infinity, so remove these.
-        mixed_cols = [col for col in list(commission_master) if col not in Utils.NUMERICAL_COLUMNS
-                      and col not in ['Invoice Number', 'Part Number', 'Principal']]
-        for col in mixed_cols:
-            commission_master[col] = pd.to_numeric(commission_master[col], errors='ignore')
-
-        # Now remove the nans.
-        commission_master.replace(to_replace=['nan', np.nan], value='', inplace=True)
 
         # Make sure all the dates are formatted correctly.
         for col in ['Invoice Date', 'Paid Date', 'Sales Report Date']:
@@ -91,7 +80,7 @@ def load_com_master():
     except FileNotFoundError:
         logger.error('No Commissions Master file found!')
     except XLRDError:
-        logger.error('Commissions Master tab names incorrect! '
+        logger.error('Error loading Commissions Master! '
                      'Make sure the tabs are named Master and Files Processed.')
     return commission_master, master_files
 
@@ -102,9 +91,8 @@ def load_run_com(file_path):
 
     try:
         running_com = pd.read_excel(file_path, sheet_name='Master', dtype=str)
-        files_processed = pd.read_excel(file_path, sheet_name='Files Processed').fillna('')
+        files_processed = pd.read_excel(file_path, sheet_name='Files Processed')
         running_com = Utils.format_pct_numeric_cols(running_com)
-        running_com.replace(to_replace=['nan', np.nan], value='', inplace=True)
         # Make sure all the dates are formatted correctly.
         running_com['Invoice Date'] = running_com['Invoice Date'].map(lambda x: form_date(x))
         # Make sure that the CM Splits aren't blank or zero.
@@ -114,7 +102,7 @@ def load_run_com(file_path):
     except FileNotFoundError:
         logger.error('No Running Commissions file found!')
     except XLRDError:
-        logger.error('Running Commissions tab names incorrect! '
+        logger.error('Error loading Running Commissions! '
                      'Make sure the tabs are named Master and Files Processed.')
 
     return running_com, files_processed
@@ -151,7 +139,7 @@ def load_entries_need_fixing(file_dir):
     except FileNotFoundError:
         logger.error('No matching Entries Need Fixing file found for this Running Commissions file!')
     except XLRDError:
-        logger.error('No sheet named Data found in Entries Need Fixing!')
+        logger.error('Error loading Entries Need Fixing! Make sure there is a sheet named Data.')
     return entries_need_fixing
 
 
@@ -171,7 +159,7 @@ def load_acct_list():
     except FileNotFoundError:
         logger.error(f'No Account List file found! Please make sure it is location in {location}')
     except XLRDError:
-        logger.error('Account List tab names incorrect! Make sure the main tab is named Allacct.')
+        logger.error('Account List tab names may be incorrect! Make sure the main tab is named Allacct.')
     return acct_list
 
 
@@ -195,7 +183,7 @@ def load_lookup_master():
     except FileNotFoundError:
         logger.error(f'No Lookup Master found! Please make sure Lookup Master - Current.xlsx is in {location}')
     except XLRDError:
-        logger.error('Error loading the Lookup Master.')
+        logger.error('Error loading the Lookup Master file.')
 
     return master_lookup
 
@@ -218,14 +206,13 @@ def load_root_customer_mappings():
         logger.error('No Root Customer Mappings file found! '
                      'Please make sure rootCustomerMappings.xlsx is in the directory.')
     except XLRDError:
-        logger.error('Error reading sheet names.')
+        logger.error('Error loading Root Customer Mappings file.')
     return customer_mappings
 
 
 def load_digikey_master():
     """Load and prepare the digikey insights master file."""
-    digikey_master = pd.Series([])
-    files_processed = pd.Series([])
+    digikey_master, files_processed = pd.Series([]), pd.Series([])
     location = Utils.DIRECTORIES.get('DIGIKEY_DIR')
     try:
         digikey_master = pd.read_excel(os.path.join(location, 'Digikey Insight Master.xlsx'),
@@ -236,7 +223,7 @@ def load_digikey_master():
         logger.error('No Digikey Insight Master file found! '
                      'Please make sure Digikey Insight Master is in the directory.')
     except XLRDError:
-        logger.error('Error reading sheet names.')
+        logger.error('Error reading Digikey Master sheet names.')
     return digikey_master, files_processed
 
 
@@ -252,8 +239,8 @@ def load_distributor_map():
                          'Please make sure the main tab is named Distributors.\n*Program terminated*')
             return
         # Check the column names.
-        disty_map_cols = ['Corrected Dist', 'Search Abbreviation']
-        missing_cols = [i for i in disty_map_cols if i not in list(distributor_map)]
+        dist_map_columns = ['Corrected Dist', 'Search Abbreviation']
+        missing_cols = [i for i in dist_map_columns if i not in list(distributor_map)]
         if missing_cols:
             logger.error(f'The following columns were not detected in distributorLookup.xlsx:'
                          f'\n{', '.join(map(str, missing_cols))}\n*Program terminated*')
@@ -269,7 +256,7 @@ def save_excel_file(filename, tab_data, tab_names):
     if save_error(filename):
         logger.error(f'The following file is currently open in Excel: {filename}'
                      f'\nPlease close the file and try again.')
-        return None
+        return
     if not isinstance(tab_data, list):
         tab_data = [tab_data]
     if not isinstance(tab_names, list):

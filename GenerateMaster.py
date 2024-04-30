@@ -37,16 +37,16 @@ def main(filepaths, path_to_running_com, field_mappings):
                      file data columns.
     """
     logger.info('Starting program: Generate Master')
-    # Get the correct column names for the commission file.
-    column_names = Utils.get_column_names(field_mappings)
-
     # -------------------------------------------------------------------
     # Check to see if there's an existing Running Commissions to append
     # the new data onto. If so, we need to do some work to get it ready.
     # -------------------------------------------------------------------
+    # Get the correct column names for the commission file.
+    column_names = Utils.get_column_names(field_mappings)
+
     if path_to_running_com:
         running_com, files_processed = load_run_com(file_path=path_to_running_com)
-        logger.info('Appending files to Running Commissions...')
+        logger.info(f'Appending files to {path_to_running_com}...')
 
         # Check to make sure that all columns are present and match between the files
         missing_cols = [i for i in column_names if i not in running_com]
@@ -69,7 +69,6 @@ def main(filepaths, path_to_running_com, field_mappings):
             logger.error('No Entries Need Fixing found for the provided Running Commissions!\n*Program Terminated*')
             return
         running_com_input_len = running_com.shape[0]
-
     # ---------------------------------------------------------
     # Start new Running Commissions; no existing one provided.
     # ---------------------------------------------------------

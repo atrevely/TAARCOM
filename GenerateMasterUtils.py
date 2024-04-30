@@ -1,5 +1,6 @@
 import os
 import pandas as pd
+import numpy as np
 import datetime
 import logging
 from dateutil.parser import parse
@@ -13,8 +14,8 @@ TAARCOM_DIRECTORIES = {'COMM_LOOKUPS_DIR': 'Z:\\Commissions Lookup', 'COMM_WORKI
 DIRECTORIES = {i: j if os.path.exists(j) else os.getcwd() for i, j in TAARCOM_DIRECTORIES.items()}
 
 # Columns defined as containing numerical data.
-DOLLAR_COLUMNS = ['Ext. Cost', 'Invoiced Dollars', 'Paid-On Revenue', 'Actual Comm Paid',
-                  'Unit Cost', 'Unit Price', 'Sales Commission']
+DOLLAR_COLUMNS = ['Ext. Cost', 'Invoiced Dollars', 'Paid-On Revenue', 'Actual Comm Paid', 'Unit Cost', 'Unit Price',
+                  'Sales Commission']
 NUMERICAL_COLUMNS = ['Quantity', 'Year']
 PERCENTAGE_COLUMNS = ['Commission Rate', 'Split Percentage', 'Gross Rev Reduction', 'Shared Rev Tier Rate', 'CM Split']
 
@@ -76,6 +77,7 @@ def check_for_date_errors(date):
 
 def format_pct_numeric_cols(dataframe):
     """Convert know numeric and percentage columns to their correct form."""
+    dataframe.index = dataframe.index.map(int)
     for col in DOLLAR_COLUMNS:
         try:
             # Remove extra whitespace and any dollar signs, then convert non-empty entries to numeric.
@@ -100,7 +102,7 @@ def format_pct_numeric_cols(dataframe):
         except KeyError:
             pass
         except ValueError:
-            logger.error(f'Unexpected non-numeric character in row {col}.')
+            logger.error(f'Unexpected non-numeric character in column {col}.')
             raise
 
     for col in PERCENTAGE_COLUMNS:
@@ -119,4 +121,5 @@ def format_pct_numeric_cols(dataframe):
             logger.error(f'Unexpected non-numeric character in row {col}.')
             raise
 
+    dataframe.replace(to_replace=np.nan, value='', inplace=True)
     return dataframe
