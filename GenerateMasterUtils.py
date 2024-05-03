@@ -78,38 +78,33 @@ def check_for_date_errors(date):
 def format_pct_numeric_cols(dataframe):
     """Convert know numeric and percentage columns to their correct form."""
     dataframe.index = dataframe.index.map(int)
+    non_empty_idx = dataframe.index[dataframe['Part Number'] != '']
+
     for col in DOLLAR_COLUMNS:
         try:
             # Remove extra whitespace and any dollar signs, then convert non-empty entries to numeric.
             dataframe[col] = dataframe[col].map(lambda x: str(x).strip().replace('$', ''))
-            non_empty_idx = dataframe[dataframe[col] != ''].index
             # Columns with partially numeric data will end up mixed type (i.e. Object col type).
             dataframe.loc[non_empty_idx, col] = pd.to_numeric(dataframe.loc[non_empty_idx, col])
         except KeyError:
             pass
         except ValueError:
-            logger.error(f'Unexpected non-numeric character in row {col}.')
-            raise
+            raise ValueError(f'Unexpected non-numeric character in column {col}.')
 
     for col in NUMERICAL_COLUMNS:
         try:
             # Remove extra whitespace.
             dataframe[col] = dataframe[col].map(lambda x: str(x).strip())
-            non_empty_idx = dataframe[dataframe[col] != ''].index
             dataframe.loc[non_empty_idx, col] = pd.to_numeric(dataframe.loc[non_empty_idx, col])
-            # Columns with partially numeric data will end up mixed type (i.e. Object col type).
-            dataframe[col] = pd.to_numeric(dataframe[col], errors='coerce').fillna('')
         except KeyError:
             pass
         except ValueError:
-            logger.error(f'Unexpected non-numeric character in column {col}.')
-            raise
+            raise ValueError(f'Unexpected non-numeric character in column {col}.')
 
     for col in PERCENTAGE_COLUMNS:
         try:
             # Remove extra whitespace and any dollar signs, then convert non-empty entries to numeric.
             dataframe[col] = dataframe[col].map(lambda x: str(x).strip().replace('%', ''))
-            non_empty_idx = dataframe[dataframe[col] != ''].index
             # Columns with partially numeric data will end up mixed type (i.e. Object col type).
             dataframe.loc[non_empty_idx, col] = pd.to_numeric(dataframe.loc[non_empty_idx, col])
             # Detect percentages and convert them to decimal.
@@ -118,8 +113,7 @@ def format_pct_numeric_cols(dataframe):
         except (KeyError, TypeError):
             pass
         except ValueError:
-            logger.error(f'Unexpected non-numeric character in row {col}.')
-            raise
+            raise ValueError(f'Unexpected non-numeric character in column {col}.')
 
     dataframe.replace(to_replace=np.nan, value='', inplace=True)
     return dataframe
