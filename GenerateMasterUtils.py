@@ -78,7 +78,13 @@ def check_for_date_errors(date):
 def format_pct_numeric_cols(dataframe):
     """Convert know numeric and percentage columns to their correct form."""
     dataframe.index = dataframe.index.map(int)
-    non_empty_idx = dataframe.index[dataframe['Part Number'] != '']
+    dataframe.replace(to_replace=np.nan, value='', inplace=True)
+
+    try:
+        non_empty_idx = dataframe.index[dataframe['Part Number'] != '']
+    except KeyError:
+        # This sheet has no part numbers and thus it will be discarded anyway.
+        return
 
     for col in DOLLAR_COLUMNS:
         try:
