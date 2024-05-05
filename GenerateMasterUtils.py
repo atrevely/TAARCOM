@@ -83,8 +83,8 @@ def format_pct_numeric_cols(dataframe):
     try:
         non_empty_idx = dataframe.index[dataframe['Part Number'] != '']
     except KeyError:
-        # This sheet has no part numbers and thus it will be discarded anyway.
-        return
+        # This sheet has no part numbers, this no valid entries to format.
+        return dataframe
 
     for col in DOLLAR_COLUMNS:
         try:
