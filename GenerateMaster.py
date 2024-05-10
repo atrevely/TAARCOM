@@ -174,8 +174,8 @@ def main(filepaths, path_to_running_com, field_mappings):
                 logger.warning(f'No part number column found on tab {sheet_name}. Skipping tab.')
                 continue
 
-            # Now that we've renamed all of the relevant columns,
-            # append the new sheet to Running Commissions, where only the properly named columns are appended.
+            # Now that we've renamed all the relevant columns, append the new sheet to Running Commissions,
+            # where only the properly named columns are appended.
             if sheet.columns.duplicated().any():
                 duplicates = sheet.columns[sheet.columns.duplicated()].unique()
                 logger.error('Two items are being mapped to the same column!\n'
@@ -332,7 +332,7 @@ def main(filepaths, path_to_running_com, field_mappings):
         # If any data isn't found/parsed, copy over to Entries Need Fixing.
         # -----------------------------------------------------------------
         if lookup_matches != 1 or len(dist_matches) != 1 or date_error:
-            entries_need_fixing = pd.concat((entries_need_fixing, running_com.loc[row, :]), sort=False)
+            entries_need_fixing.loc[row] = running_com.loc[row, :]
             entries_need_fixing.loc[row, 'Running Com Index'] = row
             entries_need_fixing.loc[row, 'Distributor Matches'] = len(dist_matches)
             entries_need_fixing.loc[row, 'Lookup Master Matches'] = lookup_matches
@@ -363,8 +363,8 @@ def main(filepaths, path_to_running_com, field_mappings):
                          'Unique ID'])
 
     # Fix up the Entries Need Fixing file.
-    entries_need_fixing = entries_need_fixing.loc[:, column_names]
     entries_need_fixing.reset_index(drop=True, inplace=True)
+    entries_need_fixing = entries_need_fixing.loc[:, column_names]
     entries_need_fixing.fillna('', inplace=True)
 
     # Make sure all the dates are formatted correctly.
