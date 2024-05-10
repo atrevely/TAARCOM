@@ -126,8 +126,7 @@ def table_format(sheet_data, sheet_name, workbook):
                 # adding the apostrophe label tag in front.
                 if len(num_padding) > len(str(inv_num)):
                     inv_num = f"'{inv_num}"
-                inv_format = workbook.book.add_format({'font': 'Calibri', 'font_size': 11,
-                                                       'num_format': num_padding})
+                inv_format = workbook.book.add_format({'font': 'Calibri', 'font_size': 11, 'num_format': num_padding})
                 try:
                     sheet.write_number(row+1, index, inv_num, inv_format)
                 except TypeError:
@@ -151,7 +150,7 @@ def table_format(sheet_data, sheet_name, workbook):
         # Extra space for '$'/'%' in accounting/percent format.
         if (col in acct_cols or col in pct_cols) and col not in hide_cols:
             max_width += 2
-        sheet.set_column(index, index, max_width+0.8, formatting)
+        sheet.set_column(index, index, max_width + 0.8, formatting)
     # Set the auto-filter for the sheet.
     sheet.autofilter(0, 0, sheet_data.shape[0], sheet_data.shape[1] - 1)
 
