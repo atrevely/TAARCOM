@@ -48,7 +48,7 @@ def main(run_com_path):
         quarantined = pd.read_excel(os.path.join(Utils.DIRECTORIES.get('COMM_LOOKUPS_DIR'),
                                                  'Quarantined Lookups.xlsx')).fillna('')
     else:
-        logger.error('No Quarantined Lookups file found!'
+        logger.error('No Quarantined Lookups file found!\n'
                      'Please make sure Quarantined Lookups.xlsx is in the directory.\n*Program Terminated*')
         return
 
@@ -184,7 +184,7 @@ def main(run_com_path):
         # Record the date we quarantined the entries.
         old_entries.loc[:, 'Date Quarantined'] = datetime.datetime.now().date()
         # Add deprecated entries to the quarantine.
-        quarantined = quarantined.append(old_entries, ignore_index=True, sort=False)
+        quarantined = pd.concat((quarantined, old_entries), ignore_index=True, sort=False)
         # Notify us of changes.
         logger.info(f'{len(old_entries)} entries quarantined for being more than 2 years old.')
 
