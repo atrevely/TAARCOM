@@ -290,7 +290,7 @@ class GenerateMasterGUI(QMainWindow):
         if self.master:
             # Run the GenerateMaster.py file.
             try:
-                CommTools.extractLookups(self.master)
+                CommTools.extract_lookups(self.master)
             except Exception:
                 logging.error(f'Unexpected Python error: {traceback.format_exc(0)}')
         else:

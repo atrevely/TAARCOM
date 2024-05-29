@@ -75,7 +75,7 @@ def check_for_date_errors(date):
     return False
 
 
-def format_pct_numeric_cols(dataframe):
+def format_pct_numeric_cols(dataframe, convert_percentages=True):
     """Convert know numeric and percentage columns to their correct form."""
     dataframe.index = dataframe.index.map(int)
     dataframe.replace(to_replace=np.nan, value='', inplace=True)
@@ -114,7 +114,7 @@ def format_pct_numeric_cols(dataframe):
             # Columns with partially numeric data will end up mixed type (i.e. Object col type).
             dataframe.loc[non_empty_idx, col] = pd.to_numeric(dataframe.loc[non_empty_idx, col])
             # Detect percentages and convert them to decimal.
-            if (dataframe.loc[non_empty_idx, col] > 1).any():
+            if convert_percentages and (dataframe.loc[non_empty_idx, col] > 1).any():
                 dataframe.loc[non_empty_idx, col] /= 100
         except (KeyError, TypeError):
             pass

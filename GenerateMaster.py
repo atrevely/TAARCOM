@@ -357,7 +357,7 @@ def main(filepaths, path_to_running_com, field_mappings):
     # -----------------------------
     # Clean up the finalized data.
     # -----------------------------
-    running_com = Utils.format_pct_numeric_cols(dataframe=running_com)
+    running_com = Utils.format_pct_numeric_cols(dataframe=running_com, convert_percentages=False)
     # Reorder columns to match the desired layout in column_names.
     running_com = running_com.loc[:, column_names]
     column_names.extend(['Distributor Matches', 'Lookup Master Matches', 'Date Added', 'Running Com Index',
@@ -366,7 +366,7 @@ def main(filepaths, path_to_running_com, field_mappings):
     # Fix up the Entries Need Fixing file.
     entries_need_fixing.reset_index(drop=True, inplace=True)
     entries_need_fixing = entries_need_fixing.loc[:, column_names]
-    entries_need_fixing = Utils.format_pct_numeric_cols(dataframe=entries_need_fixing)
+    entries_need_fixing = Utils.format_pct_numeric_cols(dataframe=entries_need_fixing, convert_percentages=False)
 
     # Make sure all the dates are formatted correctly.
     running_com['Invoice Date'] = running_com['Invoice Date'].map(lambda x: form_date(x))
@@ -383,7 +383,7 @@ def main(filepaths, path_to_running_com, field_mappings):
     filepath_LM = os.path.join(Utils.DIRECTORIES.get('COMM_LOOKUPS_DIR'), f'Lookup Master - Current.xlsx')
     if save_error(filepath_RC, filepath_ENF, filepath_LM):
         logger.error('One or more of the RC/ENF/Lookup files are currently open in Excel! '
-                     'Please close the files and try again.\n*Program Teminated*')
+                     'Please close the files and try again.\n*Program Terminated*')
         return
 
     save_excel_file(filename=filepath_RC, tab_data=[running_com, files_processed],
