@@ -12,15 +12,16 @@ def main(run_com_path):
     """
     # Load up the file to be merged.
     running_com, files_processed = load_run_com(file_path=run_com_path)
-    com_mast, master_files = load_com_master()
-    if any([com_mast.empty, running_com.empty]):
+    commission_master, master_files = load_com_master()
+    if any([commission_master.empty, running_com.empty]):
         logger.info('*Program Terminated*')
         return
 
     logger.info('Merging file by UID...')
     for row in running_com.index:
         try:
-            id_match_loc = com_mast[com_mast['Unique ID'] == running_com.loc[row, 'Unique ID']].index.tolist()
+            id_match_loc = commission_master[commission_master['Unique ID'] == running_com.loc[row, 'Unique ID']]
+            id_match_loc = id_match_loc.index.tolist()
             if len(id_match_loc) == 0:
                 logger.warning(f'WARNING! No match found for unique ID {running_com.loc[row, 'Unique ID']}.')
             elif len(id_match_loc) > 1:
@@ -28,14 +29,14 @@ def main(run_com_path):
             else:
                 id_match_loc = id_match_loc[0]
                 # Replace the target entry with the fixed/updated one.
-                com_mast.loc[id_match_loc, :] = running_com.loc[row, list(running_com)]
+                commission_master.loc[id_match_loc, :] = running_com.loc[row, list(running_com)]
         except ValueError:
             logger.error('Error reading Running Com Index! Make sure all values are numeric.\n'
                          '*Program Terminated*')
             return
 
     filename = os.path.join(Utils.DIRECTORIES.get('COMM_WORKING_DIR'), 'Commissions Master.xlsx')
-    save_excel_file(filename=filename, tab_data=[running_com, files_processed],
+    save_excel_file(filename=filename, tab_data=[commission_master, files_processed],
                     tab_names=['Master', 'Files Processed'])
 
-    logger.info('+ Merge Complete +')
+    logger.info('+Merge Complete+')
