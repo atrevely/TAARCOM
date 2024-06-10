@@ -5,31 +5,13 @@ import datetime
 import os
 import logging
 from dateutil.parser import parse
+import GenerateMasterUtils as Utils
 from RCExcelTools import tab_save_prep, save_error, PivotTables
-from FileIO import load_salespeople_info, load_com_master, load_run_com, load_acct_list, load_lookup_master
+from FileIO import (load_salespeople_info, load_com_master, load_run_com, load_acct_list, load_lookup_master,
+                    save_excel_file)
 # from PDFReportGenerator import pdfReport
 
 logger = logging.getLogger(__name__)
-
-# Set the numerical columns.
-num_cols = ['Quantity', 'Ext. Cost', 'Invoiced Dollars', 'Paid-On Revenue', 'Actual Comm Paid',
-            'Unit Cost', 'Unit Price', 'CM Split', 'Year', 'Sales Commission',
-            'Split Percentage', 'Commission Rate', 'Gross Rev Reduction', 'Shared Rev Tier Rate']
-
-# Set the directory for the data input/output.
-if os.path.exists('Z:\\'):
-    data_dir = 'Z:\\MK Working Commissions'
-    look_dir = 'Z:\\Commissions Lookup'
-    reports_dir = 'Z:\\MK Working Commissions\\Reports'
-    if not os.path.exists(reports_dir):
-        try:
-            os.mkdir(reports_dir)
-        except OSError:
-            print('Error creating Reports folder in MK Working Commissions.')
-else:
-    data_dir = os.getcwd()
-    look_dir = os.getcwd()
-    reports_dir = os.getcwd()
 
 
 def get_sales_comm_data(salesperson, input_data, sales_info):
@@ -81,7 +63,7 @@ def data_by_princ_tab(input_data):
 
 def create_quarterly_report(comm_data, comm_qtr, salespeople, sales_info):
     """Builds the report that runs at the end of each quarter."""
-    print('---\nCreating end-of-quarter report.')
+    logger.info('Creating end-of-quarter report.')
     # ---------------------------------------------------------
     # Build the tab with commissions broken down by principal.
     # ---------------------------------------------------------
@@ -111,18 +93,14 @@ def create_quarterly_report(comm_data, comm_qtr, salespeople, sales_info):
             sales_tab.loc[row, 'Actual Comm Paid'] = np.sum(princ_data['Actual Comm Paid'])
             sales_tab.loc[row, 'Sales Commission'] = np.sum(princ_data['Sales Commission'])
             row += 1
+
     # -----------------
     # Save the report.
     # -----------------
-    filename = os.path.join(reports_dir, 'Quarterly Commission Report ' + comm_qtr + '.xlsx')
-    writer = pd.ExcelWriter(filename, engine='xlsxwriter', datetime_format='mm/dd/yyyy')
-    tab_save_prep(writer=writer, data=comm_data, sheet_name='Comm Data')
-    tab_save_prep(writer=writer, data=princ_tab, sheet_name='Principals')
-    tab_save_prep(writer=writer, data=sales_tab, sheet_name='Salespeople')
-    if not save_error(filename):
-        writer.save()
-    else:
-        print('Error saving quarter commission report.')
+    filename = os.path.join(Utils.DIRECTORIES.get('COMM_REPORTS_DIR'), f'Quarterly Commission Report {comm_qtr}.xlsx')
+    save_excel_file(filename=filename, tab_data=[comm_data, princ_tab, sales_tab],
+                    tab_names=['Comm Data', 'Principals', 'Salespeople'])
+    logger.info('Finished creating end-of-quarter report')
 
 
 def main(run_com):
@@ -255,7 +233,7 @@ def main(run_com):
     revenue_data = com_mast[com_mast['Quarter Shipped'].isin(quarters)]
     revenue_data.reset_index(drop=True, inplace=True)
     if run_com:
-        revenue_data = revenue_data.append(running_com, ignore_index=True, sort=False)
+        revenue_data = pd.concat((revenue_data, running_com), ignore_index=True, sort=False)
     # Tag the data by current Design Sales in the Account List.
     for cust in revenue_data['T-End Cust'].unique():
         # Check for a single match in Account List.
@@ -297,7 +275,7 @@ def main(run_com):
     qtr_data = com_mast_tracked[com_mast_tracked['Comm Month'].isin(qtr_mos)]
     # Compile the quarter data.
     if run_com:
-        comm_data = qtr_data.append(running_com, ignore_index=True, sort=False)
+        comm_data = pd.concat((qtr_data, running_com), ignore_index=True, sort=False)
     else:
         comm_data = qtr_data
     del qtr_data, com_mast_tracked
@@ -327,13 +305,14 @@ def main(run_com):
         # Also grab any nonstandard splits.
         cm_data = split_data[split_data['CM Sales'] == person]
         cm_data = cm_data[cm_data['CDS'] != person]
-        design_data = design_data.append(cm_data, ignore_index=True, sort=False)
+        design_data = pd.concat((design_data, cm_data), ignore_index=True, sort=False)
         # Get rid of empty Quarter Shipped lines.
         design_data = design_data[design_data['Quarter Shipped'] != '']
         design_data.reset_index(drop=True, inplace=True)
 
         # Write the raw data to a file.
-        filename = os.path.join(reports_dir, f'{person} Revenue Report - {current_yr_mo}.xlsx')
+        filename = os.path.join(Utils.DIRECTORIES.get('COMM_REPORTS_DIR'),
+                                f'{person} Revenue Report - {current_yr_mo}.xlsx')
         writer = pd.ExcelWriter(filename, engine='xlsxwriter', datetime_format='mm/dd/yyyy')
         tab_save_prep(writer=writer, data=design_data, sheet_name='Raw Data')
 
@@ -369,7 +348,7 @@ def main(run_com):
         final_report = get_sales_comm_data(salesperson=person, input_data=comm_data,
                                            sales_info=sales_info)
         # Append the data.
-        final_report = final_report.append(qq_condensed, ignore_index=True, sort=False)
+        final_report = pd.concat((final_report, qq_condensed), ignore_index=True, sort=False)
         # Total up the Paid-On Revenue and Actual/Sales Commission.
         report_total = pd.DataFrame(columns=['Salesperson', 'Paid-On Revenue', 'Actual Comm Paid',
                                              'Sales Commission'], index=[0])
@@ -386,12 +365,13 @@ def main(run_com):
         person_total = princ_tab[princ_tab['Principal'] == 'Grand Total']
         person_total['Salesperson'] = person
         person_total['Principal'] = ''
-        sales_tot = sales_tot.append(person_total, ignore_index=True, sort=False)
-        sales_tot = sales_tot.append(princ_tab[princ_tab['Principal'] != 'Grand Total'],
-                                     ignore_index=True, sort=False)
+        sales_tot = pd.concat((sales_tot, person_total), ignore_index=True, sort=False)
+        sales_tot = pd.concat((sales_tot, princ_tab[princ_tab['Principal'] != 'Grand Total']),
+                              ignore_index=True, sort=False)
 
         # Write report to file.
-        filename = os.path.join(reports_dir, f'{person} Commission Report - {current_yr_mo}.xlsx')
+        filename = os.path.join(Utils.DIRECTORIES.get('COMM_REPORTS_DIR'),
+                                f'{person} Commission Report - {current_yr_mo}.xlsx')
         writer = pd.ExcelWriter(filename, engine='xlsxwriter', datetime_format='mm/dd/yyyy')
         # Prepare the data in Excel.
         tab_save_prep(writer=writer, data=princ_tab, sheet_name='Principals')
@@ -432,7 +412,8 @@ def main(run_com):
     # Create the overall Revenue Report.
     # -----------------------------------
     # Write the raw data to a file.
-    filename = os.path.join(reports_dir, f'Revenue Report - {current_yr_mo}{RC_addon}.xlsx')
+    filename = os.path.join(Utils.DIRECTORIES.get('COMM_REPORTS_DIR'),
+                            f'Revenue Report - {current_yr_mo}{RC_addon}.xlsx')
     writer = pd.ExcelWriter(filename, engine='xlsxwriter', datetime_format='mm/dd/yyyy')
     tab_save_prep(writer=writer, data=revenue_data, sheet_name='Raw Data')
 
@@ -480,8 +461,8 @@ def main(run_com):
         # --------------------------------------------------------------
         # Append the new Running Commissions to the Commissions Master.
         # --------------------------------------------------------------
-        com_mast = com_mast.append(running_com, ignore_index=True, sort=False)
-        master_files = master_files.append(files_processed, ignore_index=True, sort=False)
+        com_mast = pd.concat((com_mast, running_com), ignore_index=True, sort=False)
+        master_files = pd.concat((master_files, files_processed), ignore_index=True, sort=False)
         # Convert commission dollars to numeric.
         master_files['Total Commissions'] = pd.to_numeric(master_files['Total Commissions'],
                                                           errors='coerce').fillna(0)
@@ -489,41 +470,19 @@ def main(run_com):
     # ----------------
     # Save the files.
     # ----------------
-    filename_1 = data_dir + '\\Commissions Master.xlsx'
-    filename_2 = look_dir + '\\Lookup Master - Current.xlsx'
-    filename_3 = reports_dir + '\\Running Commissions ' + current_yr_mo + ' Reported' + RC_addon + '.xlsx'
-
-    if save_error(filename_1, filename_2, filename_3):
-        print('---\nOne or more of these files are currently open in Excel:\n'
-              'Running Commissions, Commissions Master, Lookup Master.\n'
-              'Please close these files and try again.\n*Program Terminated*')
-        return
-
     if run_com:
-        # Write the Commissions Master file if new RC data was added to it.
-        writer1 = pd.ExcelWriter(filename_1, engine='xlsxwriter', datetime_format='mm/dd/yyyy')
-        tab_save_prep(writer=writer1, data=com_mast, sheet_name='Master')
-        tab_save_prep(writer=writer1, data=master_files, sheet_name='Files Processed')
+        save_excel_file(filename=os.path.join(Utils.DIRECTORIES.get('COMM_WORKING_DIR'), 'Commissions Master.xlsx'),
+                        tab_data=[com_mast, master_files], tab_names=['Master', 'Files Processed'])
+        save_excel_file(
+            filename=os.path.join(Utils.DIRECTORIES.get('COMM_LOOKUPS_DIR'), 'Lookup Master - Current.xlsx'),
+            tab_data=look_mast, tab_names='Lookup')
 
-        # Write the Lookup Master.
-        writer2 = pd.ExcelWriter(filename_2, engine='xlsxwriter', datetime_format='mm/dd/yyyy')
-        tab_save_prep(writer=writer2, data=look_mast, sheet_name='Lookup')
+    save_excel_file(
+        filename=os.path.join(Utils.DIRECTORIES.get('COMM_REPORTS_DIR'),
+                              f'Running Commissions {current_yr_mo} Reported{RC_addon}.xlsx'),
+        tab_data=[running_com, sales_tot, princ_tab], tab_names=['Data', 'Salesperson Totals', 'Principal Totals'])
 
-    # Write the Running Commissions report.
-    writer3 = pd.ExcelWriter(filename_3, engine='xlsxwriter', datetime_format='mm/dd/yyyy')
-    tab_save_prep(writer=writer3, data=running_com, sheet_name='Data')
+    logger.info('Sales reports finished successfully!')
     if run_com:
-        # Only write the Files Processed tab if it's a new RC.
-        tab_save_prep(writer=writer3, data=files_processed, sheet_name='Files Processed')
-    tab_save_prep(writer=writer3, data=sales_tot, sheet_name='Salesperson Totals')
-    tab_save_prep(writer=writer3, data=princ_tab, sheet_name='Principal Totals')
-
-    # Save the files.
-    if run_com:
-        writer1.save()
-        writer2.save()
-    writer3.save()
-    print('---\nSales reports finished successfully!')
-    if run_com:
-        print('---\nCommissions Master updated.\nLookup Master updated.')
-    print('+Program Complete+')
+        logger.info('Commissions Master updated. Lookup Master updated.')
+    logger.info('+Program Complete+')
