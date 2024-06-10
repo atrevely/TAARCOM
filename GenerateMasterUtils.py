@@ -119,6 +119,9 @@ def format_pct_numeric_cols(dataframe, convert_percentages=True):
         except (KeyError, TypeError):
             pass
         except ValueError:
+            # The CM Split column will sometimes have multiple entries (lookup matches) combined, so may fail.
+            if col == 'CM Split':
+                continue
             raise ValueError(f'Unexpected non-numeric character in column {col}.')
 
     dataframe.replace(to_replace=np.nan, value='', inplace=True)

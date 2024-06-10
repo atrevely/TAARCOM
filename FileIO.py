@@ -6,7 +6,7 @@ import shutil
 import logging
 import GenerateMasterUtils as Utils
 from xlrd import XLRDError
-from RCExcelTools import form_date, save_error, table_format
+from RCExcelTools import form_date, save_error, table_format, tab_save_prep
 
 logger = logging.getLogger(__name__)
 
@@ -15,6 +15,7 @@ def load_salespeople_info():
     """Read in Salespeople Info. Return empty series if not found or if there's an error."""
     sales_info = pd.Series([])
     location = Utils.DIRECTORIES.get('COMM_LOOKUPS_DIR')
+
     try:
         sales_info = pd.read_excel(os.path.join(location, 'Salespeople Info.xlsx'), sheet_name='Info')
         # Make sure the required columns are present.
@@ -32,8 +33,8 @@ def load_salespeople_info():
         logger.error('No Salespeople Info file found!\n'
                      f'Please make sure Salespeople Info.xlsx is in the following directory: {location}')
     except XLRDError:
-        logger.error('Error loading the Salespeople Info! '
-                     'Please make sure the main tab is named Info.')
+        logger.error('Error loading the Salespeople Info! Please make sure the main tab is named Info.')
+
     return sales_info
 
 
@@ -41,14 +42,15 @@ def load_principal_info():
     """Load the Principal Info file."""
     principal_info = pd.Series([])
     location = Utils.DIRECTORIES.get('COMM_LOOKUPS_DIR')
+
     try:
         principal_info = pd.read_excel(os.path.join(location, 'principalList.xlsx'), sheet_name='Principals')
     except FileNotFoundError:
         logger.error('No Principal List file found! '
                      f'Please make sure Principal Info.xlsx is in the following directory: {location}')
     except XLRDError:
-        logger.error('Error loading Principal List! '
-                     'Please make sure the main tab is named Principals.')
+        logger.error('Error loading Principal List! Please make sure the main tab is named Principals.')
+
     return principal_info
 
 
@@ -80,8 +82,8 @@ def load_com_master():
     except FileNotFoundError:
         logger.error('No Commissions Master file found!')
     except XLRDError:
-        logger.error('Error loading Commissions Master! '
-                     'Make sure the tabs are named Master and Files Processed.')
+        logger.error('Error loading Commissions Master! Make sure the tabs are named Master and Files Processed.')
+
     return commission_master, master_files
 
 
@@ -102,8 +104,7 @@ def load_run_com(file_path):
     except FileNotFoundError:
         logger.error('No Running Commissions file found!')
     except XLRDError:
-        logger.error('Error loading Running Commissions! '
-                     'Make sure the tabs are named Master and Files Processed.')
+        logger.error('Error loading Running Commissions! Make sure the tabs are named Master and Files Processed.')
 
     return running_com, files_processed
 
@@ -112,6 +113,7 @@ def load_run_com(file_path):
 def load_entries_need_fixing(file_dir):
     """Load and prepare the Entries Need Fixing file."""
     entries_need_fixing = None
+
     try:
         entries_need_fixing = pd.read_excel(file_dir, sheet_name='Data', dtype=str)
         # Convert entries to proper types, like above.
@@ -140,27 +142,30 @@ def load_entries_need_fixing(file_dir):
         logger.error('No matching Entries Need Fixing file found for this Running Commissions file!')
     except XLRDError:
         logger.error('Error loading Entries Need Fixing! Make sure there is a sheet named Data.')
+
     return entries_need_fixing
 
 
-def load_acct_list():
+def load_account_list():
     """Load and prepare the Account List file."""
-    acct_list = pd.Series([])
+    account_list = pd.Series([])
     location = Utils.DIRECTORIES.get('COMM_LOOKUPS_DIR')
+
     try:
-        acct_list = pd.read_excel(os.path.join(location, 'Master Account List.xlsx'), sheet_name='Allacct').fillna('')
+        account_list = pd.read_excel(os.path.join(location, 'Master Account List.xlsx'), sheet_name='Allacct').fillna('')
         # Make sure the required columns are present.
         cols = ['SLS', 'ProperName']
-        missing_cols = [i for i in cols if i not in list(acct_list)]
+        missing_cols = [i for i in cols if i not in list(account_list)]
         if missing_cols:
             logger.error(f'The following columns were not found in the Account List: {', '.join(missing_cols)}'
                          '\nPlease check for these column names (case-sensitive) and try again.')
-            acct_list = pd.Series([])
+            account_list = pd.Series([])
     except FileNotFoundError:
         logger.error(f'No Account List file found! Please make sure it is location in {location}')
     except XLRDError:
         logger.error('Account List tab names may be incorrect! Make sure the main tab is named Allacct.')
-    return acct_list
+
+    return account_list
 
 
 def load_lookup_master():
@@ -192,6 +197,7 @@ def load_root_customer_mappings():
     """Load and prepare the root customer mappings file."""
     customer_mappings = pd.Series([])
     location = Utils.DIRECTORIES.get('COMM_LOOKUPS_DIR')
+
     try:
         customer_mappings = pd.read_excel(os.path.join(location, 'rootCustomerMappings.xlsx'),
                                           sheet_name='Sales Lookup').fillna('')
@@ -207,6 +213,7 @@ def load_root_customer_mappings():
                      'Please make sure rootCustomerMappings.xlsx is in the directory.')
     except XLRDError:
         logger.error('Error loading Root Customer Mappings file.')
+
     return customer_mappings
 
 
@@ -214,6 +221,7 @@ def load_digikey_master():
     """Load and prepare the digikey insights master file."""
     digikey_master, files_processed = pd.Series([]), pd.Series([])
     location = Utils.DIRECTORIES.get('DIGIKEY_DIR')
+
     try:
         digikey_master = pd.read_excel(os.path.join(location, 'Digikey Insight Master.xlsx'),
                                        sheet_name='Master').fillna('')
@@ -224,12 +232,14 @@ def load_digikey_master():
                      'Please make sure Digikey Insight Master is in the directory.')
     except XLRDError:
         logger.error('Error reading Digikey Master sheet names.')
+
     return digikey_master, files_processed
 
 
 def load_distributor_map():
     distributor_map = pd.Series([])
     location = Utils.DIRECTORIES.get('COMM_LOOKUPS_DIR')
+
     # Read in the distributor map. Terminate if not found or if errors in file.
     if os.path.exists(os.path.join(location, 'distributorLookup.xlsx')):
         try:
@@ -246,8 +256,8 @@ def load_distributor_map():
                          f'\n{', '.join(map(str, missing_cols))}\n*Program terminated*')
             return
     else:
-        logger.error('No distributor lookup file found! '
-                     'Please make sure distributorLookup.xlsx is in the directory.\n*Program terminated*')
+        logger.error('No distributor lookup file found! Please make sure distributorLookup.xlsx is in the directory.')
+
     return distributor_map
 
 
@@ -257,13 +267,17 @@ def save_excel_file(filename, tab_data, tab_names):
         logger.error(f'The following file is currently open in Excel: {filename}'
                      f'\nPlease close the file and try again.')
         return
+
     if not isinstance(tab_data, list):
         tab_data = [tab_data]
+
     if not isinstance(tab_names, list):
         tab_names = [tab_names]
+
     assert len(tab_data) == len(tab_names), logger.error(f'Mismatch in size of tab data and tab names in {filename}.')
     # Add each tab to the document.
     with pd.ExcelWriter(filename, datetime_format='mm/dd/yyyy') as writer:
         for data, sheet_name in zip(tab_data, tab_names):
+            data = tab_save_prep(data)
             data.to_excel(writer, sheet_name=sheet_name, index=False)
             table_format(sheet_data=data, sheet_name=sheet_name, workbook=writer)

@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import os
-from FileIO import load_acct_list, load_root_customer_mappings, load_salespeople_info
+from FileIO import load_account_list, load_root_customer_mappings, load_salespeople_info
 
 
 def tableFormat(sheetData, sheetName, wbook):
@@ -91,7 +91,7 @@ def main(filepath):
     root_cust_map = load_root_customer_mappings()
 
     # Load the Master Account List file.
-    acct_list = load_acct_list()
+    acct_list = load_account_list()
 
     # Load the Salesperson Info file.
     salespeople_info = load_salespeople_info()

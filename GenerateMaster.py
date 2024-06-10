@@ -46,8 +46,11 @@ def main(filepaths, path_to_running_com, field_mappings):
 
     if path_to_running_com:
         running_com, files_processed = load_run_com(file_path=path_to_running_com)
-        logger.info(f'Appending files to {path_to_running_com}...')
+        if any([running_com.empty, files_processed.empty]):
+            logger.error('*Program Terminated*')
+            return
 
+        logger.info(f'Appending files to {path_to_running_com}...')
         # Check to make sure that all columns are present and match between the files
         missing_cols = [i for i in column_names if i not in running_com]
         extra_cols = [i for i in running_com if i not in column_names]
@@ -61,13 +64,10 @@ def main(filepaths, path_to_running_com, field_mappings):
         ENF_path = os.path.join(Utils.DIRECTORIES.get('COMM_WORKING_DIR'),
                                 f'Entries Need Fixing {path_to_running_com[-20:]}')
         entries_need_fixing = load_entries_need_fixing(file_dir=ENF_path)
+        if entries_need_fixing is None:
+            logger.error('*Program Terminated*')
+            return
 
-        if any([running_com.empty, files_processed.empty]):
-            logger.error('Running commissions and/or files processed are empty!\n*Program Terminated*')
-            return
-        elif entries_need_fixing is None:
-            logger.error('No Entries Need Fixing found for the provided Running Commissions!\n*Program Terminated*')
-            return
         running_com_input_len = running_com.shape[0]
     # ---------------------------------------------------------
     # Start new Running Commissions; no existing one provided.
@@ -96,6 +96,7 @@ def main(filepaths, path_to_running_com, field_mappings):
     if any([distributor_map.empty, master_lookup.empty, principal_info.empty]):
         logger.error('Error loading supporting files.\n*Program terminated*')
         return
+
     principal_list = principal_info['Abbreviation'].to_list()
 
     # -------------------------------------------------------------------------

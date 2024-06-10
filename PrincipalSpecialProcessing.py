@@ -90,9 +90,9 @@ def process_by_principal(principal, sheet, sheet_name, disty_map):
                             'Commission Rate, Paid-On Revenue, Actual Comm Paid')
             elif 'MoComm' in sheet_name:
                 # Fill down Distributor for their grouping scheme.
-                sheet['Reported Distributor'].replace('', np.nan, inplace=True)
-                sheet['Reported Distributor'].fillna(method='ffill', inplace=True)
-                sheet['Reported Distributor'].fillna('', inplace=True)
+                sheet['Reported Distributor'] = sheet['Reported Distributor'].replace('', np.nan)
+                sheet['Reported Distributor'] = sheet['Reported Distributor'].fillna(method='ffill')
+                sheet['Reported Distributor'] = sheet['Reported Distributor'].fillna('')
                 # Paid-On Revenue gets Invoiced Dollars.
                 sheet['Paid-On Revenue'] = sheet['Invoiced Dollars']
                 sheet['Comm Source'] = 'Resale'

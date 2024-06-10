@@ -6,8 +6,8 @@ import os
 import logging
 from dateutil.parser import parse
 import GenerateMasterUtils as Utils
-from RCExcelTools import tab_save_prep, PivotTables
-from FileIO import (load_salespeople_info, load_com_master, load_run_com, load_acct_list, load_lookup_master,
+from RCExcelTools import PivotTables
+from FileIO import (load_salespeople_info, load_com_master, load_run_com, load_account_list, load_lookup_master,
                     save_excel_file)
 # from PDFReportGenerator import pdfReport
 
@@ -114,7 +114,7 @@ def main(run_com):
     # Load in the supporting files, exit if any aren't found.
     # --------------------------------------------------------
     sales_info = load_salespeople_info()
-    acct_list = load_acct_list()
+    acct_list = load_account_list()
     com_mast, master_files = load_com_master()
     if any([acct_list.empty, sales_info.empty, com_mast.empty, master_files.empty]):
         logger.error('Error loading files.\n*Program Terminated*')
