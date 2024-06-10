@@ -6,7 +6,7 @@ import os
 import logging
 from dateutil.parser import parse
 import GenerateMasterUtils as Utils
-from RCExcelTools import tab_save_prep, save_error, PivotTables
+from RCExcelTools import tab_save_prep, PivotTables
 from FileIO import (load_salespeople_info, load_com_master, load_run_com, load_acct_list, load_lookup_master,
                     save_excel_file)
 # from PDFReportGenerator import pdfReport
@@ -247,6 +247,7 @@ def main(run_com):
                              'Please make sure the columns ProperName and SLS are in the Account List.'
                              '\n*Program Terminated*')
                 return
+
     # Fill in the CDS (current design sales) for missing entries as simply the
     # Design Sales for that line.
     for row in revenue_data[pd.isna(revenue_data['CDS'])].index:
@@ -268,11 +269,13 @@ def main(run_com):
         logger.error('Error reading month in Comm Month column! '
                      'Please make sure all months are in YYYY-MM format.\n*Program Terminated*')
         return
+
     # Determine how many months back we need to go.
     num_prev_mos = (current_month - 1) % 3
     months = range(current_month, current_month - num_prev_mos - 1, -1)
     qtr_mos = [f'{current_year}-{i}' for i in months]
     qtr_data = com_mast_tracked[com_mast_tracked['Comm Month'].isin(qtr_mos)]
+
     # Compile the quarter data.
     if run_com:
         comm_data = pd.concat((qtr_data, running_com), ignore_index=True, sort=False)
@@ -313,9 +316,7 @@ def main(run_com):
         # Write the raw data to a file.
         filename = os.path.join(Utils.DIRECTORIES.get('COMM_REPORTS_DIR'),
                                 f'{person} Revenue Report - {current_yr_mo}.xlsx')
-        writer = pd.ExcelWriter(filename, engine='xlsxwriter', datetime_format='mm/dd/yyyy')
-        tab_save_prep(writer=writer, data=design_data, sheet_name='Raw Data')
-
+        save_excel_file(filename=filename, tab_data=design_data, tab_names='Raw Data')
         # Create the revenue pivot table.
         pivots.create_pivot_table(excel_file=filename, data_sheet_name='Raw Data',
                                   pivot_sheet_name='Revenue Table',
@@ -372,11 +373,7 @@ def main(run_com):
         # Write report to file.
         filename = os.path.join(Utils.DIRECTORIES.get('COMM_REPORTS_DIR'),
                                 f'{person} Commission Report - {current_yr_mo}.xlsx')
-        writer = pd.ExcelWriter(filename, engine='xlsxwriter', datetime_format='mm/dd/yyyy')
-        # Prepare the data in Excel.
-        tab_save_prep(writer=writer, data=princ_tab, sheet_name='Principals')
-        tab_save_prep(writer=writer, data=final_report, sheet_name='Raw Data')
-
+        save_excel_file(filename=filename, tab_data=[princ_tab, final_report], tab_names=['Principals', 'Raw Data'])
         pivots.create_pivot_table(excel_file=filename,  data_sheet_name='Raw Data',
                                   pivot_sheet_name='Comm Table', row_fields=['T-End Cust', 'Principal'],
                                   col_field='Comm Month', data_field='Sales Commission')
@@ -414,9 +411,7 @@ def main(run_com):
     # Write the raw data to a file.
     filename = os.path.join(Utils.DIRECTORIES.get('COMM_REPORTS_DIR'),
                             f'Revenue Report - {current_yr_mo}{RC_addon}.xlsx')
-    writer = pd.ExcelWriter(filename, engine='xlsxwriter', datetime_format='mm/dd/yyyy')
-    tab_save_prep(writer=writer, data=revenue_data, sheet_name='Raw Data')
-
+    save_excel_file(filename=filename, tab_data=revenue_data, tab_names='Raw Data')
     # Add the pivot table for revenue by quarter.
     pivots.create_pivot_table(excel_file=filename,  data_sheet_name='Raw Data',
                               pivot_sheet_name='Revenue Table',
