@@ -89,7 +89,8 @@ def format_pct_numeric_cols(dataframe, convert_percentages=True):
     for col in DOLLAR_COLUMNS:
         try:
             # Remove extra whitespace and any dollar signs, then convert non-empty entries to numeric.
-            dataframe[col] = dataframe[col].map(lambda x: str(x).strip().replace('$', ''))
+            dataframe[col] = dataframe[col].map(
+                lambda x: str(x).strip().replace('$', '').replace(',', ''))
             # Columns with partially numeric data will end up mixed type (i.e. Object col type).
             dataframe.loc[non_empty_idx, col] = pd.to_numeric(dataframe.loc[non_empty_idx, col])
         except KeyError:
@@ -100,7 +101,7 @@ def format_pct_numeric_cols(dataframe, convert_percentages=True):
     for col in NUMERICAL_COLUMNS:
         try:
             # Remove extra whitespace.
-            dataframe[col] = dataframe[col].map(lambda x: str(x).strip())
+            dataframe[col] = dataframe[col].map(lambda x: str(x).strip().replace(',', ''))
             dataframe.loc[non_empty_idx, col] = pd.to_numeric(dataframe.loc[non_empty_idx, col])
         except KeyError:
             pass
@@ -110,7 +111,8 @@ def format_pct_numeric_cols(dataframe, convert_percentages=True):
     for col in PERCENTAGE_COLUMNS:
         try:
             # Remove extra whitespace and any dollar signs, then convert non-empty entries to numeric.
-            dataframe[col] = dataframe[col].map(lambda x: str(x).strip().replace('%', ''))
+            dataframe[col] = dataframe[col].map(
+                lambda x: str(x).strip().replace('%', '').replace(',', ''))
             # Columns with partially numeric data will end up mixed type (i.e. Object col type).
             dataframe.loc[non_empty_idx, col] = pd.to_numeric(dataframe.loc[non_empty_idx, col])
             # Detect percentages and convert them to decimal.
