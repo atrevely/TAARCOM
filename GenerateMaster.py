@@ -37,49 +37,12 @@ def main(filepaths, path_to_running_com, field_mappings):
                      file data columns.
     """
     logger.info('Starting program: Generate Master')
-    # -------------------------------------------------------------------
-    # Check to see if there's an existing Running Commissions to append
-    # the new data onto. If so, we need to do some work to get it ready.
-    # -------------------------------------------------------------------
-    # Get the correct column names for the commission file.
     column_names = Utils.get_column_names(field_mappings)
+    running_com, files_processed, entries_need_fixing = initialize_running_commissions(
+        path_to_running_com=path_to_running_com, column_names=column_names)
 
-    if path_to_running_com:
-        running_com, files_processed = load_run_com(file_path=path_to_running_com)
-        if any([running_com.empty, files_processed.empty]):
-            logger.error('*Program Terminated*')
-            return
-
-        logger.info(f'Appending files to {path_to_running_com}...')
-        # Check to make sure that all columns are present and match between the files
-        missing_cols = [i for i in column_names if i not in running_com]
-        extra_cols = [i for i in running_com if i not in column_names]
-        if missing_cols or extra_cols:
-            logger.error('Columns in Running Commissions do not match field_mappings.xlsx!\n'
-                         f'Missing columns:\n{', '.join(map(str, missing_cols))}'
-                         f'\nExtra (erroneous) columns:\n{', '.join(map(str, extra_cols))}\n*Program Terminated*')
-            return
-
-        # Load in the matching Entries Need Fixing file.
-        ENF_path = os.path.join(Utils.DIRECTORIES.get('COMM_WORKING_DIR'),
-                                f'Entries Need Fixing {path_to_running_com[-20:]}')
-        entries_need_fixing = load_entries_need_fixing(file_dir=ENF_path)
-        if entries_need_fixing is None:
-            logger.error('*Program Terminated*')
-            return
-
-        running_com_input_len = running_com.shape[0]
-    # ---------------------------------------------------------
-    # Start new Running Commissions; no existing one provided.
-    # ---------------------------------------------------------
-    else:
-        logger.info('No Running Commissions file provided. Starting a new one.')
-        running_com_input_len = 0
-        running_com = pd.DataFrame(columns=column_names)
-        entries_need_fixing = pd.DataFrame(columns=column_names)
-        files_processed = pd.DataFrame(columns=['Filename', 'Total Commissions', 'Date Added', 'Paid Date'])
-
-    filenames = Utils.filter_duplicate_files(filepaths, files_processed)
+    running_com_input_len = running_com.shape[0]
+    filenames = Utils.filter_duplicate_files(filepaths=filepaths, files_processed=files_processed)
     # Exit if no new files are left after filtering.
     if not filenames:
         logger.error('No new commissions files selected. Please try selecting files again.\n*Program terminated*')
@@ -124,44 +87,20 @@ def main(filepaths, path_to_running_com, field_mappings):
         # Each sheet in the file is its own dataframe in the dictionary.
         # ----------------------------------------------------------------
         for sheet_name in list(new_data):
-            # Rework the index just in case it got read in wrong, then clean up the dataframe.
-            sheet = new_data[sheet_name].reset_index(drop=True)
-            sheet.index = sheet.index.map(int)
-            sheet.replace(to_replace=['nan', np.nan], value='', inplace=True)
-            sheet.rename(columns=lambda x: str(x).strip(), inplace=True)
+            # Get the next sheet of data.
+            sheet = get_cleaned_sheet_data(sheet_data=new_data[sheet_name])
 
-            # Clear out unnamed columns.
-            try:
-                sheet = sheet.loc[:, ~sheet.columns.str.contains('^Unnamed')]
-            except AttributeError:
-                # It's an empty dataframe, so simply pass it along (it'll get dealt with).
-                pass
-
-            if sheet.empty:
-                logger.info(f'Skipping empty sheet {sheet_name}')
-                continue
-
-            # Do specialized pre-processing tailored to principal (mostly renaming columns).
+            # Specialized pre-processing tailored to principal (modifies sheet).
+            # This is done first because it may rename columns that are used later.
             preprocess_by_principal(principal=principal, sheet=sheet, sheet_name=sheet_name)
 
-            # Iterate over each column of data that we want to append.
-            for data_name in list(field_mappings):
-                # Grab list of names that the data could potentially be under.
-                name_list = field_mappings[data_name].dropna().tolist()
-                # Look for a match in the sheet column names.
-                column_name = [val for val in sheet.columns if val in name_list]
-                # If we found too many columns that match, then rename the column in the sheet to the master name.
-                if len(column_name) > 1:
-                    logger.error(f'Found multiple mappings for {data_name}'
-                                 f'\nMatching columns: {', '.join(map(str, column_name))}'
-                                 '\nPlease fix column names and try again.\n*Program terminated*')
-                    return
-                elif len(column_name) == 1:
-                    sheet.rename(columns={column_name[0]: data_name}, inplace=True)
+            # Map columns inplace (modifies sheet).
+            map_columns(sheet_data=sheet, field_mappings=field_mappings)
 
+            # Clean up the input data now that columns are mapped and named correctly.
             sheet = Utils.format_pct_numeric_cols(dataframe=sheet)
 
-            # Do special processing for principal, if applicable.
+            # Do special processing for principal, if applicable (modifies sheet).
             process_by_principal(principal=principal, sheet=sheet, sheet_name=sheet_name, disty_map=distributor_map)
 
             # Drop entries with emtpy part number, or skip tab if no part number column is found.
@@ -175,45 +114,31 @@ def main(filepaths, path_to_running_com, field_mappings):
                 logger.warning(f'No part number column found on tab {sheet_name}. Skipping tab.')
                 continue
 
-            # Now that we've renamed all the relevant columns, append the new sheet to Running Commissions,
-            # where only the properly named columns are appended.
-            if sheet.columns.duplicated().any():
-                duplicates = sheet.columns[sheet.columns.duplicated()].unique()
-                logger.error('Two items are being mapped to the same column!\n'
-                             f'These columns contain duplicates: {', '.join(map(str, duplicates))}'
-                             f'\n*Program terminated*')
-                return
-            elif 'Actual Comm Paid' not in list(sheet):
-                # Tab has no commission data, so it is ignored.
-                logger.warning(f'No commission dollars column found on tab {sheet_name}. Skipping tab.')
-            elif 'Invoice Date' not in list(sheet):
-                # Tab has no date column, so report and exit.
-                logger.warning(f'No Invoice Date column found on tab {sheet_name}. Skipping tab.')
-            else:
-                logger.info(f'Found {sheet.shape[0]} entries in the tab {sheet_name} with valid part numbers.')
-                # Remove entries with no commissions dollars.
-                sheet['Actual Comm Paid'] = pd.to_numeric(sheet['Actual Comm Paid'], errors='coerce').fillna(0)
-                sheet = sheet[sheet['Actual Comm Paid'] != 0]
-                # Add 'From File' column to track where data came from.
-                sheet['From File'] = filename
-                # Fill in the principal.
-                sheet['Principal'] = principal
+            if not check_cleaned_data(sheet_data=sheet, sheet_name=sheet_name):
+                continue
 
-                # Find matching columns.
-                matching_columns = [val for val in list(sheet) if val in list(field_mappings)]
-                if len(matching_columns) > 0:
-                    # Sum commissions paid on sheet.
-                    logger.info(f'Commissions for this tab: ${sheet['Actual Comm Paid'].sum():,.2f}')
-                    total_comm += sheet['Actual Comm Paid'].sum()
-                    # Strip whitespace from all strings in dataframe.
-                    string_cols = [val for val in list(sheet) if sheet[val].dtype == 'object']
-                    for col in string_cols:
-                        sheet[col] = sheet[col].fillna('').astype(str).map(lambda x: x.strip())
-                    # Append matching columns of data.
-                    app_cols = matching_columns + ['From File', 'Principal']
-                    running_com = pd.concat((running_com, sheet[app_cols]), ignore_index=True, sort=False)
-                else:
-                    logger.info(f'Found no data tab {sheet_name}. Skipping.')
+            logger.info(f'Found {sheet.shape[0]} entries in the tab {sheet_name} with valid part numbers.')
+            # Remove entries with no commissions dollars.
+            sheet['Actual Comm Paid'] = sheet['Actual Comm Paid'].map(
+                lambda x: Utils.to_numeric(x, errors='coerce', coerce_fill=0))
+            sheet = sheet[sheet['Actual Comm Paid'] != 0]
+            sheet['From File'], sheet['Principal'] = filename, principal
+
+            # Find matching columns.
+            matching_columns = [val for val in list(sheet) if val in list(field_mappings)]
+            if len(matching_columns) > 0:
+                # Sum commissions paid on sheet.
+                logger.info(f'Commissions for this tab: ${sheet['Actual Comm Paid'].sum():,.2f}')
+                total_comm += sheet['Actual Comm Paid'].sum()
+                # Strip whitespace from all strings in dataframe.
+                string_cols = [val for val in list(sheet) if sheet[val].dtype == 'object']
+                for col in string_cols:
+                    sheet[col] = sheet[col].fillna('').astype(str).map(lambda x: x.strip())
+                # Append matching columns of data.
+                app_cols = matching_columns + ['From File', 'Principal']
+                running_com = pd.concat((running_com, sheet[app_cols]), ignore_index=True, sort=False)
+            else:
+                logger.info(f'Found no data tab {sheet_name}. Skipping.')
 
         # Show total commissions.
         logger.info(f'Total commissions for {filename}: ${total_comm:,.2f}')
@@ -230,7 +155,7 @@ def main(filepaths, path_to_running_com, field_mappings):
         logger.error('No new valid data provided. Please check the new files for missing data or column matches.\n'
                      '*Program terminated*')
         return
-    logger.info(f'Beginning processing on {running_com.shape[0] - running_com_input_len} rows of data.')
+    logger.info(f'Beginning processing on {running_com.shape[0] - running_com_input_len:,} rows of data.')
 
     # Fill NaNs left over from appending.
     running_com.replace(to_replace=np.nan, value='', inplace=True)
@@ -391,4 +316,89 @@ def main(filepaths, path_to_running_com, field_mappings):
                     tab_names=['Master', 'Files Processed'])
     save_excel_file(filename=filepath_ENF, tab_data=entries_need_fixing, tab_names='Data')
     save_excel_file(filename=filepath_LM, tab_data=master_lookup, tab_names='Lookup')
+    return True
+
+
+def initialize_running_commissions(path_to_running_com, column_names):
+    """Load and prepare an existing Running Commissions file, or start a new one."""
+    # Check if we already have a Running Commissions.
+    if path_to_running_com:
+        running_com, files_processed = load_run_com(file_path=path_to_running_com)
+        if any([running_com.empty, files_processed.empty]):
+            raise FileNotFoundError
+
+        logger.info(f'Appending files to {path_to_running_com}...')
+        # Check to make sure that all columns are present and match between the files
+        missing_cols = [i for i in column_names if i not in running_com]
+        extra_cols = [i for i in running_com if i not in column_names]
+        if missing_cols or extra_cols:
+            logger.error('Columns in Running Commissions do not match field_mappings.xlsx!\n'
+                         f'Missing columns:\n{', '.join(map(str, missing_cols))}'
+                         f'\nExtra (erroneous) columns:\n{', '.join(map(str, extra_cols))}\n*Program Terminated*')
+            raise ValueError
+
+        # Load in the matching Entries Need Fixing file.
+        ENF_path = os.path.join(Utils.DIRECTORIES.get('COMM_WORKING_DIR'),
+                                f'Entries Need Fixing {path_to_running_com[-20:]}')
+        entries_need_fixing = load_entries_need_fixing(file_dir=ENF_path)
+        if entries_need_fixing is None:
+            raise FileNotFoundError
+    else:
+        logger.info('No Running Commissions file provided. Starting a new one.')
+        running_com = pd.DataFrame(columns=column_names)
+        entries_need_fixing = pd.DataFrame(columns=column_names)
+        files_processed = pd.DataFrame(columns=['Filename', 'Total Commissions', 'Date Added', 'Paid Date'])
+
+    return running_com, files_processed, entries_need_fixing
+
+
+def get_cleaned_sheet_data(sheet_data):
+    # Rework the index just in case it got read in wrong, then clean up the dataframe.
+    sheet_data = sheet_data.reset_index(drop=True)
+    sheet_data.index = sheet_data.index.map(int)
+    sheet_data.replace(to_replace=['nan', np.nan], value='', inplace=True)
+    sheet_data.rename(columns=lambda x: str(x).strip(), inplace=True)
+
+    # Clear out unnamed columns.
+    try:
+        sheet_data = sheet_data.loc[:, ~sheet_data.columns.str.contains('^Unnamed')]
+    except AttributeError:
+        # It's an empty dataframe, so simply pass it along (it'll get dealt with).
+        pass
+
+    return sheet_data
+
+
+def map_columns(sheet_data, field_mappings):
+    """Iterate the field mappings and rename sheet columns to match."""
+    for data_name in list(field_mappings):
+        name_list = field_mappings[data_name].dropna().tolist()
+        column_name = [val for val in sheet_data.columns if val in name_list]
+        # If we found too many columns that match, then rename the column in the sheet to the master name.
+        if len(column_name) > 1:
+            logger.error(f'Found multiple mappings for {data_name}'
+                         f'\nMatching columns: {', '.join(map(str, column_name))}'
+                         '\nPlease fix column names and try again.\n*Program terminated*')
+            raise ValueError
+        elif len(column_name) == 1:
+            sheet_data.rename(columns={column_name[0]: data_name}, inplace=True)
+
+
+def check_cleaned_data(sheet_data, sheet_name):
+    # Now that we've renamed all the relevant columns, append the new sheet to Running Commissions,
+    # where only the properly named columns are appended.
+    if sheet_data.columns.duplicated().any():
+        duplicates = sheet_data.columns[sheet_data.columns.duplicated()].unique()
+        logger.error('Two items are being mapped to the same column! '
+                     f'These columns contain duplicates:\n{', '.join(map(str, duplicates))}'
+                     f'\n*Program terminated*')
+        raise ValueError
+    elif 'Actual Comm Paid' not in list(sheet_data):
+        # Tab has no commission data, so it is ignored.
+        logger.warning(f'No commission dollars column found on tab {sheet_name}. Skipping tab.')
+        return False
+    elif 'Invoice Date' not in list(sheet_data):
+        # Tab has no date column, so report and exit.
+        logger.warning(f'No Invoice Date column found on tab {sheet_name}. Skipping tab.')
+        return False
     return True

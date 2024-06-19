@@ -43,6 +43,7 @@ def get_column_names(field_mappings):
 
 
 def filter_duplicate_files(filepaths, files_processed):
+
     """Check to ensure that no duplicate files were provided."""
     filenames = [os.path.basename(val) for val in filepaths]
     duplicates = list(set(filenames).intersection(files_processed['Filename']))
@@ -75,6 +76,24 @@ def check_for_date_errors(date):
     return False
 
 
+def to_numeric(value, errors='raise', coerce_fill=np.nan):
+    """
+    Attempt to turn an item numeric, then decide how to handle non-numeric values.
+    Primarily for use as a lambda on a Dataframe or Series.
+    """
+    try:
+        return pd.to_numeric(value)
+    except ValueError:
+        if errors not in ['raise', 'coerce', 'ignore']:
+            raise ValueError(f'Unrecognized argument {errors} in to_numeric()')
+        elif errors == 'ignore':
+            return value
+        elif errors == 'coerce':
+            return coerce_fill
+        elif errors == 'raise':
+            raise
+
+
 def format_pct_numeric_cols(dataframe, convert_percentages=True):
     """Convert know numeric and percentage columns to their correct form."""
     dataframe.index = dataframe.index.map(int)
@@ -92,7 +111,7 @@ def format_pct_numeric_cols(dataframe, convert_percentages=True):
             dataframe[col] = dataframe[col].map(
                 lambda x: str(x).strip().replace('$', '').replace(',', ''))
             # Columns with partially numeric data will end up mixed type (i.e. Object col type).
-            dataframe.loc[non_empty_idx, col] = pd.to_numeric(dataframe.loc[non_empty_idx, col])
+            dataframe.loc[non_empty_idx, col] = dataframe.loc[non_empty_idx, col].map(lambda x: to_numeric(x))
         except KeyError:
             pass
         except ValueError:
@@ -102,7 +121,7 @@ def format_pct_numeric_cols(dataframe, convert_percentages=True):
         try:
             # Remove extra whitespace.
             dataframe[col] = dataframe[col].map(lambda x: str(x).strip().replace(',', ''))
-            dataframe.loc[non_empty_idx, col] = pd.to_numeric(dataframe.loc[non_empty_idx, col])
+            dataframe.loc[non_empty_idx, col] = dataframe.loc[non_empty_idx, col].map(lambda x: to_numeric(x))
         except KeyError:
             pass
         except ValueError:
@@ -114,7 +133,7 @@ def format_pct_numeric_cols(dataframe, convert_percentages=True):
             dataframe[col] = dataframe[col].map(
                 lambda x: str(x).strip().replace('%', '').replace(',', ''))
             # Columns with partially numeric data will end up mixed type (i.e. Object col type).
-            dataframe.loc[non_empty_idx, col] = pd.to_numeric(dataframe.loc[non_empty_idx, col])
+            dataframe.loc[non_empty_idx, col] = dataframe.loc[non_empty_idx, col].map(lambda x: to_numeric(x))
             # Detect percentages and convert them to decimal.
             if convert_percentages and (dataframe.loc[non_empty_idx, col] > 1).any():
                 dataframe.loc[non_empty_idx, col] /= 100
@@ -123,7 +142,8 @@ def format_pct_numeric_cols(dataframe, convert_percentages=True):
         except ValueError:
             # The CM Split column will sometimes have multiple entries (lookup matches) combined, so may fail.
             if col == 'CM Split':
-                continue
+                dataframe.loc[non_empty_idx, col] = dataframe.loc[non_empty_idx, col].map(
+                    lambda x: to_numeric(x, errors='ignore'))
             raise ValueError(f'Unexpected non-numeric character in column {col}.')
 
     dataframe.replace(to_replace=np.nan, value='', inplace=True)

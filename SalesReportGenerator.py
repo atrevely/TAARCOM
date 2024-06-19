@@ -130,8 +130,7 @@ def main(run_com):
         comm_months = [parse(str(i).strip()) for i in comm_months if i != '']
     except ValueError:
         logger.error('Error parsing dates in Comm Month column of Commissions Master!'
-                     ' Please check that all dates are in standard formatting and '
-                     'try again.\n*Program Terminated*')
+                     ' Please check that all dates are in standard formatting and try again.\n*Program Terminated*')
         return
     # Grab the most recent month in Commissions Master.
     last_month = max(comm_months)
@@ -142,6 +141,7 @@ def main(run_com):
         if any([look_mast.empty, running_com.empty, files_processed.empty]):
             logger.error('Error loading files.\n*Program Terminated*')
             return
+
         # Fill in the Sales Report Date in Running Commissions.
         running_com.loc[running_com['Sales Report Date'] == '', 'Sales Report Date'] = time.strftime('%m/%d/%Y')
 
@@ -154,7 +154,7 @@ def main(run_com):
         # Don't let duplicate files get processed.
         if duplicates:
             # Let us know we found duplicates and removed them.
-            logger.error(f'The following files are already in Commissions Master: {', '.join(map(str, duplicates))}'
+            logger.error(f'The following files are already in Commissions Master:\n{', '.join(map(str, duplicates))}'
                          '\nPlease check the files and try again.\n*Program Terminated*')
             return
 

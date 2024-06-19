@@ -3,7 +3,7 @@ import re
 import logging
 import pandas as pd
 import numpy as np
-from GenerateMasterUtils import DIRECTORIES
+from GenerateMasterUtils import DIRECTORIES, to_numeric
 
 logger = logging.getLogger(__name__)
 
@@ -68,11 +68,12 @@ def process_by_principal(principal, sheet, sheet_name, disty_map):
     # Make sure applicable entries exist and are numeric.
     invoice_dollars = ext_cost = True
     try:
-        sheet['Invoiced Dollars'] = pd.to_numeric(sheet['Invoiced Dollars'], errors='coerce').fillna(0)
+        sheet['Invoiced Dollars'] = sheet['Invoiced Dollars'].map(
+            lambda x: to_numeric(x, errors='coerce', coerce_fill=0))
     except KeyError:
         invoice_dollars = False
     try:
-        sheet['Ext. Cost'] = pd.to_numeric(sheet['Ext. Cost'], errors='coerce').fillna(0)
+        sheet['Ext. Cost'] = sheet['Ext. Cost'].map(lambda x: to_numeric(x, errors='coerce', coerce_fill=0))
     except KeyError:
         ext_cost = False
 
@@ -82,23 +83,22 @@ def process_by_principal(principal, sheet, sheet_name, disty_map):
             if 'Adj' in sheet_name:
                 # Input missing data. Commission Rate is always 3% here.
                 sheet['Commission Rate'] = 0.03
-                sheet['Paid-On Revenue'] = pd.to_numeric(sheet['Invoiced Dollars'], errors='coerce') * 0.7
+                sheet['Paid-On Revenue'] = 0.7 * sheet['Invoiced Dollars'].map(
+                    lambda x: to_numeric(x, errors='coerce', coerce_fill=0))
                 sheet['Actual Comm Paid'] = sheet['Paid-On Revenue'] * 0.03
                 # These are paid on resale.
                 sheet['Comm Source'] = 'Resale'
-                logger.info('Columns added from Abracon special processing:'
+                logger.info('Columns added from Abracon special processing: '
                             'Commission Rate, Paid-On Revenue, Actual Comm Paid')
             elif 'MoComm' in sheet_name:
                 # Fill down Distributor for their grouping scheme.
-                sheet['Reported Distributor'] = sheet['Reported Distributor'].replace('', np.nan)
-                sheet['Reported Distributor'] = sheet['Reported Distributor'].fillna(method='ffill')
-                sheet['Reported Distributor'] = sheet['Reported Distributor'].fillna('')
+                sheet['Reported Distributor'] = sheet['Reported Distributor'].replace('', np.nan).ffill()
                 # Paid-On Revenue gets Invoiced Dollars.
                 sheet['Paid-On Revenue'] = sheet['Invoiced Dollars']
                 sheet['Comm Source'] = 'Resale'
                 # Calculate the Commission Rate.
-                comm_paid = pd.to_numeric(sheet['Actual Comm Paid'], errors='coerce')
-                revenue = pd.to_numeric(sheet['Paid-On Revenue'], errors='coerce')
+                comm_paid = sheet['Actual Comm Paid'].map(lambda x: to_numeric(x, errors='coerce', coerce_fill=0))
+                revenue = sheet['Paid-On Revenue'].map(lambda x: to_numeric(x, errors='coerce', coerce_fill=0))
                 comm_rate = round(comm_paid / revenue, 3)
                 sheet['Commission Rate'] = comm_rate
                 logger.info('Columns added from Abracon special processing: Commission Rate')
@@ -117,8 +117,7 @@ def process_by_principal(principal, sheet, sheet_name, disty_map):
                         cust = sheet.loc[row, 'Reported Customer']
                         dist_name = re.sub(pattern='[^a-zA-Z0-9]', repl='', string=str(cust).lower())
                         # Find matches in the Distributor Abbreviations.
-                        dist_matches = [i for i in disty_map['Search Abbreviation']
-                                        if i in dist_name]
+                        dist_matches = [i for i in disty_map['Search Abbreviation'] if i in dist_name]
                         if len(dist_matches) == 1:
                             # Copy to distributor column.
                             try:

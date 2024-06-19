@@ -10,7 +10,7 @@ import logging
 from dateutil.parser import parse
 import win32com.client
 import pythoncom
-from GenerateMasterUtils import NUMERICAL_COLUMNS
+from GenerateMasterUtils import NUMERICAL_COLUMNS, to_numeric
 
 logger = logging.getLogger(__name__)
 
@@ -205,7 +205,7 @@ def tab_save_prep(data):
                 data[col].replace(to_replace=0, value='', inplace=True)
             else:
                 fill = 0
-            data[col] = pd.to_numeric(data[col], errors='coerce')
+            data[col] = data[col].map(lambda x: to_numeric(x, errors='ignore'))
             data[col] = data[col].replace(to_replace=np.nan, value=fill)
         except KeyError:
             pass

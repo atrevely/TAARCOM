@@ -69,7 +69,7 @@ def load_com_master():
     try:
         commission_master = pd.read_excel(file_path, sheet_name='Master', dtype=str)
         master_files = pd.read_excel(file_path, sheet_name='Files Processed')
-        commission_master = Utils.format_pct_numeric_cols(commission_master)
+        commission_master = Utils.format_pct_numeric_cols(commission_master, convert_percentages=True)
 
         # Make sure all the dates are formatted correctly.
         for col in ['Invoice Date', 'Paid Date', 'Sales Report Date']:
@@ -94,7 +94,7 @@ def load_run_com(file_path):
     try:
         running_com = pd.read_excel(file_path, sheet_name='Master', dtype=str)
         files_processed = pd.read_excel(file_path, sheet_name='Files Processed')
-        running_com = Utils.format_pct_numeric_cols(running_com)
+        running_com = Utils.format_pct_numeric_cols(running_com, convert_percentages=True)
         # Make sure all the dates are formatted correctly.
         running_com['Invoice Date'] = running_com['Invoice Date'].map(lambda x: form_date(x))
         # Make sure that the CM Splits aren't blank or zero.
@@ -119,16 +119,17 @@ def load_entries_need_fixing(file_dir):
         # Convert entries to proper types, like above.
         for col in Utils.NUMERICAL_COLUMNS:
             try:
-                entries_need_fixing[col] = pd.to_numeric(entries_need_fixing[col], errors='coerce').fillna('')
+                entries_need_fixing[col] = pd.to_numeric(entries_need_fixing[col], errors='coerce')
             except KeyError:
                 logger.error(f'The following column was not found in ENF: {col}. '
                              f'Please check the column names and try again')
                 return None
         mixed_cols = [col for col in list(entries_need_fixing) if col not in Utils.NUMERICAL_COLUMNS
                       and col not in ['Invoice Number', 'Part Number', 'Principal']]
+
         for col in mixed_cols:
             try:
-                entries_need_fixing[col] = entries_need_fixing[col].map(lambda x: pd.to_numeric(x, errors='ignore'))
+                entries_need_fixing[col] = entries_need_fixing[col].map(lambda x: Utils.to_numeric(x, errors='ignore'))
             except KeyError:
                 logger.error(f'The following column was not found in ENF: {col}. '
                              'Please check the column names and try again.')
@@ -152,7 +153,8 @@ def load_account_list():
     location = Utils.DIRECTORIES.get('COMM_LOOKUPS_DIR')
 
     try:
-        account_list = pd.read_excel(os.path.join(location, 'Master Account List.xlsx'), sheet_name='Allacct').fillna('')
+        account_list = pd.read_excel(
+            os.path.join(location, 'Master Account List.xlsx'), sheet_name='Allacct').fillna('')
         # Make sure the required columns are present.
         cols = ['SLS', 'ProperName']
         missing_cols = [i for i in cols if i not in list(account_list)]
