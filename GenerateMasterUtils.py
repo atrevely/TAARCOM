@@ -144,7 +144,8 @@ def format_pct_numeric_cols(dataframe, convert_percentages=True):
             if col == 'CM Split':
                 dataframe.loc[non_empty_idx, col] = dataframe.loc[non_empty_idx, col].map(
                     lambda x: to_numeric(x, errors='ignore'))
-            raise ValueError(f'Unexpected non-numeric character in column {col}.')
+            else:
+                raise ValueError(f'Unexpected non-numeric character in column {col}.')
 
     dataframe.replace(to_replace=np.nan, value='', inplace=True)
     return dataframe
