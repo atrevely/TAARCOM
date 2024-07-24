@@ -451,7 +451,7 @@ def main(run_com):
                 new_lookup = running_com.loc[row, lookup_cols]
                 new_lookup['Date Added'] = datetime.datetime.now().date()
                 new_lookup['Last Used'] = datetime.datetime.now().date()
-                look_mast = look_mast.append(new_lookup, ignore_index=True)
+                look_mast = pd.concat((look_mast, new_lookup), ignore_index=True, sort=False)
 
         # --------------------------------------------------------------
         # Append the new Running Commissions to the Commissions Master.
