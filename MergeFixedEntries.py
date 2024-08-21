@@ -184,7 +184,7 @@ def main(run_com_path):
         # Record the date we quarantined the entries.
         old_entries.loc[:, 'Date Quarantined'] = datetime.datetime.now().date()
         # Add deprecated entries to the quarantine.
-        quarantined = pd.concat((quarantined, old_entries), ignore_index=True, sort=False)
+        quarantined = Utils.df_append(quarantined, old_entries)
         # Notify us of changes.
         logger.info(f'{len(old_entries)} entries quarantined for being more than 2 years old.')
 

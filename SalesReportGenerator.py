@@ -233,7 +233,7 @@ def main(run_com):
     revenue_data = com_mast[com_mast['Quarter Shipped'].isin(quarters)]
     revenue_data.reset_index(drop=True, inplace=True)
     if run_com:
-        revenue_data = pd.concat((revenue_data, running_com), ignore_index=True, sort=False)
+        revenue_data = Utils.df_append(revenue_data, running_com)
     # Tag the data by current Design Sales in the Account List.
     for cust in revenue_data['T-End Cust'].unique():
         # Check for a single match in Account List.
@@ -278,7 +278,7 @@ def main(run_com):
 
     # Compile the quarter data.
     if run_com:
-        comm_data = pd.concat((qtr_data, running_com), ignore_index=True, sort=False)
+        comm_data = Utils.df_append(qtr_data, running_com)
     else:
         comm_data = qtr_data
     del qtr_data, com_mast_tracked
@@ -308,7 +308,7 @@ def main(run_com):
         # Also grab any nonstandard splits.
         cm_data = split_data[split_data['CM Sales'] == person]
         cm_data = cm_data[cm_data['CDS'] != person]
-        design_data = pd.concat((design_data, cm_data), ignore_index=True, sort=False)
+        design_data = Utils.df_append(design_data, cm_data)
         # Get rid of empty Quarter Shipped lines.
         design_data = design_data[design_data['Quarter Shipped'] != '']
         design_data.reset_index(drop=True, inplace=True)
@@ -349,7 +349,7 @@ def main(run_com):
         final_report = get_sales_comm_data(salesperson=person, input_data=comm_data,
                                            sales_info=sales_info)
         # Append the data.
-        final_report = pd.concat((final_report, qq_condensed), ignore_index=True, sort=False)
+        final_report = Utils.df_append(final_report, qq_condensed)
         # Total up the Paid-On Revenue and Actual/Sales Commission.
         report_total = pd.DataFrame(columns=['Salesperson', 'Paid-On Revenue', 'Actual Comm Paid',
                                              'Sales Commission'], index=[0])
@@ -366,9 +366,8 @@ def main(run_com):
         person_total = princ_tab[princ_tab['Principal'] == 'Grand Total']
         person_total['Salesperson'] = person
         person_total['Principal'] = ''
-        sales_tot = pd.concat((sales_tot, person_total), ignore_index=True, sort=False)
-        sales_tot = pd.concat((sales_tot, princ_tab[princ_tab['Principal'] != 'Grand Total']),
-                              ignore_index=True, sort=False)
+        sales_tot = Utils.df_append(sales_tot, person_total)
+        sales_tot = Utils.df_append(sales_tot, princ_tab[princ_tab['Principal'] != 'Grand Total'])
 
         # Write report to file.
         filename = os.path.join(Utils.DIRECTORIES.get('COMM_REPORTS_DIR'),
@@ -451,13 +450,13 @@ def main(run_com):
                 new_lookup = running_com.loc[row, lookup_cols]
                 new_lookup['Date Added'] = datetime.datetime.now().date()
                 new_lookup['Last Used'] = datetime.datetime.now().date()
-                look_mast = pd.concat((look_mast, new_lookup), ignore_index=True, sort=False)
+                look_mast = Utils.df_append(look_mast, new_lookup)
 
         # --------------------------------------------------------------
         # Append the new Running Commissions to the Commissions Master.
         # --------------------------------------------------------------
-        com_mast = pd.concat((com_mast, running_com), ignore_index=True, sort=False)
-        master_files = pd.concat((master_files, files_processed), ignore_index=True, sort=False)
+        com_mast = Utils.df_append(com_mast, running_com)
+        master_files = Utils.df_append(master_files, files_processed)
         # Convert commission dollars to numeric.
         master_files['Total Commissions'] = pd.to_numeric(master_files['Total Commissions'],
                                                           errors='coerce').fillna(0)

@@ -149,3 +149,13 @@ def format_pct_numeric_cols(dataframe, convert_percentages=True):
 
     dataframe.replace(to_replace=np.nan, value='', inplace=True)
     return dataframe
+
+
+def df_append(left, right):
+    """A safe pd.concat method that handles Series or Dataframes."""
+    return pd.concat(
+        (left if type(left) is pd.core.frame.DataFrame else left.to_frame().T,
+         right if type(right) is pd.core.frame.DataFrame else right.to_frame().T),
+        ignore_index=True,
+        sort=False
+    )

@@ -136,7 +136,7 @@ def main(filepaths, path_to_running_com, field_mappings):
                     sheet[col] = sheet[col].fillna('').astype(str).map(lambda x: x.strip())
                 # Append matching columns of data.
                 app_cols = matching_columns + ['From File', 'Principal']
-                running_com = pd.concat((running_com, sheet[app_cols]), ignore_index=True, sort=False)
+                running_com = Utils.df_append(running_com, sheet[app_cols])
             else:
                 logger.info(f'Found no data tab {sheet_name}. Skipping.')
 
@@ -145,7 +145,7 @@ def main(filepaths, path_to_running_com, field_mappings):
         # Append filename and total commissions to Files Processed sheet.
         new_file = pd.DataFrame({'Filename': [filename], 'Total Commissions': [total_comm],
                                  'Date Added': [datetime.datetime.now().date()], 'Paid Date': ['']})
-        files_processed = pd.concat((files_processed, new_file), ignore_index=True, sort=False)
+        files_processed = Utils.df_append(files_processed, new_file)
 
     # ----------------------------------------------------------------
     # Done appending new data, now find matches in the Lookup Master.
