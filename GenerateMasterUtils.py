@@ -1,5 +1,6 @@
 import os
 import pandas as pd
+import numpy as np
 import datetime
 import logging
 from dateutil.parser import parse
@@ -13,8 +14,8 @@ TAARCOM_DIRECTORIES = {'COMM_LOOKUPS_DIR': 'Z:\\Commissions Lookup', 'COMM_WORKI
 DIRECTORIES = {i: j if os.path.exists(j) else os.getcwd() for i, j in TAARCOM_DIRECTORIES.items()}
 
 # Columns defined as containing numerical data.
-DOLLAR_COLUMNS = ['Ext. Cost', 'Invoiced Dollars', 'Paid-On Revenue', 'Actual Comm Paid',
-                  'Unit Cost', 'Unit Price', 'Sales Commission']
+DOLLAR_COLUMNS = ['Ext. Cost', 'Invoiced Dollars', 'Paid-On Revenue', 'Actual Comm Paid', 'Unit Cost', 'Unit Price',
+                  'Sales Commission']
 NUMERICAL_COLUMNS = ['Quantity', 'Year']
 PERCENTAGE_COLUMNS = ['Commission Rate', 'Split Percentage', 'Gross Rev Reduction', 'Shared Rev Tier Rate', 'CM Split']
 
@@ -42,6 +43,7 @@ def get_column_names(field_mappings):
 
 
 def filter_duplicate_files(filepaths, files_processed):
+
     """Check to ensure that no duplicate files were provided."""
     filenames = [os.path.basename(val) for val in filepaths]
     duplicates = list(set(filenames).intersection(files_processed['Filename']))
@@ -74,49 +76,86 @@ def check_for_date_errors(date):
     return False
 
 
-def format_pct_numeric_cols(dataframe):
+def to_numeric(value, errors='raise', coerce_fill=np.nan):
+    """
+    Attempt to turn an item numeric, then decide how to handle non-numeric values.
+    Primarily for use as a lambda on a Dataframe or Series.
+    """
+    try:
+        return pd.to_numeric(value)
+    except ValueError:
+        if errors not in ['raise', 'coerce', 'ignore']:
+            raise ValueError(f'Unrecognized argument {errors} in to_numeric()')
+        elif errors == 'ignore':
+            return value
+        elif errors == 'coerce':
+            return coerce_fill
+        elif errors == 'raise':
+            raise
+
+
+def format_pct_numeric_cols(dataframe, convert_percentages=True):
     """Convert know numeric and percentage columns to their correct form."""
+    dataframe.index = dataframe.index.map(int)
+    dataframe.replace(to_replace=np.nan, value='', inplace=True)
+
+    try:
+        non_empty_idx = dataframe.index[dataframe['Part Number'] != '']
+    except KeyError:
+        # This sheet has no part numbers, this no valid entries to format.
+        return dataframe
+
     for col in DOLLAR_COLUMNS:
         try:
             # Remove extra whitespace and any dollar signs, then convert non-empty entries to numeric.
-            dataframe[col] = dataframe[col].map(lambda x: str(x).strip().replace('$', ''))
-            non_empty_idx = dataframe[dataframe[col] != ''].index
+            dataframe[col] = dataframe[col].map(
+                lambda x: str(x).strip().replace('$', '').replace(',', ''))
             # Columns with partially numeric data will end up mixed type (i.e. Object col type).
-            dataframe.loc[non_empty_idx, col] = pd.to_numeric(dataframe.loc[non_empty_idx, col])
+            dataframe.loc[non_empty_idx, col] = dataframe.loc[non_empty_idx, col].map(lambda x: to_numeric(x))
         except KeyError:
             pass
         except ValueError:
-            logger.error(f'Unexpected non-numeric character in row {col}.')
-            raise
+            raise ValueError(f'Unexpected non-numeric character in column {col}.')
 
     for col in NUMERICAL_COLUMNS:
         try:
             # Remove extra whitespace.
-            dataframe[col] = dataframe[col].map(lambda x: str(x).strip())
-            non_empty_idx = dataframe[dataframe[col] != ''].index
-            dataframe.loc[non_empty_idx, col] = pd.to_numeric(dataframe.loc[non_empty_idx, col])
-            # Columns with partially numeric data will end up mixed type (i.e. Object col type).
-            dataframe[col] = pd.to_numeric(dataframe[col], errors='coerce').fillna('')
+            dataframe[col] = dataframe[col].map(lambda x: str(x).strip().replace(',', ''))
+            dataframe.loc[non_empty_idx, col] = dataframe.loc[non_empty_idx, col].map(lambda x: to_numeric(x))
         except KeyError:
             pass
         except ValueError:
-            logger.error(f'Unexpected non-numeric character in row {col}.')
-            raise
+            raise ValueError(f'Unexpected non-numeric character in column {col}.')
 
     for col in PERCENTAGE_COLUMNS:
         try:
             # Remove extra whitespace and any dollar signs, then convert non-empty entries to numeric.
-            dataframe[col] = dataframe[col].map(lambda x: str(x).strip().replace('%', ''))
-            non_empty_idx = dataframe[dataframe[col] != ''].index
+            dataframe[col] = dataframe[col].map(
+                lambda x: str(x).strip().replace('%', '').replace(',', ''))
             # Columns with partially numeric data will end up mixed type (i.e. Object col type).
-            dataframe.loc[non_empty_idx, col] = pd.to_numeric(dataframe.loc[non_empty_idx, col])
+            dataframe.loc[non_empty_idx, col] = dataframe.loc[non_empty_idx, col].map(lambda x: to_numeric(x))
             # Detect percentages and convert them to decimal.
-            if (dataframe.loc[non_empty_idx, col] > 1).any():
+            if convert_percentages and (dataframe.loc[non_empty_idx, col] > 1).any():
                 dataframe.loc[non_empty_idx, col] /= 100
         except (KeyError, TypeError):
             pass
         except ValueError:
-            logger.error(f'Unexpected non-numeric character in row {col}.')
-            raise
+            # The CM Split column will sometimes have multiple entries (lookup matches) combined, so may fail.
+            if col == 'CM Split':
+                dataframe.loc[non_empty_idx, col] = dataframe.loc[non_empty_idx, col].map(
+                    lambda x: to_numeric(x, errors='ignore'))
+            else:
+                raise ValueError(f'Unexpected non-numeric character in column {col}.')
 
+    dataframe.replace(to_replace=np.nan, value='', inplace=True)
     return dataframe
+
+
+def df_append(left, right):
+    """A safe pd.concat method that handles Series or Dataframes."""
+    return pd.concat(
+        (left if type(left) is pd.core.frame.DataFrame else left.to_frame().T,
+         right if type(right) is pd.core.frame.DataFrame else right.to_frame().T),
+        ignore_index=True,
+        sort=False
+    )

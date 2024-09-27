@@ -18,7 +18,7 @@ VERSION = 'Master v3.0.040424'
 LOOKUPS_DIR = DIRECTORIES.get('COMM_LOOKUPS_DIR')
 
 
-class GenMast(QMainWindow):
+class GenerateMasterGUI(QMainWindow):
     """Main application window."""
     def __init__(self):
         super().__init__()
@@ -71,20 +71,27 @@ class GenMast(QMainWindow):
         runcom_file_layout.addWidget(self.runcom_file_list)
         self.runcom_file_groupbox.setLayout(runcom_file_layout)
 
-        # Create box for program buttons.
-        self.programs_groupbox = QGroupBox('Programs')
+        # Create box for primary program buttons.
+        self.programs_groupbox = QGroupBox('Primary Programs')
         programs_layout = QGridLayout()
         programs_layout.addWidget(self.button_generate_master, 0, 0, 1, 2)
-        programs_layout.addWidget(self.button_update_lookup, 1, 0)
-        programs_layout.addWidget(self.button_update_master, 1, 1)
-        programs_layout.addWidget(self.button_fix_entries, 2, 0)
-        programs_layout.addWidget(self.button_generate_reports, 2, 1)
+
+        programs_layout.addWidget(self.button_fix_entries, 1, 0)
+        programs_layout.addWidget(self.button_generate_reports, 1, 1)
         self.programs_groupbox.setLayout(programs_layout)
+
+        # Create box for primary program buttons.
+        self.tools_groupbox = QGroupBox('Secondary Programs')
+        tools_layout = QGridLayout()
+        tools_layout.addWidget(self.button_update_lookup, 1, 0)
+        tools_layout.addWidget(self.button_update_master, 1, 1)
+        self.tools_groupbox.setLayout(tools_layout)
 
         # Add GUI elements to the top level grid layout.
         main_layout.addWidget(self.raw_files_groupbox, 0, 0, 1, 2)
         main_layout.addWidget(self.runcom_file_groupbox, 1, 0, 1, 2)
         main_layout.addWidget(self.programs_groupbox, 2, 0, 1, 2)
+        main_layout.addWidget(self.tools_groupbox, 3, 0, 1, 2)
         main_layout.addWidget(self.log_groupbox, 0, 3, 5, 5)
 
         # Set the grid geometry.
@@ -290,7 +297,7 @@ class GenMast(QMainWindow):
         if self.master:
             # Run the GenerateMaster.py file.
             try:
-                CommTools.extractLookups(self.master)
+                CommTools.extract_lookups(self.master)
             except Exception:
                 logging.error(f'Unexpected Python error: {traceback.format_exc(0)}')
         else:
@@ -388,8 +395,7 @@ class Worker(QtCore.QRunnable):
 
     @pyqtSlot()
     def run(self):
-        """Initialise the runner function with passed args,
-         kwargs."""
+        """Initialize the runner function with passed args, kwargs."""
         self.fn(*self.args, **self.kwargs)
 
 
@@ -402,5 +408,5 @@ if __name__ == '__main__':
     font.setPointSize(10)
     app.setFont(font)
     # Open main window.
-    gui = GenMast()
+    gui = GenerateMasterGUI()
     sys.exit(app.exec_())

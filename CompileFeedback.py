@@ -2,7 +2,7 @@ import pandas as pd
 import os
 import time
 from RCExcelTools import save_error
-from FileIO import load_salespeople_info, load_root_customer_mappings, load_acct_list, load_digikey_master
+from FileIO import load_salespeople_info, load_root_customer_mappings, load_account_list, load_digikey_master
 from xlrd import XLRDError
 
 # Set the directory for the data input/output.
@@ -68,7 +68,7 @@ def main(filepaths):
     # --------------------------------------------------------
     sales_info = load_salespeople_info()
     customer_mappings = load_root_customer_mappings()
-    acct_list = load_acct_list()
+    acct_list = load_account_list()
     digikey_master, files_processed = load_digikey_master()
 
     if any([sales_info.empty, customer_mappings.empty, acct_list.empty, digikey_master.empty]):
